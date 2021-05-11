@@ -5,7 +5,7 @@ B_BAN  = 4
 
 class Draft:
 
-    def __init__(self, history=None, rewards=None, roles_per_champ=None):
+    def __init__(self, history=None, rewards=None, champs_roles=None):
         self.format = (A_BAN, 
                        B_BAN,
                        A_BAN,
@@ -24,7 +24,7 @@ class Draft:
 
         self.history = history or []
         self.rewards = rewards or self._generate_rewards()
-        self.roles_per_champ = roles_per_champ or self._find_roles_per_champ()
+        self.champs_roles = champs_roles or self.find_champs_roles()
         self.child_visits = []
 
         # Used to help with producing legal actions.
@@ -72,13 +72,13 @@ class Draft:
             
         to_select = self.to_select()
         if to_select == A_PICK:
-            return [c for c, roles in enumerate(self.roles_per_champ) 
+            return [c for c, roles in enumerate(self.champs_roles) 
                     if available(c) and has_open_role(roles, self.team_A_roles)]
         elif to_select == B_PICK:
-            return [c for c, roles in enumerate(self.roles_per_champ) 
+            return [c for c, roles in enumerate(self.champs_roles) 
                     if available(c) and has_open_role(roles, self.team_B_roles)]
         else:
-            return [c for c, roles in enumerate(self.roles_per_champ)
+            return [c for c, roles in enumerate(self.champs_roles)
                     if available(c) and bool(roles)] 
 
     # If a champ can only play in a single role then we can immediately
@@ -96,7 +96,7 @@ class Draft:
                 team_roles['partial'] = set()
                 team_roles['num_partial'] = 0
 
-        options = self.roles_per_champ[champ].intersection(team_roles['open'])
+        options = self.champs_roles[champ].intersection(team_roles['open'])
         if len(options) == 1:
             role = next(iter(options))
             team_roles['open'].remove(role)
@@ -105,10 +105,10 @@ class Draft:
         else:
             team_roles['partial'] = team_roles['partial'].union(options)
             team_roles['num_partial'] += 1
-            check_parital_roles(team_roles)
+            check_partial_roles(team_roles)
 
     def _generate_rewards(self):
         pass
 
-    def _find_roles_per_champ(self):
+    def _find_champs_roles(self):
         pass
