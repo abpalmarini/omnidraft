@@ -45,6 +45,7 @@ class Draft:
 
     def apply(self, action):
         to_select = self.to_select()
+        # @Speed can adjust to not update open roles if its last pick
         if to_select == A_PICK:
             self._update_open_roles(action, self.team_A_roles)
         elif to_select == B_PICK:
@@ -75,120 +76,73 @@ class Draft:
 
     def _update_open_roles(self, champ, team_roles):
         options = self.champs_roles[champ].intersection(team_roles['open'])
-        # need to check for whether partial already has something or not, if it doesn't and 
-        # options is len 1 then I just remove from open, if options is greater than one then I just add it
-        # need to refactor by either creating methods for these things or doing some general thing with for 
-        # loops
-        if not team_roles['partial']:
+        num_partial = len(team_roles['partial'])
+
+        def handle_options():
             if len(options) == 1:
-                team_roles['open'] = team_roles['open'] - options
+                team_roles['open'] -= options
+                for roles in team_roles['partial']:
+                    roles -= options
             else:
                 team_roles['partial'].append(options)
-        # PARTIAL OF SIZE ONE
-        elif len(team_roles['partial']) == 1:
+
+        def total_resolve(champs_involved):
             combined = options.union(*team_roles['partial'])
-            if len(combined) == 2:
-                team_roles['open'] = team_roles['open'] - combined
+            if len(combined) == champs_involved:
+                team_roles['open'] -= combined
                 team_roles['partial'] = []
-                return 
-            if len(options) == 1:
-                team_roles['partial'][0] = team_roles['partial'][0] - options
-                team_roles['open'] = team_roles['open'] - options
-            else:
-                team_roles['partial'].append(options)
-        # PARTIAL OF SIZE TWO
-        elif len(team_roles['partial']) == 2:
-            combined = options.union(*team_roles['partial'])
-            if len(combined) == 3:
-                team_roles['open'] = team_roles['open'] - combined
-                team_roles['partial'] = []
-                return
-            # First pair
-            combined = options.union(team_roles['partial'][0])
-            if len(combined) == 2:
-                team_roles['open'] = team_roles['open'] - combined
-                team_roles['partial'].pop(0)
-                team_roles['partial'][0] = team_roles['partial'][0] - combined
-                return
-            # Second pair
-            combined = options.union(team_roles['partial'][1])
-            if len(combined) == 2:
-                team_roles['open'] = team_roles['open'] - combined
-                team_roles['partial'].pop(1)
-                team_roles['partial'][0] = team_roles['partial'][0] - combined
-                return
-            # If doesn't resolve with anything remove from open and
-            # partials if single, else add to partials.
-            if len(options) == 1:
-                team_roles['open'] = team_roles['open'] - options
-                for i in range(3):
-                    team_roles['partial'][i] = team_roles['partial'][i] - options
-            else:
-                team_roles['partial'].append(options)
-        # PARTIAL OF SIZE THREE
-        elif len(team_roles['partial']) == 3:
-            combined = options.union(*team_roles['partial'])
-            if len(combined) == 4:
-                team_roles['open'] = team_roles['open'] - combined
-                team_roles['partial'] = []
-                return
-            # Need to try all triplets
+                return True
+            return False
+
+        def pair_resolve():
+            for i in range(num_partial):
+                combined = options.union(team_roles['partial'][i])
+                if len(combined) == 2:
+                    team_roles['partial'].pop(i)
+                    team_roles['open'] -= combined
+                    for roles in team_roles['partial']:
+                        roles -= combined
+                    return True
+            return False
+
+        def triplet_resolve():
             for i in range(2):
                 for j in range(1, 3):
                     if i == j: continue 
                     pair = team_roles['partial'][i], team_roles['partial'][j]
                     combined = options.union(*pair)
                     if len(combined) == 3:
-                        team_roles['open'] = team_roles['open'] - combined
                         # Pop j before i as j is always larger.
                         team_roles['partial'].pop(j)
                         team_roles['partial'].pop(i)
-                        team_roles['partial'][0] = team_roles['partial'][0] - combined
-                        return
-            # Finally try all pairs
-            for i in range(3):
-                combined = options.union(team_roles['partial'][i])
-                if len(combined) == 2:
-                    team_roles['open'] = team_roles['open'] - combined
-                    team_roles['partial'].pop(i)
-                    team_roles['partial'][0] = team_roles['partial'][0] - combined
-                    team_roles['partial'][1] = team_roles['partial'][1] - combined
-                    return
-            # If doesn't resolve with anything remove from open and
-            # partials if single, else add to partials.
-            if len(options) == 1:
-                team_roles['open'] = team_roles['open'] - options
-                for i in range(3):
-                    team_roles['partial'][i] = team_roles['partial'][i] - options
+                        team_roles['open'] -= combined
+                        team_roles['partial'][0] -= combined
+                        return True
+            return False
+
+        if num_partial == 0:
+            handle_options()
+        elif num_partial == 1:
+            if total_resolve(2):
+                pass
             else:
-                team_roles['partial'].append(options)
-
-
-    # If a champ can only play in a single role then we can immediately
-    # remove that role from open roles. However, if it has the option
-    # of being able to play more than one, then we can't remove them.
-    # Instead we cache these as partially filled roles and wait until
-    # the number of partially filled roles is equal to the number of 
-    # champs who could occupy them. At that point all must play one of
-    # these roles so we can remove them all from being open. 
-    def _update_filled_roles(self, champ, team_roles):
-
-        def check_partial_roles(team_roles):
-            if len(team_roles['partial']) == team_roles['num_partial']:
-                team_roles['open'] = team_roles['open'] - team_roles['partial']
-                team_roles['partial'] = set()
-                team_roles['num_partial'] = 0
-
-        options = self.champs_roles[champ].intersection(team_roles['open'])
-        if len(options) == 1:
-            role = next(iter(options))
-            team_roles['open'].remove(role)
-            team_roles['partial'].discard(role)
-            check_partial_roles(team_roles)
-        else:
-            team_roles['partial'] = team_roles['partial'].union(options)
-            team_roles['num_partial'] += 1
-            check_partial_roles(team_roles)
+                handle_options()
+        elif num_partial == 2:
+            if total_resolve(3):
+                pass
+            elif pair_resolve():
+                pass
+            else:
+                handle_options()
+        elif num_partial == 3:
+            if total_resolve(4):
+                pass
+            elif triplet_resolve():
+                pass
+            elif pair_resolve():
+                pass
+            else:
+                handle_options()
 
     def _generate_rewards(self):
         pass
