@@ -3,7 +3,7 @@ from autodraft.selfplay import Draft
 
 
 def open_roles(draft):
-    return draft.team_A_roles['open']
+    return draft.A_roles['open']
 
 
 class TestOpenRoles(unittest.TestCase):
