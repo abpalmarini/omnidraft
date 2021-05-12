@@ -1,5 +1,5 @@
 import unittest 
-from autodraft.selfplay import Draft
+from autodraft.draft import Draft
 
 
 def open_roles(draft):
