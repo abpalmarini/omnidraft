@@ -1,10 +1,39 @@
 from itertools import combinations
 from copy import deepcopy
+from random import random, randint, sample, choice, choices
+
 
 A_PICK = 1
 A_BAN  = 2
 B_PICK = 3
 B_BAN  = 4
+
+
+class RoleReward:
+    __slots__ = ['champ', 'role', 'A_value', 'B_value']
+    def __init__(self, champ, role, A_value, B_value):
+        self.champ = champ
+        self.role = role
+        self.A_value = A_value
+        self.B_value = B_value
+
+
+class SynergyReward:
+    __slots__ = ['champs', 'A_value', 'B_value']
+    def __init__(self, champs, A_value, B_value):
+        self.champs = champs
+        self.A_value = A_value
+        self.B_value = B_value
+
+
+class CounterReward:
+    __slots__ = ['team_champs', 'enemy_champs', 'A_value', 'B_value']
+    def __init__(self, team_champs, enemy_champs, A_value, B_value):
+        self.team_champs = team_champs
+        self.enemy_champs = enemy_champs
+        self.A_value = A_value
+        self.B_value = B_value
+
 
 class Draft:
 
@@ -108,8 +137,98 @@ class Draft:
         else:
             team_roles['partial'].append(options)
 
+    # Basic implementation of generating role, synergy and counter
+    # rewards needed for a draft. This is unlikely to represent the
+    # type of rewards that will be seen in the real world. The hope is
+    # that it will provide the network with a large range of varying
+    # types that it can learn the direct relationship they have on the
+    # draft outcome. 
     def _generate_rewards(self):
-        pass
+        NUM_ROLES = 5
+        # @Adjustable
+        min_champs_per_role = 4
+        num_synergies_range = (3, 20)
+        p_synergy_size = [0.7, 0.2, 0.07, 0.03] # sizes 2..5
+        num_counters_range = (3, 20)
+        p_counter_size = [0.7, 0.2, 0.06, 0.03, 0.01] # sizes 1..5
+        num_versatile_range = (5, 20)
+        p_versatility = [0.7, 0.2, 0.07, 0.03] # sizes 2..5
+
+        # Segregate an initial selection of champs into roles.
+        champs_per_role = []
+        champ_pool = set(range(self.num_champs))
+        def rand_role_num(): 
+            return randint(min_champs_per_role, self.num_champs // 5)
+        for num in [rand_role_num() for _ in range(NUM_ROLES)]:
+            champs = sample(champ_pool, num)
+            champs_per_role.append(champs)
+            champ_pool -= set(champs)
+
+        # Create random synergies. 
+        synergies = []
+        num_synergies = randint(*num_synergies_range)
+        sizes = choices(range(2, 6), k=num_synergies, weights=p_synergy_size)
+        for size in sizes:
+            roles_involved = sample(range(NUM_ROLES), k=size)
+            champs = {choice(champs_per_role[role]) for role in roles_involved}
+            synergies.append(champs)
+
+        # Create random counters.
+        counters = []
+        champs_used = set(range(self.num_champs)) - champ_pool 
+        num_counters = randint(*num_counters_range)
+        team_sizes = choices(range(1, 6), k=num_counters, weights=p_counter_size)
+        enemy_sizes = choices(range(1, 6), k=num_counters, weights=p_counter_size)
+        for team_size, enemy_size in zip(team_sizes, enemy_sizes):
+            champs = sample(champs_used, team_size + enemy_size)
+            counter = (set(champs[:team_size]), set(champs[team_size:]))
+            counters.append(counter)
+
+        # Now that synergies have been created we can let a sample of
+        # champs play more than one role. 
+        champs_selected = set()
+        num_versatile = randint(*num_versatile_range)
+        amounts = choices(range(2, 6), k=num_versatile, weights=p_versatility)
+        for amount in amounts:
+            select_role, *extra_roles = sample(range(NUM_ROLES), k=amount)
+            champ = choice(champs_per_role[select_role])
+            if champ in champs_selected: continue 
+            champs_selected.add(champ)
+            for role in extra_roles:
+                champs_per_role[role].append(champ)
+
+        def rand_team_values():
+            assignment = choice(range(4))
+            if assignment == 0:
+                # Both teams receive same reward value.
+                value = random()
+                return value, value
+            elif assignment == 1:
+                # Each team receives a different value.
+                return random(), random()
+            elif assignment == 2:
+                # Just team A receives a value.
+                return random(), 0
+            elif assignment == 3:
+                # Just team B receives a value.
+                return 0, random()
+
+        # Randomly assign a reward value for team A/B and create the
+        # the reward objects.
+        rewards = {'role': [], 'synergy': [], 'counter': []}
+        for role, champs in enumerate(champs_per_role):
+            for champ in champs:
+                reward = RoleReward(champ, role, *rand_team_values())
+                rewards['role'].append(reward)
+        for champs in synergies:
+            reward = SynergyReward(champs, *rand_team_values())
+            rewards['synergy'].append(reward)
+        for team_champs, enemy_champs in counters:
+            reward = CounterReward(team_champs, enemy_champs, 
+                                   *rand_team_values())
+            rewards['counter'].append(reward)
+        return rewards
 
     def _find_champs_roles(self):
         pass
+
