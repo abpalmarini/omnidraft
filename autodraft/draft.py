@@ -86,13 +86,10 @@ class Draft:
     # actions can play in at least one open role for team to pick. See
     # _update_open_roles for logic maintaining valid open roles.
     def legal_actions(self):
-
         def has_open_role(roles, team_roles):
             return bool(roles.intersection(team_roles['open']))
-
         def available(champ):
             return champ not in self.history
-            
         to_select = self.to_select()
         if to_select == A_PICK:
             return [c for c, roles in enumerate(self.champs_roles) 
@@ -151,7 +148,7 @@ class Draft:
         num_counters_range = (3, 20)
         p_counter_size = [0.7, 0.2, 0.06, 0.03, 0.01] # sizes 1..5
         num_versatile_range = (5, 20)
-        p_versatility = [0.7, 0.2, 0.07, 0.03] # sizes 2..5
+        p_versatility = [0.65, 0.25, 0.07, 0.03] # sizes 2..5
 
         # Segregate an initial selection of champs into roles.
         champs_per_role = []
@@ -228,5 +225,10 @@ class Draft:
             rewards['counter'].append(reward)
         return rewards
 
+    # Returns a list of size num_champs containg a set of roles each
+    # champ can play.
     def _find_champs_roles(self):
-        pass
+        champs_roles = [set() for _ in range(self.num_champs)]
+        for reward in self.rewards['role']:
+            champs_roles[reward.champ].add(reward.role)
+        return champs_roles
