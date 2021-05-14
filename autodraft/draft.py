@@ -72,7 +72,52 @@ class Draft:
         try:
             return self._terminal_value
         except AttributeError:
-            pass
+            team_A = {champ for champ, turn in zip(self.history, self.format) 
+                      if turn == A_PICK}
+            team_B = {champ for champ, turn in zip(self.history, self.format)
+                      if turn == B_PICK}
+            value = 0
+            value += _role_value(team_A, team_B)
+            value += _synergy_value(team_A, team_B)
+            value += _counter_value(team_A, team_B)
+
+    def _role_value(team_A, team_B):
+        # this function requires knowing all role rewards for each 
+        # champ in the team and there is no way around that if we 
+        # want to test which role assignment gives best reward.
+        # we could loop through all role rewards every time here and 
+        # store the values corresponding to team a and b heroes. 
+        # however, if we need to evaluate terminal positions for a 
+        # single set of commands over and over which we will as we 
+        # approach the end stage of draft because for example in second 
+        # last pick there is only 56 initial heroes to try then every other 
+        # simulation is going to be doing a terminal value. so that saves
+        # having to do about 750 loops through the role rewards per game at 
+        # the MINIMUM. which means i save at least a second every 200 games.
+        # so its probably best if i refactor champs_roles to include the role
+        # rewards for each hero. that way i can still use it for open roles,
+        # albeit with more hastle, but can also use it for this.
+        pass
+            
+    def _synergy_value(team_A, team_B):
+        value = 0
+        for reward in self.rewards['synergy']:
+            if reward.champs.issubset(team_A):
+                value += reward.A_value
+            elif reward.champs.issubset(team_B):
+                value -= reward.B_value
+        return value
+
+    def _counter_value(team_A, team_B):
+        value = 0
+        for reward in self.rewards['counter']:
+            if (reward.team_champs.issubset(team_A) 
+                    and reward.enemy_champs.issubset(team_B)):
+                value += reward.A_value
+            elif (reward.team_champs.issubset(team_B)
+                    and reward.enemy_champs.issubset(team_A)):
+                value -= reward.B_value
+        return value
 
     def apply(self, action):
         to_select = self.to_select()
