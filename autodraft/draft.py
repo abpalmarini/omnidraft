@@ -36,31 +36,30 @@ class CounterReward:
 
 
 class Draft:
+    # @Adjustable
+    format = (A_BAN, 
+              B_BAN,
+              A_BAN,
+              B_BAN,
+              A_PICK,
+              B_PICK,
+              B_PICK,
+              A_PICK,
+              A_PICK,
+              B_PICK,
+              B_PICK,
+              A_PICK,
+              A_PICK,
+              B_PICK) 
+    num_champs = 70
 
     def __init__(self, history=None, rewards=None, champs_roles=None,
                  A_roles=None, B_roles=None):
-        self.format = (A_BAN, 
-                       B_BAN,
-                       A_BAN,
-                       B_BAN,
-                       A_PICK,
-                       B_PICK,
-                       B_PICK,
-                       A_PICK,
-                       A_PICK,
-                       B_PICK,
-                       B_PICK,
-                       A_PICK,
-                       A_PICK,
-                       B_PICK) 
-        self.num_champs = 70
-
         self.history = history or []
         self.rewards = rewards or self._generate_rewards()
         self.champs_roles = champs_roles or self._find_champs_roles()
         self.A_roles = A_roles or {'open': set(range(5)), 'partial': []}
         self.B_roles = B_roles or {'open': set(range(5)), 'partial': []}
-
         self.child_visits = []
 
     def to_select(self):
@@ -231,4 +230,3 @@ class Draft:
 
     def _find_champs_roles(self):
         pass
-
