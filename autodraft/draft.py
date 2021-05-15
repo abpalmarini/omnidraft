@@ -95,13 +95,13 @@ class Draft:
         to_select = self.to_select()
         if to_select == A_PICK:
             return [champ for champ, rrs in enumerate(self.rrs_lookup)
-                    if available(champ) and has_open_role(rrs, self.A_roles)]
+                    if has_open_role(rrs, self.A_roles) and available(champ)]
         elif to_select == B_PICK:
             return [champ for champ, rrs in enumerate(self.rrs_lookup)
-                    if available(champ) and has_open_role(rrs, self.B_roles)]
+                    if has_open_role(rrs, self.B_roles) and available(champ)]
         else:
             return [champ for champ, rrs in enumerate(self.rrs_lookup)
-                    if available(champ) and bool(rrs)]
+                    if bool(rrs) and available(champ)]
 
     def clone(self):
         history = self.history.copy()
