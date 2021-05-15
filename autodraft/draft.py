@@ -88,8 +88,10 @@ class Draft:
     # maintaining valid open roles.
     def legal_actions(self):
         def has_open_role(role_rewards, team_roles):
-            champ_roles = {rr.role for rr in role_rewards}
-            return bool(champ_roles.intersection(team_roles['open']))
+            for role_reward in role_rewards:
+                if role_reward.role in team_roles['open']:
+                    return True
+            return False
         def available(champ):
             return champ not in self.history
         to_select = self.to_select()
