@@ -1,38 +1,61 @@
 import unittest 
-from autodraft.draft import Draft
+from autodraft.draft import Draft, RoleReward
 
 
 def open_roles(draft):
     return draft.A_roles['open']
 
+# Help to quickly create list of role rewards.
+def rrs(champ, roles):
+    role_rewards = []
+    for role in roles:
+        role_rewards.append(RoleReward(champ, role, 0, 0))
+    return role_rewards
+
 
 class TestLegalActions(unittest.TestCase):
 
     def test_legal_actions_first_ban(self):
-        champs_roles = [{0}, {1}, {2}, {3}, set()]
-        draft = Draft(rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0]), rrs(1, [1]), rrs(2, [2]),
+            rrs(3, [3]), rrs(4, [])
+            ]
+        draft = Draft(rewards=[], rrs_lookup=rrs_lookup)
         self.assertEqual(draft.legal_actions(), list(range(4)))
 
     def test_legal_actions_second_ban(self):
-        champs_roles = [{0}, {1}, {2}, {3}, set()]
-        draft = Draft(rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0]), rrs(1, [1]), rrs(2, [2]), 
+            rrs(3, [3]), rrs(4, [])
+            ]
+        draft = Draft(rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(3)
         self.assertEqual(draft.legal_actions(), list(range(3)))
 
     def test_legal_actions_first_pick(self):
-        champs_roles = [{0}, {1}, {2}, {3}, set()]
-        draft = Draft(history=[4]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0]), rrs(1, [1]), rrs(2, [2]), 
+            rrs(3, [3]), rrs(4, [])
+            ]
+        draft = Draft(history=[4]*4, rewards=[], rrs_lookup=rrs_lookup)
         self.assertEqual(draft.legal_actions(), list(range(4)))
 
     def test_legal_actions_second_pick(self):
-        champs_roles = [{0}, {1}, {2}, {3}, set()]
-        draft = Draft(history=[4]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0]), rrs(1, [1]), rrs(2, [2]), 
+            rrs(3, [3]), rrs(4, [])
+            ]
+        draft = Draft(history=[4]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(3)
         self.assertEqual(draft.legal_actions(), list(range(3)))
 
     def test_legal_actions_role_removed(self):
-        champs_roles = [{0}, {1}, {2}, {3}, {4}, {0}, set()]
-        draft = Draft(history=[6]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0]), rrs(1, [1]), rrs(2, [2]),
+            rrs(3, [3]), rrs(4, [4]), rrs(5, [0]),
+            rrs(6, [])
+            ]
+        draft = Draft(history=[6]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(0)
         draft.apply(1)
         draft.apply(2)
@@ -48,15 +71,15 @@ class TestLegalActions(unittest.TestCase):
 class TestOpenRoles(unittest.TestCase):
 
     def test_single(self):
-        champs_roles = [{4}]
-        draft = Draft(history=[0]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [rrs(0, [4])]
+        draft = Draft(history=[-1]*4, rewards=[], rrs_lookup=rrs_lookup)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(0)
         self.assertEqual(open_roles(draft), {0, 1, 2, 3})
 
     def test_single_turns_double_to_single(self):
-        champs_roles = [{0, 1}, {1}, set()]
-        draft = Draft(history=[0]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [rrs(0, [0, 1]), rrs(1, [1]), rrs(2, [])]
+        draft = Draft(history=[-1]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         # Skip over team B picks.
@@ -66,8 +89,11 @@ class TestOpenRoles(unittest.TestCase):
         self.assertEqual(open_roles(draft), {2, 3 ,4})
 
     def test_four_plus_single_turns_double_to_single(self):
-        champs_roles = [{0, 1, 2, 3}, {2, 3}, {3}, set()]
-        draft = Draft(history=[0]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0, 1, 2, 3]), rrs(1, [2, 3]),
+            rrs(2, [3]), rrs(3, [])
+            ]
+        draft = Draft(history=[-1]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -78,8 +104,8 @@ class TestOpenRoles(unittest.TestCase):
         self.assertEqual(open_roles(draft), {0, 1, 4})
 
     def test_double_resolve(self):
-        champs_roles = [{0, 1}, {0, 1}, set()]
-        draft = Draft(history=[0]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [rrs(0, [0, 1]), rrs(1, [0, 1]), rrs(2, [])]
+        draft = Draft(history=[-1]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -88,8 +114,11 @@ class TestOpenRoles(unittest.TestCase):
         self.assertEqual(open_roles(draft), {2, 3, 4})
 
     def test_extra_double_plus_double_resolve(self):
-        champs_roles = [{0, 1}, {2, 3}, {2, 3}, set()]
-        draft = Draft(history=[0]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0, 1]), rrs(1, [2, 3]),
+            rrs(2, [2, 3]), rrs(3, [])
+            ]
+        draft = Draft(history=[-1]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -100,8 +129,11 @@ class TestOpenRoles(unittest.TestCase):
         self.assertEqual(open_roles(draft), {0, 1, 4})
 
     def test_three_way_resolve(self):
-        champs_roles = [{0, 1}, {1, 2}, {0, 2}, set()]
-        draft = Draft(history=[0]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0, 1]), rrs(1, [1, 2]),
+            rrs(2, [0, 2]), rrs(3, [])
+            ]
+        draft = Draft(history=[-1]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -113,8 +145,11 @@ class TestOpenRoles(unittest.TestCase):
         self.assertEqual(open_roles(draft), {3, 4})
 
     def test_four_role_plus_three_way_resolve(self):
-        champs_roles = [{0, 1, 2, 3}, {2, 3}, {3, 4}, {2, 4}, set()]
-        draft = Draft(history=[0]*4, rewards=[], champs_roles=champs_roles)
+        rrs_lookup = [
+            rrs(0, [0, 1, 2, 3]), rrs(1, [2, 3]),
+            rrs(2, [3, 4]), rrs(3, [2, 4]), rrs(4, [])
+            ]
+        draft = Draft(history=[-1]*4, rewards=[], rrs_lookup=rrs_lookup)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
