@@ -53,11 +53,11 @@ class Draft:
               B_PICK) 
     num_champs = 70
 
-    def __init__(self, history=None, rewards=None, champs_roles=None,
+    def __init__(self, history=None, rewards=None, rrs_lookup=None,
                  A_roles=None, B_roles=None):
         self.history = history or []
         self.rewards = rewards or self._generate_rewards()
-        self.champs_roles = champs_roles or self._find_champs_roles()
+        self.rrs_lookup = rrs_lookup or self._set_rrs_lookup()
         self.A_roles = A_roles or {'open': set(range(5)), 'partial': []}
         self.B_roles = B_roles or {'open': set(range(5)), 'partial': []}
         self.child_visits = []
@@ -82,30 +82,32 @@ class Draft:
             self._update_open_roles(action, self.B_roles)
         self.history.append(action)
 
-    # Returns champs that have not been picked or banned, and for pick
-    # actions can play in at least one open role for team to pick. See
-    # _update_open_roles for logic maintaining valid open roles.
+    # Returns champs that have not been picked or banned, have been
+    # mentioned in a reward and for pick actions can play in at least
+    # one open role for team to pick. See _update_open_roles for logic
+    # maintaining valid open roles.
     def legal_actions(self):
-        def has_open_role(roles, team_roles):
-            return bool(roles.intersection(team_roles['open']))
+        def has_open_role(role_rewards, team_roles):
+            champ_roles = {rr.role for rr in role_rewards}
+            return bool(champ_roles.intersection(team_roles['open']))
         def available(champ):
             return champ not in self.history
         to_select = self.to_select()
         if to_select == A_PICK:
-            return [c for c, roles in enumerate(self.champs_roles) 
-                    if available(c) and has_open_role(roles, self.A_roles)]
+            return [champ for champ, rrs in enumerate(self.rrs_lookup)
+                    if available(champ) and has_open_role(rrs, self.A_roles)]
         elif to_select == B_PICK:
-            return [c for c, roles in enumerate(self.champs_roles) 
-                    if available(c) and has_open_role(roles, self.B_roles)]
+            return [champ for champ, rrs in enumerate(self.rrs_lookup)
+                    if available(champ) and has_open_role(rrs, self.B_roles)]
         else:
-            return [c for c, roles in enumerate(self.champs_roles)
-                    if available(c) and bool(roles)] 
+            return [champ for champ, rrs in enumerate(self.rrs_lookup)
+                    if available(champ) and bool(rrs)]
 
     def clone(self):
         history = self.history.copy()
         A_roles = deepcopy(self.A_roles)
         B_roles = deepcopy(self.B_roles)
-        return Draft(history, self.rewards, self.champs_roles, A_roles, B_roles)
+        return Draft(history, self.rewards, self.rrs_lookup, A_roles, B_roles)
 
     # To ensure valid actions only contain champs who can fill an open
     # role we maintain a set of open roles and a list of roles
@@ -114,7 +116,8 @@ class Draft:
     # partial roles, is equal to the number of champs who can play them
     # we can determine when they are no longer open.
     def _update_open_roles(self, champ, team_roles):
-        options = self.champs_roles[champ].intersection(team_roles['open'])
+        champ_roles = {rr.role for rr in self.rrs_lookup[champ]}
+        options = champ_roles.intersection(team_roles['open'])
         for n_champs in range(len(team_roles['partial']), 0, -1):
             for partial_subset in combinations(team_roles['partial'], n_champs):
                 unique_roles = options.union(*partial_subset)
@@ -225,10 +228,14 @@ class Draft:
             rewards['counter'].append(reward)
         return rewards
 
-    # Returns a list of size num_champs containg a set of roles each
-    # champ can play.
-    def _find_champs_roles(self):
-        champs_roles = [set() for _ in range(self.num_champs)]
-        for reward in self.rewards['role']:
-            champs_roles[reward.champ].add(reward.role)
-        return champs_roles
+    # Provides a list of size num_champs where each entry contains
+    # the corresponding champ's role rewards. Fast access to a champ's
+    # roles is needed for maintaining open roles and providing legal
+    # actions. Fast access to roles + reward is need for calculating 
+    # terminal value.
+    def _set_rrs_lookup(self):
+        rrs_lookup = [list() for _ in range(self.num_champs)]
+        for role_reward in self.rewards['role']:
+            rrs_lookup[role_reward.champ].append(role_reward)
+        return rrs_lookup
+
