@@ -68,6 +68,8 @@ class Draft:
     def terminal(self):
         return len(self.history) == len(self.format)
 
+    # Zero-sum evalution from team A's perspective in accordance to
+    # the supplied rewards.
     def terminal_value(self):
         try:
             return self._terminal_value
@@ -77,29 +79,34 @@ class Draft:
             team_B = {champ for champ, turn in zip(self.history, self.format)
                       if turn == B_PICK}
             value = 0
-            value += _role_value(team_A, team_B)
-            value += _synergy_value(team_A, team_B)
-            value += _counter_value(team_A, team_B)
+            value += self._team_role_value(team_A, is_A=True)
+            value -= self._team_role_value(team_B, is_A=False)
+            value += self._synergy_value(team_A, team_B)
+            value += self._counter_value(team_A, team_B)
+            self._terminal_value = value
+            return value
 
-    def _role_value(team_A, team_B):
-        # this function requires knowing all role rewards for each 
-        # champ in the team and there is no way around that if we 
-        # want to test which role assignment gives best reward.
-        # we could loop through all role rewards every time here and 
-        # store the values corresponding to team a and b heroes. 
-        # however, if we need to evaluate terminal positions for a 
-        # single set of commands over and over which we will as we 
-        # approach the end stage of draft because for example in second 
-        # last pick there is only 56 initial heroes to try then every other 
-        # simulation is going to be doing a terminal value. so that saves
-        # having to do about 750 loops through the role rewards per game at 
-        # the MINIMUM. which means i save at least a second every 200 games.
-        # so its probably best if i refactor champs_roles to include the role
-        # rewards for each hero. that way i can still use it for open roles,
-        # albeit with more hastle, but can also use it for this.
-        pass
-            
-    def _synergy_value(team_A, team_B):
+    # As there could be multiple role assignments for a given team, we 
+    # recursively search all possible assignments and return the value
+    # of the best.
+    def _team_role_value(self, team_champs, is_A):
+        team_rrs = [self.rrs_lookup[champ] for champ in team_champs]
+        def best_value(current_value, roles_filled, pos):
+            if pos == len(team_champs):
+                return current_value
+            best = float('-inf')
+            for rr in team_rrs[pos]:
+                if rr.role not in roles_filled:
+                    roles_filled.add(rr.role)
+                    value = current_value + (rr.A_value if is_A else rr.B_value)
+                    value = best_value(value, roles_filled, pos + 1)
+                    roles_filled.remove(rr.role)
+                    if value > best:
+                        best = value
+            return best
+        return best_value(0, set(), 0)
+
+    def _synergy_value(self, team_A, team_B):
         value = 0
         for reward in self.rewards['synergy']:
             if reward.champs.issubset(team_A):
@@ -108,7 +115,7 @@ class Draft:
                 value -= reward.B_value
         return value
 
-    def _counter_value(team_A, team_B):
+    def _counter_value(self, team_A, team_B):
         value = 0
         for reward in self.rewards['counter']:
             if (reward.team_champs.issubset(team_A) 
