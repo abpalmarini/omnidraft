@@ -105,7 +105,6 @@ class Draft:
                     if total_value > best:
                         best = total_value
             return best
-
         return best_value(0, set(), 0)
 
     def _synergy_value(self, team_A, team_B):

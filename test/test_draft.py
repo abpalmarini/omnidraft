@@ -294,5 +294,24 @@ class TestTerminalValue(unittest.TestCase):
         self.assertEqual(draft.terminal_value(), 11 - 14 - 1 - 2)
 
 
+class TestMiscDraftMethods(unittest.TestCase):
+
+    def test_terminal(self):
+        draft = Draft(list(range(13)))
+        self.assertFalse(draft.terminal())
+        draft.apply(13)
+        self.assertTrue(draft.terminal())
+
+    def test_clone(self):
+        rrs_lookup = [rrs(0, [4])]
+        draft = Draft(history=[-1]*4, rrs_lookup=rrs_lookup)
+        draft_clone = draft.clone()
+        draft_clone.apply(0)
+        self.assertEqual(draft.history, [-1, -1, -1, -1])
+        self.assertEqual(open_roles(draft), set(range(5)))
+        self.assertEqual(draft_clone.history, [-1, -1, -1, -1, 0])
+        self.assertEqual(open_roles(draft_clone), set(range(4)))
+        
+
 if __name__ == '__main__':
     unittest.main()
