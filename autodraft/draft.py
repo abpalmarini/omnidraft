@@ -91,6 +91,7 @@ class Draft:
     # of the best.
     def _team_role_value(self, team_champs, is_A):
         team_rrs = [self.rrs_lookup[champ] for champ in team_champs]
+
         def best_value(current_value, roles_filled, pos):
             if pos == len(team_champs):
                 return current_value
@@ -99,11 +100,12 @@ class Draft:
                 if rr.role not in roles_filled:
                     roles_filled.add(rr.role)
                     value = current_value + (rr.A_value if is_A else rr.B_value)
-                    value = best_value(value, roles_filled, pos + 1)
+                    total_value = best_value(value, roles_filled, pos + 1)
                     roles_filled.remove(rr.role)
-                    if value > best:
-                        best = value
+                    if total_value > best:
+                        best = total_value
             return best
+
         return best_value(0, set(), 0)
 
     def _synergy_value(self, team_A, team_B):
