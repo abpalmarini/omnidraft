@@ -294,3 +294,6 @@ class Draft:
             rrs_lookup[role_reward.champ].append(role_reward)
         return rrs_lookup
 
+    def make_nn_input(self, state_idx):
+        # TODO
+        return 1.
