@@ -3,10 +3,10 @@ from copy import deepcopy
 from random import random, randint, sample, choice, choices
 
 
-A_PICK = 1
-A_BAN  = 2
-B_PICK = 3
-B_BAN  = 4
+A = 1
+B = 2
+PICK = 3
+BAN  = 4
 
 
 class RoleReward:
@@ -37,20 +37,20 @@ class CounterReward:
 
 class Draft:
     # @Adjustable
-    format = (A_BAN, 
-              B_BAN,
-              A_BAN,
-              B_BAN,
-              A_PICK,
-              B_PICK,
-              B_PICK,
-              A_PICK,
-              A_PICK,
-              B_PICK,
-              B_PICK,
-              A_PICK,
-              A_PICK,
-              B_PICK) 
+    format = ((A, BAN),
+              (B, BAN),
+              (A, BAN),
+              (B, BAN),
+              (A, PICK),
+              (B, PICK),
+              (B, PICK),
+              (A, PICK),
+              (A, PICK),
+              (B, PICK),
+              (B, PICK),
+              (A, PICK),
+              (A, PICK),
+              (B, PICK))
     num_champs = 70
 
     def __init__(self, history=None, rewards=None, rrs_lookup=None,
@@ -75,9 +75,9 @@ class Draft:
             return self._terminal_value
         except AttributeError:
             team_A = {champ for champ, turn in zip(self.history, self.format) 
-                      if turn == A_PICK}
+                      if turn == (A, PICK)}
             team_B = {champ for champ, turn in zip(self.history, self.format)
-                      if turn == B_PICK}
+                      if turn == (B, PICK)}
             value = 0
             value += self._team_role_value(team_A, is_A=True)
             value -= self._team_role_value(team_B, is_A=False)
@@ -129,9 +129,9 @@ class Draft:
 
     def apply(self, action):
         to_select = self.to_select()
-        if to_select == A_PICK:
+        if to_select == (A, PICK):
             self._update_open_roles(action, self.A_roles)
-        elif to_select == B_PICK:
+        elif to_select == (B, PICK):
             self._update_open_roles(action, self.B_roles)
         self.history.append(action)
 
@@ -148,10 +148,10 @@ class Draft:
         def available(champ):
             return champ not in self.history
         to_select = self.to_select()
-        if to_select == A_PICK:
+        if to_select == (A, PICK):
             return [champ for champ, rrs in enumerate(self.rrs_lookup)
                     if has_open_role(rrs, self.A_roles) and available(champ)]
-        elif to_select == B_PICK:
+        elif to_select == (B, PICK):
             return [champ for champ, rrs in enumerate(self.rrs_lookup)
                     if has_open_role(rrs, self.B_roles) and available(champ)]
         else:
