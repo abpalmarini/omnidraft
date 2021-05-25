@@ -7,17 +7,16 @@ import math
 import numpy as np
 
 
-# A node in the MCTS represents a state-action pair. The to_select
-# attribute refers to the team that could select the action the 
-# node is representing.
+# A node in the MCTS represents a state-action pair. The team attribute
+# corresponds to the team who can select the action.
 class Node:
 
-    def __init__(self, prior, to_select):
+    def __init__(self, prior, team):
         self.visit_count = 0
         self.value_sum = 0
         self.value = 0
         self.prior = prior
-        self.to_select = to_select
+        self.team = team
         self.children = {}
 
     def expanded(self):
@@ -34,6 +33,10 @@ class Node:
             add_noise(self.children[action], noise)
 
 
+# The MCTS algorithm. Iteratively executes the three main phases
+# (selecting a child until a leaf node is reached, expanding the node
+# and having the NN evaluate its positiion, backing up the value for
+# each node visited) as described in the paper and briefly below.
 def run_mcts(config, draft, network, root=None):
     if root is None:
         root = Node(None, None)
@@ -44,13 +47,20 @@ def run_mcts(config, draft, network, root=None):
         simulator_draft = draft.clone()
         node = root
         search_path = [node]
+
         while node.expanded():
             action, node = select_child(config, node)
             simulator_draft.apply(action)
             search_path.append(node)
-        # TODO
-        # * evaluate node (taking into account it could be terminal)
-        # * backup value
+
+        if simulator_draft.terminal():
+            value = simulator_draft.terminal_value()
+            team, _  = simulator_draft.format[0] # Team A selects first.
+        else:
+            value = expand_and_evaluate(node, simulator_draft, network)
+            team, _ = simulator_draft.to_select()
+        backup(search_path, value, team)
+    return root
 
 
 # As explained in the AlphaZero paper; we select an action in the tree
@@ -73,6 +83,7 @@ def select_child(config, parent):
                            for action, child in parent.children.items())
     return action, child
 
+
 # To expand a node we have the NN evaluate the current state. The
 # network outputs move probabilities based on what it initially
 # believes is best. A child node is created for each legal action and
@@ -84,7 +95,16 @@ def expand_and_evaluate(node, draft, network):
     policy_logits, value = network(draft.make_nn_input(-1), True)
     policy = {a: math.exp(policy_logits[a]) for a in draft.legal_actions()}
     policy_sum = sum(policy.values())
-    to_select = draft.to_select()
+    team, _ = draft.to_select()
     for action, p in policy.items():
-        node.children[action] = Node(p / policy_sum, to_select)
+        node.children[action] = Node(p / policy_sum, team)
     return value
+
+
+# All state-action pair nodes that were visited in a simulation are
+# updated to reflect the value they lead to.
+def backup(search_path, value, team):
+    for node in search_path:
+        node.visit_count += 1
+        node.value_sum += value if node.team == team else - value
+        node.value = node.value_sum / node.visit_count
