@@ -92,7 +92,7 @@ def select_child(config, parent):
 # it can get from the current state. This value is returned so it can
 # be backed up the tree.
 def expand_and_evaluate(node, draft, network):
-    policy_logits, value = network(draft.make_nn_input(-1), True)
+    policy_logits, value = network(draft.make_nn_input(-1))
     policy = {a: math.exp(policy_logits[a]) for a in draft.legal_actions()}
     policy_sum = sum(policy.values())
     team, _ = draft.to_select()
