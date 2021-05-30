@@ -60,6 +60,7 @@ class Draft:
         self.rrs_lookup = rrs_lookup or self._set_rrs_lookup()
         self.A_roles = A_roles or {'open': set(range(5)), 'partial': []}
         self.B_roles = B_roles or {'open': set(range(5)), 'partial': []}
+        self.open_roles_history = [(list(range(5)), list(range(5)))]
         self.child_visits = []
 
     def to_select(self):
@@ -133,6 +134,8 @@ class Draft:
             self._update_open_roles(action, self.A_roles)
         elif to_select == (B, PICK):
             self._update_open_roles(action, self.B_roles)
+        open_roles = (self.A_roles['open'], self.B_roles['open'])
+        self.open_roles_history.append(open_roles)
         self.history.append(action)
 
     # Returns champs that have not been picked or banned, have been
