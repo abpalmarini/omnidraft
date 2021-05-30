@@ -56,11 +56,11 @@ class Draft:
               (B, PICK))
     num_champs = 70
 
-    def __init__(self, history=None, rewards=None, rrs_lookup=None,
-                 A_roles=None, B_roles=None):
+    def __init__(self, history=None, rewards=None, A_roles=None, B_roles=None):
         self.history = history or []
         self.rewards = rewards or self._generate_rewards()
-        self.rrs_lookup = rrs_lookup or self._set_rrs_lookup()
+        if 'rrs_lookup' not in self.rewards:
+            self._set_rrs_lookup()
         self.A_roles = A_roles or {'open': set(range(5)), 'partial': []}
         self.B_roles = B_roles or {'open': set(range(5)), 'partial': []}
         self.open_roles_history = [(list(range(5)), list(range(5)))]
@@ -94,7 +94,7 @@ class Draft:
     # recursively search all possible assignments and return the value
     # of the best.
     def _team_role_value(self, team_champs, is_A):
-        team_rrs = [self.rrs_lookup[champ] for champ in team_champs]
+        team_rrs = [self.rewards['rrs_lookup'][champ] for champ in team_champs]
 
         def best_value(current_value, roles_filled, pos):
             if pos == len(team_champs):
@@ -155,20 +155,20 @@ class Draft:
             return champ not in self.history
         to_select = self.to_select()
         if to_select == (A, PICK):
-            return [champ for champ, rrs in enumerate(self.rrs_lookup)
+            return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                     if has_open_role(rrs, self.A_roles) and available(champ)]
         elif to_select == (B, PICK):
-            return [champ for champ, rrs in enumerate(self.rrs_lookup)
+            return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                     if has_open_role(rrs, self.B_roles) and available(champ)]
         else:
-            return [champ for champ, rrs in enumerate(self.rrs_lookup)
+            return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                     if bool(rrs) and available(champ)]
 
     def clone(self):
         history = self.history.copy()
         A_roles = deepcopy(self.A_roles)
         B_roles = deepcopy(self.B_roles)
-        return Draft(history, self.rewards, self.rrs_lookup, A_roles, B_roles)
+        return Draft(history, self.rewards, A_roles, B_roles)
 
     # To ensure valid actions only contain champs who can fill an open
     # role we maintain a set of open roles and a list of roles
@@ -177,7 +177,7 @@ class Draft:
     # partial roles, is equal to the number of champs who can play them
     # we can determine when they are no longer open.
     def _update_open_roles(self, champ, team_roles):
-        champ_roles = {rr.role for rr in self.rrs_lookup[champ]}
+        champ_roles = {rr.role for rr in self.rewards['rrs_lookup'][champ]}
         options = champ_roles.intersection(team_roles['open'])
         for n_champs in range(len(team_roles['partial']), 0, -1):
             for partial_subset in combinations(team_roles['partial'], n_champs):
@@ -297,7 +297,7 @@ class Draft:
         rrs_lookup = [list() for _ in range(self.num_champs)]
         for role_reward in self.rewards['role']:
             rrs_lookup[role_reward.champ].append(role_reward)
-        return rrs_lookup
+        self.rewards['rrs_lookup'] = rrs_lookup
 
     # Returns both: a single vector capturing the entire draft state
     # when selecting for the given draft position and a vector for each
