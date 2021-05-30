@@ -1,8 +1,11 @@
 from itertools import combinations
 from copy import deepcopy
 from random import random, randint, sample, choice, choices
+import numpy as np
 
 
+NUM_ROLES = 5
+# @Enums
 A = 1
 B = 2
 PICK = 3
@@ -201,7 +204,6 @@ class Draft:
     # types that it can learn the direct relationship they have on the
     # draft outcome. 
     def _generate_rewards(self):
-        NUM_ROLES = 5
         # @Adjustable
         min_champs_per_role = 4
         num_synergies_range = (3, 20)
@@ -297,6 +299,79 @@ class Draft:
             rrs_lookup[role_reward.champ].append(role_reward)
         return rrs_lookup
 
-    def make_nn_input(self, state_idx):
-        # TODO
-        return 1.
+    # Returns both: a single vector capturing the entire draft state
+    # when selecting for the given draft position and a vector for each
+    # reward.
+    def make_nn_input(self, pos=None):
+        if pos is None:
+            pos = len(self.history)
+
+        num_features = (1 + 1 + 1
+                        + len(self.format)
+                        + (2 * NUM_ROLES)
+                        + (4 * self.num_champs))
+        draft_state = np.zeros(num_features, dtype=np.float32)
+        offset = 0
+
+        # Turn information.
+        team, selection_type = self.format[pos]
+        next_turn_team, _ = self.format[(pos + 1) % len(self.format)]
+        if team == A:
+            draft_state[offset + 0] = 1
+        if selection_type == PICK:
+            draft_state[offset + 1] = 1
+        if next_turn_team == team:
+            draft_state[offset + 2] = 1
+        offset += 3
+
+        # Position in draft.
+        draft_state[offset + pos] = 1
+        offset += len(self.format)
+
+        # Open roles for the selecting team and enemy.
+        A_open_roles, B_open_roles = self.open_roles_history[pos]
+        if team == A:
+            team_open_roles = A_open_roles
+            enemy_open_roles = B_open_roles
+        else:
+            team_open_roles = B_open_roles
+            enemy_open_roles = A_open_roles
+        for role in team_open_roles:
+            draft_state[offset + role] = 1
+        offset += NUM_ROLES
+        for role in enemy_open_roles:
+            draft_state[offset + role] = 1
+        offset += NUM_ROLES
+
+        # Champs picked and banned for the selecting team and enemy.
+        A_picks, B_picks, A_bans, B_bans = [], [], [], []
+        for champ, turn in zip(self.history[:pos], self.format):
+            if turn == (A, PICK):
+                A_picks.append(champ)
+            elif turn == (B, PICK):
+                B_picks.append(champ)
+            elif turn == (A, BAN):
+                A_bans.append(champ)
+            else:
+                B_bans.append(champ)
+        if team == A:
+            team_picks = A_picks
+            team_bans = A_bans
+            enemy_picks = B_picks
+            enemy_bans = B_bans
+        else:
+            team_picks = B_picks
+            team_bans = B_bans
+            enemy_picks = A_picks
+            enemy_bans = A_bans
+        for champ in team_picks:
+            draft_state[offset + champ] = 1
+        offset += self.num_champs
+        for champ in team_bans:
+            draft_state[offset + champ] = 1
+        offset += self.num_champs
+        for champ in enemy_picks:
+            draft_state[offset + champ] = 1
+        offset += self.num_champs
+        for champ in enemy_bans:
+            draft_state[offset + champ] = 1
