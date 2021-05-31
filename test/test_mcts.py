@@ -60,7 +60,8 @@ class TestMCTS(unittest.TestCase):
         RR = RoleReward
         rewards['role'] = [RR(0, 0, 0, 0), RR(1, 1, 0, 0), RR(2, 2, 0, 0)]
         A_roles = {'open': {0}, 'partial': []}
-        draft = Draft(history=[-1]*4, rewards=rewards, A_roles=A_roles)
+        draft = Draft(history=[-1]*4, rewards=rewards)
+        draft.roles['A'] = A_roles
         # Keeping track of values assigned by NN at each position.
         values = []
         def network(x):

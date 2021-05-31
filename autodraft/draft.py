@@ -56,14 +56,12 @@ class Draft:
               (B, PICK))
     num_champs = 70
 
-    def __init__(self, history=None, rewards=None, A_roles=None, B_roles=None):
+    def __init__(self, history=None, rewards=None, roles=None):
         self.history = history or []
         self.rewards = rewards or self._generate_rewards()
         if 'rrs_lookup' not in self.rewards:
             self._set_rrs_lookup()
-        self.A_roles = A_roles or {'open': set(range(5)), 'partial': []}
-        self.B_roles = B_roles or {'open': set(range(5)), 'partial': []}
-        self.open_roles_history = [(list(range(5)), list(range(5)))]
+        self.roles = roles or self._init_roles()
         self.child_visits = []
 
     def to_select(self):
@@ -134,17 +132,20 @@ class Draft:
     def apply(self, action):
         to_select = self.to_select()
         if to_select == (A, PICK):
-            self._update_open_roles(action, self.A_roles)
+            self._update_open_roles(action, self.roles['A'])
         elif to_select == (B, PICK):
-            self._update_open_roles(action, self.B_roles)
-        open_roles = (self.A_roles['open'], self.B_roles['open'])
-        self.open_roles_history.append(open_roles)
+            self._update_open_roles(action, self.roles['B'])
+        A_open_roles = tuple(self.roles['A']['open'])
+        B_open_roles = tuple(self.roles['B']['open'])
+        self.roles['open_history'].append((A_open_roles, B_open_roles))
         self.history.append(action)
 
     # Returns champs that have not been picked or banned, have been
     # mentioned in a reward and for pick actions can play in at least
-    # one open role for team to pick. See _update_open_roles for logic
-    # maintaining valid open roles.
+    # one open role for team to pick. Without enforcing that the NN
+    # must have one champ per role it could gain a higher reward by
+    # picking a champ in a duplicate role to avoid being countered.
+    # See _update_open_roles for logic maintaining valid open roles.
     def legal_actions(self):
         def has_open_role(role_rewards, team_roles):
             for role_reward in role_rewards:
@@ -156,19 +157,16 @@ class Draft:
         to_select = self.to_select()
         if to_select == (A, PICK):
             return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
-                    if has_open_role(rrs, self.A_roles) and available(champ)]
+                    if has_open_role(rrs, self.roles['A']) and available(champ)]
         elif to_select == (B, PICK):
             return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
-                    if has_open_role(rrs, self.B_roles) and available(champ)]
+                    if has_open_role(rrs, self.roles['B']) and available(champ)]
         else:
             return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                     if bool(rrs) and available(champ)]
 
     def clone(self):
-        history = self.history.copy()
-        A_roles = deepcopy(self.A_roles)
-        B_roles = deepcopy(self.B_roles)
-        return Draft(history, self.rewards, A_roles, B_roles)
+        return Draft(self.history.copy(), self.rewards, deepcopy(self.roles))
 
     # To ensure valid actions only contain champs who can fill an open
     # role we maintain a set of open roles and a list of roles
@@ -299,6 +297,17 @@ class Draft:
             rrs_lookup[role_reward.champ].append(role_reward)
         self.rewards['rrs_lookup'] = rrs_lookup
 
+    # Provides information on what roles each team could still pick
+    # champs from. This is needed for producing legal actions. The
+    # roles each team had open at each stage in the draft is kept
+    # for later producing the draft state when training the NN.
+    def _init_roles(self):
+        roles = {}
+        roles['A'] = {'open': set(range(5)), 'partial': []}
+        roles['B'] = {'open': set(range(5)), 'partial': []}
+        roles['open_history'] = [(tuple(range(5)), tuple(range(5)))]
+        return roles
+
     # Returns both: a single vector capturing the entire draft state
     # when selecting for the given draft position and a vector for each
     # reward.
@@ -329,7 +338,7 @@ class Draft:
         offset += len(self.format)
 
         # Open roles for the selecting team and enemy.
-        A_open_roles, B_open_roles = self.open_roles_history[pos]
+        A_open_roles, B_open_roles = self.roles['open_history'][pos]
         if team == A:
             team_open_roles = A_open_roles
             enemy_open_roles = B_open_roles

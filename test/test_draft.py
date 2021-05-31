@@ -3,7 +3,7 @@ from autodraft.draft import Draft, RoleReward, SynergyReward, CounterReward
 
 
 def open_roles(draft):
-    return draft.A_roles['open']
+    return draft.roles['A']['open']
 
 # Help to quickly create list of role rewards.
 def rrs(champ, roles):
