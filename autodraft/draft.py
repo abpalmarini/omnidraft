@@ -349,13 +349,9 @@ class Draft:
                     nn_reward[offset + champ] = 1
         self.rewards['nn_input'] = (A_values, B_values, nn_rewards)
 
-    # Returns both: a single vector capturing the entire draft state
-    # when selecting for the given draft position and a vector for each
-    # reward.
-    def make_nn_input(self, pos=None):
-        if pos is None:
-            pos = len(self.history)
-
+    # Creates the NN input representation for the state of the draft
+    # at a given position in its history.
+    def _make_nn_draft_state_input(self, pos):
         num_features = (1 + 1 + 1
                         + len(self.format)
                         + (2 * NUM_ROLES)
@@ -425,3 +421,14 @@ class Draft:
         offset += self.num_champs
         for champ in enemy_bans:
             draft_state[offset + champ] = 1
+        
+        return draft_state
+
+    # Returns both: a single vector capturing the entire draft state
+    # when selecting for the given draft position and a vector for each
+    # reward.
+    def make_nn_input(self, pos=None):
+        if pos is None:
+            pos = len(self.history)
+
+        # TODO
