@@ -1,4 +1,4 @@
-from itertools import combinations
+from itertools import combinations, chain
 from copy import deepcopy
 from random import random, randint, sample, choice, choices
 import numpy as np
@@ -61,6 +61,8 @@ class Draft:
         self.rewards = rewards or self._generate_rewards()
         if 'rrs_lookup' not in self.rewards:
             self._set_rrs_lookup()
+        if 'nn_input' not in self.rewards:
+            self._set_nn_rewards_input()
         self.roles = roles or self._init_roles()
         self.child_visits = []
 
@@ -307,6 +309,45 @@ class Draft:
         roles['B'] = {'open': set(range(5)), 'partial': []}
         roles['open_history'] = [(tuple(range(5)), tuple(range(5)))]
         return roles
+
+    # Creates the NN input representation for each reward. These are
+    # created once at the start and cached as they do not change from
+    # state to state. The only thing that does change is the ordering
+    # of values for each reward (depending if it is A or B to pick).
+    def _set_nn_rewards_input(self):
+        num_rewards = (len(self.rewards['role'])
+                       + len(self.rewards['synergy'])
+                       + len(self.rewards['counter']))
+        num_features = 2 + 1 + NUM_ROLES + (2 * self.num_champs)
+        nn_rewards = np.zeros((num_rewards, num_features))
+        A_values = np.empty(num_rewards)
+        B_values = np.empty(num_rewards)
+        all_rewards = chain(self.rewards['role'],
+                            self.rewards['synergy'],
+                            self.rewards['counter'])
+        for i, reward in enumerate(all_rewards):
+            A_values[i] = reward.A_value
+            B_values[i] = reward.B_value
+            nn_reward = nn_rewards[i]
+            offset = 2 # Skipping the reward values.
+            if isinstance(reward, RoleReward):
+                nn_reward[offset + 0] = 1
+                offset += 1
+                nn_reward[offset + reward.role] = 1
+                offset += NUM_ROLES
+                nn_reward[offset + reward.champ] = 1
+            elif isinstance(reward, SynergyReward):
+                offset += 1 + NUM_ROLES
+                for champ in reward.champs:
+                    nn_reward[offset + champ] = 1
+            elif isinstance(reward, CounterReward):
+                offset += 1 + NUM_ROLES
+                for champ in reward.team_champs:
+                    nn_reward[offset + champ] = 1
+                offset += self.num_champs
+                for champ in reward.enemy_champs:
+                    nn_reward[offset + champ] = 1
+        self.rewards['nn_input'] = (A_values, B_values, nn_rewards)
 
     # Returns both: a single vector capturing the entire draft state
     # when selecting for the given draft position and a vector for each
