@@ -83,7 +83,7 @@ class TestMCTS(unittest.TestCase):
         history = [-1, -1, -1, -1, 0, 5, 6, 1, 2, 7, 8, 3, 4]
         # Copying and pasting rewards from test_draft.py that results
         # in a terminal value of -3. 
-        rewards = {'role': [], 'synergy': [], 'counter': []}
+        rewards = {'role': [], 'combo': []}
         RR = RoleReward
         rewards['role'] += [RR(0, 0, 1, 9), RR(0, 1, 9, 9), RR(0, 2, 7, 9),
                             RR(0, 3, 3, 9), RR(1, 1, 1, 9), RR(1, 2, 1, 9),

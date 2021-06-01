@@ -1,5 +1,7 @@
 import unittest 
-from autodraft.draft import Draft, RoleReward, SynergyReward, CounterReward
+from autodraft.draft import Draft
+from autodraft.draft import RoleReward as RR
+from autodraft.draft import ComboReward as CR
 
 
 def open_roles(draft):
@@ -9,7 +11,7 @@ def open_roles(draft):
 def rrs(champ, roles):
     role_rewards = []
     for role in roles:
-        role_rewards.append(RoleReward(champ, role, 0, 0))
+        role_rewards.append(RR(champ, role, 0, 0))
     return role_rewards
 
 
@@ -167,44 +169,39 @@ class TestOpenRoles(unittest.TestCase):
 class TestTerminalValue(unittest.TestCase):
 
     def setUp(self):
-        self.rewards = {'role': [], 'synergy': [], 'counter': []}
+        self.rewards = {'role': [], 'combo': []}
         # This provides A with champs 0..4 and B with champs 5..9
         self.history = [-1, -1, -1, -1, 0, 5, 6, 1, 2, 7, 8, 3, 4, 9]
         self.team_A = {0, 1, 2, 3, 4}
         self.team_B = {5, 6, 7, 8, 9}
 
     def test_synergy_value_one_team(self):
-        SR = SynergyReward
-        self.rewards['synergy'] = [SR({0, 1}, 2, 3), SR({0, 5}, 5, 5),
-                                   SR({1, 2, 3}, 1, 5)
-                                   ]
+        self.rewards['combo'] = [CR({0, 1}, set(), 2, 3), CR({0, 5}, set(), 5, 5),
+                                 CR({1, 2, 3}, set(), 1, 5)
+                                 ]
         draft = Draft(self.history, self.rewards)
-        self.assertEqual(draft._synergy_value(self.team_A, self.team_B), 3)
+        self.assertEqual(draft._combo_value(self.team_A, self.team_B), 3)
 
     def test_synergy_value_both_teams(self):
-        SR = SynergyReward
-        self.rewards['synergy'] = [SR({0, 1}, 2, 3), SR({0, 5}, 5, 5),
-                                   SR({5, 6, 7}, 5, 3)
-                                   ]
+        self.rewards['combo'] = [CR({0, 1}, set(), 2, 3), CR({0, 5}, set(), 5, 5),
+                                 CR({5, 6, 7}, set(), 5, 3)
+                                 ]
         draft = Draft(self.history, self.rewards)
-        self.assertEqual(draft._synergy_value(self.team_A, self.team_B), -1)
+        self.assertEqual(draft._combo_value(self.team_A, self.team_B), -1)
 
     def test_counter_value_same_team(self):
-        CR = CounterReward
-        self.rewards['counter'] = [CR({0}, {2}, 5, 5)]
+        self.rewards['combo'] = [CR({0}, {2}, 5, 5)]
         draft = Draft(self.history, self.rewards)
-        self.assertEqual(draft._counter_value(self.team_A, self.team_B), 0)
+        self.assertEqual(draft._combo_value(self.team_A, self.team_B), 0)
 
     def test_counter_value(self):
-        CR = CounterReward
-        self.rewards['counter'] = [CR({0}, {2}, 5, 5), CR({0}, {5}, 2, 3), 
-                                   CR({8, 9}, {2, 3, 4}, 1, 4)
-                                   ]
+        self.rewards['combo'] = [CR({0}, {2}, 5, 5), CR({0}, {5}, 2, 3),
+                                 CR({8, 9}, {2, 3, 4}, 1, 4)
+                                 ]
         draft = Draft(self.history, self.rewards)
-        self.assertEqual(draft._counter_value(self.team_A, self.team_B), -2)
+        self.assertEqual(draft._combo_value(self.team_A, self.team_B), -2)
 
     def test_role_value_standard(self):
-        RR = RoleReward
         self.rewards['role'] = [RR(0, 0, 1, 9), RR(1, 1, 1, 9), RR(2, 2, 1, 9),
                                 RR(3, 3, 1, 9), RR(4, 4, 3, 9)
                                 ] 
@@ -212,7 +209,6 @@ class TestTerminalValue(unittest.TestCase):
         self.assertEqual(draft._team_role_value(self.team_A, True), 7)
 
     def test_role_value_high_value_not_possible(self):
-        RR = RoleReward
         self.rewards['role'] = [RR(0, 0, 1, 9), RR(1, 1, 1, 9), RR(2, 2, 1, 9),
                                 RR(3, 3, 1, 9), RR(4, 4, 3, 9), RR(0, 1, 5, 9)
                                 ] 
@@ -220,7 +216,6 @@ class TestTerminalValue(unittest.TestCase):
         self.assertEqual(draft._team_role_value(self.team_A, True), 7)
 
     def test_role_value_two_options(self):
-        RR = RoleReward
         # Champ 0 can play role 0 with reward 1 or role 1 with reward 3.
         # Champ 1 can play both role 0 and 1 with reward 1 so the role
         # value should assign the highest.
@@ -232,7 +227,6 @@ class TestTerminalValue(unittest.TestCase):
         self.assertEqual(draft._team_role_value(self.team_A, True), 9)
 
     def test_role_value_team_B(self):
-        RR = RoleReward
         # 6 can play 1 and 2, 9 can play 1 and 4, 8 can play 4 and 2.
         # Highest assignment when 6 plays 1, 9 plays 4 and 8 plays 2
         # even though 8 would be better off alone in 4.
@@ -244,7 +238,6 @@ class TestTerminalValue(unittest.TestCase):
         self.assertEqual(draft._team_role_value(self.team_B, False), 14)
 
     def test_role_value_multi_options(self):
-        RR = RoleReward
         # 0 can play 0, 1, 2, 3
         # 1 can play 1, 2
         # 2 can play 1, 2
@@ -267,9 +260,6 @@ class TestTerminalValue(unittest.TestCase):
 
     def test_total_termainal_value(self):
         # Copying and pasting specific instances from the tests above.
-        RR = RoleReward
-        SR = SynergyReward
-        CR = CounterReward
         # :test_role_value_multi_options results in value of 11
         self.rewards['role'] += [RR(0, 0, 1, 9), RR(0, 1, 9, 9), RR(0, 2, 7, 9),
                                  RR(0, 3, 3, 9), RR(1, 1, 1, 9), RR(1, 2, 1, 9),
@@ -283,13 +273,13 @@ class TestTerminalValue(unittest.TestCase):
                                  RR(9, 1, 2, 2), RR(8, 2, 5, 2)
                                  ]
         # :test_synergy_value_both_teams results in value of -1
-        self.rewards['synergy'] = [SR({0, 1}, 2, 3), SR({0, 5}, 5, 5),
-                                   SR({5, 6, 7}, 5, 3)
-                                   ]
+        self.rewards['combo'] += [CR({0, 1}, set(), 2, 3), CR({0, 5}, set(), 5, 5),
+                                  CR({5, 6, 7}, set(), 5, 3)
+                                  ]
         # :test_counter_value results in value of -2
-        self.rewards['counter'] = [CR({0}, {2}, 5, 5), CR({0}, {5}, 2, 3), 
-                                   CR({8, 9}, {2, 3, 4}, 1, 4)
-                                   ]
+        self.rewards['combo'] += [CR({0}, {2}, 5, 5), CR({0}, {5}, 2, 3),
+                                  CR({8, 9}, {2, 3, 4}, 1, 4)
+                                  ]
         draft = Draft(self.history, self.rewards)
         self.assertEqual(draft.terminal_value(), 11 - 14 - 1 - 2)
 

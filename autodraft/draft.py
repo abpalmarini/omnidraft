@@ -18,15 +18,7 @@ class RoleReward:
         self.B_value = B_value
 
 
-class SynergyReward:
-    __slots__ = ['champs', 'A_value', 'B_value']
-    def __init__(self, champs, A_value, B_value):
-        self.champs = champs
-        self.A_value = A_value
-        self.B_value = B_value
-
-
-class CounterReward:
+class ComboReward:
     __slots__ = ['team_champs', 'enemy_champs', 'A_value', 'B_value']
     def __init__(self, team_champs, enemy_champs, A_value, B_value):
         self.team_champs = team_champs
@@ -82,8 +74,7 @@ class Draft:
             value = 0
             value += self._team_role_value(team_A, is_A=True)
             value -= self._team_role_value(team_B, is_A=False)
-            value += self._synergy_value(team_A, team_B)
-            value += self._counter_value(team_A, team_B)
+            value += self._combo_value(team_A, team_B)
             self._terminal_value = value
             return value
 
@@ -108,18 +99,9 @@ class Draft:
             return best
         return best_value(0, set(), 0)
 
-    def _synergy_value(self, team_A, team_B):
+    def _combo_value(self, team_A, team_B):
         value = 0
-        for reward in self.rewards['synergy']:
-            if reward.champs.issubset(team_A):
-                value += reward.A_value
-            elif reward.champs.issubset(team_B):
-                value -= reward.B_value
-        return value
-
-    def _counter_value(self, team_A, team_B):
-        value = 0
-        for reward in self.rewards['counter']:
+        for reward in self.rewards['combo']:
             if (reward.team_champs.issubset(team_A) 
                     and reward.enemy_champs.issubset(team_B)):
                 value += reward.A_value
@@ -272,18 +254,18 @@ class Draft:
 
         # Randomly assign a reward value for team A/B and create the
         # the reward objects.
-        rewards = {'role': [], 'synergy': [], 'counter': []}
+        rewards = {'role': [], 'combo': []}
         for role, champs in enumerate(champs_per_role):
             for champ in champs:
                 reward = RoleReward(champ, role, *rand_team_values())
                 rewards['role'].append(reward)
         for champs in synergies:
-            reward = SynergyReward(champs, *rand_team_values())
-            rewards['synergy'].append(reward)
+            reward = ComboReward(champs, set(), *rand_team_values())
+            rewards['combo'].append(reward)
         for team_champs, enemy_champs in counters:
-            reward = CounterReward(team_champs, enemy_champs, 
+            reward = ComboReward(team_champs, enemy_champs,
                                    *rand_team_values())
-            rewards['counter'].append(reward)
+            rewards['combo'].append(reward)
         return rewards
 
     # Provides a list of size num_champs where each entry contains
