@@ -20,7 +20,8 @@ class TestLegalActions(unittest.TestCase):
             rrs(0, [0]), rrs(1, [1]), rrs(2, [2]),
             rrs(3, [3]), rrs(4, [])
             ]
-        draft = Draft(rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(rewards=rewards)
         self.assertEqual(draft.legal_actions(), list(range(4)))
 
     def test_legal_actions_second_ban(self):
@@ -28,7 +29,8 @@ class TestLegalActions(unittest.TestCase):
             rrs(0, [0]), rrs(1, [1]), rrs(2, [2]), 
             rrs(3, [3]), rrs(4, [])
             ]
-        draft = Draft(rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(rewards=rewards)
         draft.apply(3)
         self.assertEqual(draft.legal_actions(), list(range(3)))
 
@@ -37,7 +39,8 @@ class TestLegalActions(unittest.TestCase):
             rrs(0, [0]), rrs(1, [1]), rrs(2, [2]), 
             rrs(3, [3]), rrs(4, [])
             ]
-        draft = Draft(history=[4]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[4]*4, rewards=rewards)
         self.assertEqual(draft.legal_actions(), list(range(4)))
 
     def test_legal_actions_second_pick(self):
@@ -45,7 +48,8 @@ class TestLegalActions(unittest.TestCase):
             rrs(0, [0]), rrs(1, [1]), rrs(2, [2]), 
             rrs(3, [3]), rrs(4, [])
             ]
-        draft = Draft(history=[4]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[4]*4, rewards=rewards)
         draft.apply(3)
         self.assertEqual(draft.legal_actions(), list(range(3)))
 
@@ -55,7 +59,8 @@ class TestLegalActions(unittest.TestCase):
             rrs(3, [3]), rrs(4, [4]), rrs(5, [0]),
             rrs(6, [])
             ]
-        draft = Draft(history=[6]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[6]*4, rewards=rewards)
         draft.apply(0)
         draft.apply(1)
         draft.apply(2)
@@ -72,14 +77,16 @@ class TestOpenRoles(unittest.TestCase):
 
     def test_single(self):
         rrs_lookup = [rrs(0, [4])]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(0)
         self.assertEqual(open_roles(draft), {0, 1, 2, 3})
 
     def test_single_turns_double_to_single(self):
         rrs_lookup = [rrs(0, [0, 1]), rrs(1, [1]), rrs(2, [])]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         # Skip over team B picks.
@@ -93,7 +100,8 @@ class TestOpenRoles(unittest.TestCase):
             rrs(0, [0, 1, 2, 3]), rrs(1, [2, 3]),
             rrs(2, [3]), rrs(3, [])
             ]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -105,7 +113,8 @@ class TestOpenRoles(unittest.TestCase):
 
     def test_double_resolve(self):
         rrs_lookup = [rrs(0, [0, 1]), rrs(1, [0, 1]), rrs(2, [])]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -118,7 +127,8 @@ class TestOpenRoles(unittest.TestCase):
             rrs(0, [0, 1]), rrs(1, [2, 3]),
             rrs(2, [2, 3]), rrs(3, [])
             ]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -133,7 +143,8 @@ class TestOpenRoles(unittest.TestCase):
             rrs(0, [0, 1]), rrs(1, [1, 2]),
             rrs(2, [0, 2]), rrs(3, [])
             ]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -149,7 +160,8 @@ class TestOpenRoles(unittest.TestCase):
             rrs(0, [0, 1, 2, 3]), rrs(1, [2, 3]),
             rrs(2, [3, 4]), rrs(3, [2, 4]), rrs(4, [])
             ]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         draft.apply(0)
         self.assertEqual(open_roles(draft), set(range(5)))
         draft.apply(-1)
@@ -304,7 +316,8 @@ class TestMiscDraftMethods(unittest.TestCase):
 
     def test_clone(self):
         rrs_lookup = [rrs(0, [4])]
-        draft = Draft(history=[-1]*4, rewards={'rrs_lookup': rrs_lookup})
+        rewards = {'rrs_lookup': rrs_lookup, 'nn_input': None}
+        draft = Draft(history=[-1]*4, rewards=rewards)
         draft_clone = draft.clone()
         draft_clone.apply(0)
         self.assertEqual(draft.history, [-1, -1, -1, -1])
