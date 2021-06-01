@@ -314,6 +314,17 @@ class Draft:
     # created once at the start and cached as they do not change from
     # state to state. The only thing that does change is the ordering
     # of values for each reward (depending if it is A or B to pick).
+    # Each reward is represented as a vector with the following set
+    # of features:
+    # - 1 real value indicating the value of the reward for the
+    #   selecting team
+    # - 1 real value indicating the value of the reward for the enemy
+    #   team
+    # - 1 binary feature indicating if it is a role or combo reward
+    # - (n = num roles) binary features for indicating the role in
+    #   the reward if applicable
+    # - (2 * n = num champs) binary features for indicating the champs
+    #   required for the selecting and enemy team
     def _set_nn_rewards_input(self):
         num_rewards = (len(self.rewards['role'])
                        + len(self.rewards['synergy'])
@@ -350,7 +361,19 @@ class Draft:
         self.rewards['nn_input'] = (A_values, B_values, nn_rewards)
 
     # Creates the NN input representation for the state of the draft
-    # at a given position in its history.
+    # at a given position in its history. This is a single vector
+    # represented as follows:
+    # - 1 binary feature indicating if the selecting team is A or B
+    # - 1 binary feature indicating if the selecting team is picking
+    #   or banning
+    # - 1 binary feature indicating if the selecting team also selects
+    #   next
+    # - (n = total draft selections) binary features for indicating
+    #   draft position
+    # - (2 * n = num roles) binary features for indicating the selecting
+    #   and enemy teams' open roles
+    # - (4 * n = num champs) binary features for indicating what the
+    #   selecting and enemy team have picked and banned
     def _make_nn_draft_state_input(self, pos):
         num_features = (1 + 1 + 1
                         + len(self.format)
@@ -424,11 +447,21 @@ class Draft:
         
         return draft_state
 
-    # Returns both: a single vector capturing the entire draft state
-    # when selecting for the given draft position and a vector for each
-    # reward.
+    # Returns a single vector representing the entire draft state when
+    # selecting for the given draft position as well as a vector for
+    # each reward. For details on their representation see
+    # _make_nn_draft_state_input and _set_nn_rewards_input.
     def make_nn_input(self, pos=None):
         if pos is None:
             pos = len(self.history)
-
-        # TODO
+        nn_draft_state = self._make_nn_draft_state_input(pos)
+        A_values,  B_values, nn_rewards = self.rewards['nn_input']
+        # Setting the 'my team' and 'enemy team' values.
+        team, _ = self.format[pos]
+        if team == A:
+            nn_rewards[:, 0] = A_values
+            nn_rewards[:, 1] = B_values
+        else:
+            nn_rewards[:, 0] = B_values
+            nn_rewards[:, 1] = A_values
+        return nn_draft_state, nn_rewards
