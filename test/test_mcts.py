@@ -36,7 +36,7 @@ class TestMCTS(unittest.TestCase):
         config = Config()
         # Only one valid hero in draft, so we know what will get 
         # selected first.
-        rewards = {'role': [RoleReward(0, 0, 0, 0)], 'synergy': [], 'counter': []}
+        rewards = {'role': [RoleReward(0, 0, 0, 0)], 'combo': []}
         draft = Draft(rewards=rewards)
         # After selecting first child, the network will go to expand
         # it and return a value of 2. As one action has been selected
@@ -56,7 +56,7 @@ class TestMCTS(unittest.TestCase):
         # champ 0. I also have the network give a much higher prior to
         # champ 1 so I know the order of children selected in tree
         # will be 0, 1, 2.
-        rewards = {'role': [], 'synergy': [], 'counter': []}
+        rewards = {'role': [], 'combo': []}
         RR = RoleReward
         rewards['role'] = [RR(0, 0, 0, 0), RR(1, 1, 0, 0), RR(2, 2, 0, 0)]
         A_roles = {'open': {0}, 'partial': []}

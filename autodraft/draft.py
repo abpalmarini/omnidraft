@@ -308,16 +308,12 @@ class Draft:
     # - (2 * n = num champs) binary features for indicating the champs
     #   required for the selecting and enemy team
     def _set_nn_rewards_input(self):
-        num_rewards = (len(self.rewards['role'])
-                       + len(self.rewards['synergy'])
-                       + len(self.rewards['counter']))
+        num_rewards = len(self.rewards['role']) + len(self.rewards['combo'])
         num_features = 2 + 1 + NUM_ROLES + (2 * self.num_champs)
         nn_rewards = np.zeros((num_rewards, num_features))
         A_values = np.empty(num_rewards)
         B_values = np.empty(num_rewards)
-        all_rewards = chain(self.rewards['role'],
-                            self.rewards['synergy'],
-                            self.rewards['counter'])
+        all_rewards = chain(self.rewards['role'], self.rewards['combo'])
         for i, reward in enumerate(all_rewards):
             A_values[i] = reward.A_value
             B_values[i] = reward.B_value
@@ -329,11 +325,7 @@ class Draft:
                 nn_reward[offset + reward.role] = 1
                 offset += NUM_ROLES
                 nn_reward[offset + reward.champ] = 1
-            elif isinstance(reward, SynergyReward):
-                offset += 1 + NUM_ROLES
-                for champ in reward.champs:
-                    nn_reward[offset + champ] = 1
-            elif isinstance(reward, CounterReward):
+            else:
                 offset += 1 + NUM_ROLES
                 for champ in reward.team_champs:
                     nn_reward[offset + champ] = 1
