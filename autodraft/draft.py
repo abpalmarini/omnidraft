@@ -298,10 +298,8 @@ class Draft:
     # of values for each reward (depending if it is A or B to pick).
     # Each reward is represented as a vector with the following set
     # of features:
-    # - 1 real value indicating the value of the reward for the
-    #   selecting team
-    # - 1 real value indicating the value of the reward for the enemy
-    #   team
+    # - 2 real values for indicating the value of the reward for the
+    #   selecting and enemy team
     # - 1 binary feature indicating if it is a role or combo reward
     # - (n = num roles) binary features for indicating the role in
     #   the reward if applicable
