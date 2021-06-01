@@ -62,6 +62,9 @@ class TestMCTS(unittest.TestCase):
         A_roles = {'open': {0}, 'partial': []}
         draft = Draft(history=[-1]*4, rewards=rewards)
         draft.roles['A'] = A_roles
+        # Can't have a history of len 4 without updating open_roles history.
+        draft.roles['open_history'] = [([], []) for _ in range(5)]
+
         # Keeping track of values assigned by NN at each position.
         values = []
         def network(x):
@@ -100,6 +103,7 @@ class TestMCTS(unittest.TestCase):
         # the child, mcts should use terminal value instead of the
         # network each time.
         draft = Draft(history=history, rewards=rewards)
+        draft.roles['open_history'] = [([], []) for _ in range(len(history) + 1)]
         def network(x): return list(range(10)), 1
         root = run_mcts(config, draft, network)
         child = root.children[9]
