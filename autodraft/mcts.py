@@ -55,7 +55,7 @@ def run_mcts(config, draft, network, root=None):
 
         if simulator_draft.terminal():
             value = simulator_draft.terminal_value()
-            team, _  = simulator_draft.format[0] # Team A selects first.
+            team, _  = simulator_draft.to_select(0) # Team A selects first.
         else:
             value = expand_and_evaluate(node, simulator_draft, network)
             team, _ = simulator_draft.to_select()

@@ -58,8 +58,10 @@ class Draft:
         self.roles = roles or self._init_roles()
         self.child_visits = []
 
-    def to_select(self):
-        return self.format[len(self.history)]
+    def to_select(self, pos=None):
+        if pos is None:
+            pos = len(self.history)
+        return self.format[pos]
 
     def terminal(self):
         return len(self.history) == len(self.format)
@@ -355,8 +357,8 @@ class Draft:
         offset = 0
 
         # Turn information.
-        team, selection_type = self.format[pos]
-        next_turn_team, _ = self.format[(pos + 1) % len(self.format)]
+        team, selection_type = self.to_select(pos)
+        next_turn_team, _ = self.to_select((pos + 1) % len(self.format))
         if team == A:
             draft_state[offset + 0] = 1
         if selection_type == PICK:
@@ -429,7 +431,7 @@ class Draft:
         nn_draft_state = self._make_nn_draft_state_input(pos)
         A_values,  B_values, nn_rewards = self.rewards['nn_input']
         # Setting the 'my team' and 'enemy team' values.
-        team, _ = self.format[pos]
+        team, _ = self.to_select(pos)
         if team == A:
             nn_rewards[:, 0] = A_values
             nn_rewards[:, 1] = B_values
