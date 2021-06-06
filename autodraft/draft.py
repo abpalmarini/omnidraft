@@ -46,7 +46,7 @@ class Draft:
               (A, PICK),
               (A, PICK),
               (B, PICK))
-    num_champs = 70
+    num_champs = 50
 
     def __init__(self, history=None, rewards=None, roles=None):
         self.history = history or []

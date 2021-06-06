@@ -433,7 +433,7 @@ class TestNNInput(unittest.TestCase):
 
     def test_role_reward(self):
         rewards = {'role': [], 'combo': []}
-        rewards['role'] = [RR(53, 4, 0.2, 0.1)]
+        rewards['role'] = [RR(27, 4, 0.2, 0.1)]
         draft = Draft(rewards=rewards)
         _, nn_rewards = draft.make_nn_input()
         reward = nn_rewards[0]
@@ -445,14 +445,14 @@ class TestNNInput(unittest.TestCase):
         offset = 3
         active_features.add(offset + 4)
         offset += 5
-        active_features.add(offset + 53)
+        active_features.add(offset + 27)
         # Masking reward values to check other features now we have
         # asserted they are correct.
         reward[0] = 0
         reward[1] = 0
         self.check_active_features(active_features, reward)
         # Now checking values when it is B to select.
-        draft.apply(53)
+        draft.apply(27)
         _, nn_rewards = draft.make_nn_input()
         reward = nn_rewards[0]
         self.assertEqual(reward[0], 0.1)
