@@ -102,6 +102,7 @@ class Draft:
                     if total_value > best:
                         best = total_value
             return best
+
         return best_value(0, set(), 0)
 
     def _combo_value(self, team_A, team_B):
@@ -133,13 +134,16 @@ class Draft:
     # picking a champ in a duplicate role to avoid being countered.
     # See _update_open_roles for logic maintaining valid open roles.
     def legal_actions(self):
+
         def has_open_role(role_rewards, team_roles):
             for role_reward in role_rewards:
                 if role_reward.role in team_roles['open']:
                     return True
             return False
+
         def available(champ):
             return champ not in self.history
+
         to_select = self.to_select()
         if to_select == (A, PICK):
             return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
@@ -192,6 +196,7 @@ class Draft:
         synergy_size_options = range(2, NUM_ROLES + 1)
         counter_size_options = range(1, NUM_ROLES + 1)
         flex_size_options = range(2, NUM_ROLES + 1)
+
         def halving_weights(n):
             return [2**(-x) for x in range(1, n + 1)]
 
