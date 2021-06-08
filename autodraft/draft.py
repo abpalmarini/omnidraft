@@ -128,11 +128,12 @@ class Draft:
         self.history.append(action)
 
     # Returns champs that have not been picked or banned, have been
-    # mentioned in a reward and for pick actions can play in at least
-    # one open role for team to pick. Without enforcing that the NN
-    # must have one champ per role it could gain a higher reward by
-    # picking a champ in a duplicate role to avoid being countered.
-    # See _update_open_roles for logic maintaining valid open roles.
+    # assigned a role in a role reward and for pick actions can play
+    # in at least one open role for team to pick. Without enforcing
+    # that the NN must have one champ per role it could gain a higher
+    # reward by picking a champ in a duplicate role to avoid being
+    # countered. See _update_open_roles for logic maintaining valid
+    # open roles.
     def legal_actions(self):
 
         def has_open_role(role_rewards, team_roles):
@@ -146,14 +147,32 @@ class Draft:
 
         to_select = self.to_select()
         if to_select == (A, PICK):
-            return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
-                    if has_open_role(rrs, self.roles['A']) and available(champ)]
+            legal = [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
+                     if has_open_role(rrs, self.roles['A']) and available(champ)]
+            return legal or self._add_legal_champs(self.roles['A']['open'])
         elif to_select == (B, PICK):
-            return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
-                    if has_open_role(rrs, self.roles['B']) and available(champ)]
+            legal = [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
+                     if has_open_role(rrs, self.roles['B']) and available(champ)]
+            return legal or self._add_legal_champs(self.roles['B']['open'])
         else:
             return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                     if bool(rrs) and available(champ)]
+
+    # For cases during training where a team has no champs available to
+    # select for one of their open roles we randomly choose a previously
+    # unmentioned champ for each open role and assign it zero reward.
+    def _add_legal_champs(self, open_roles):
+        unmentioned_champs = []
+        for champ, rrs in enumerate(self.rewards['rrs_lookup']):
+            if not rrs:
+                unmentioned_champs.append(champ)
+        new_champs = random.sample(unmentioned_champs, len(open_roles))
+        for champ, role in zip(new_champs, open_roles):
+            reward = RoleReward(champ, role, 0, 0)
+            self.rewards['role'].append(reward)
+            self.rewards['rrs_lookup'][champ].append(reward)
+        self._set_nn_rewards_input()
+        return new_champs
 
     def clone(self):
         return Draft(self.history.copy(), self.rewards, deepcopy(self.roles))

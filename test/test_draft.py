@@ -75,6 +75,44 @@ class TestLegalActions(unittest.TestCase):
         # Champ 5 should now become available to team B though.
         self.assertEqual(draft.legal_actions(), [5])
 
+    def test_rewards_updated_for_adding_new_legal_champ(self):
+        # Starting with one reward to ensure new ones are being added
+        # and not overwriting.
+        rewards = {'role': [RR(0, 0, 0, 0)], 'combo': []}
+        draft = Draft(history=[-1, -1, -1, 0], rewards=rewards)
+        # Should produce 5 random legal actions as A has 5 open roles.
+        legal_actions = draft.legal_actions()
+        self.assertEqual(len(legal_actions), 5)
+        # Need to check they have been added to the role rewards,
+        # rrs_lookup and nn_input.
+        self.assertEqual(len(draft.rewards['role']), 1 + 5)
+        nn_role_rewards = draft.rewards['nn_input']['role'][2]
+        self.assertEqual(len(nn_role_rewards), 1 + 5)
+        for i, champ in enumerate(legal_actions):
+            reward = draft.rewards['role'][1 + i]
+            self.assertEqual(reward.champ, champ)
+            self.assertEqual(reward.role, i)
+            self.assertEqual(reward.A_value, 0)
+            self.assertEqual(reward.B_value, 0)
+            self.assertEqual(draft.rewards['rrs_lookup'][champ], [reward])
+            # Ensure the nn reward is correctly added.
+            self.assertEqual(nn_role_rewards[1 + i][2 + i], 1)
+            self.assertEqual(nn_role_rewards[1 + i][2 + 5 + champ], 1)
+
+        # Small check that it also works for team B. After apply all
+        # actions, then A will have 2 open roles and B will have 3.
+        # So the number of newly produced legal actions should be 3
+        # and should be for roles 0, 3 and 4.
+        for action in legal_actions:
+            draft.apply(action)
+        legal_actions = draft.legal_actions()
+        self.assertEqual(len(legal_actions), 3)
+        new_champs_roles = set()
+        for champ in legal_actions:
+            reward = draft.rewards['rrs_lookup'][champ][0]
+            new_champs_roles.add(reward.role)
+        self.assertEqual(new_champs_roles, {0, 3, 4})
+
 
 class TestOpenRoles(unittest.TestCase):
 
