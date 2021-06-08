@@ -423,7 +423,7 @@ class TestNNInput(unittest.TestCase):
         # Copying and pasting from :test_draft_state_first_ban as I
         # just need to test its returned correctly in outer method.
         draft = Draft()
-        draft_state, _ = draft.make_nn_input()
+        draft_state, _, _ = draft.make_nn_input()
         active_features = set()
         active_features.add(0)
         active_features.add(3)
@@ -435,14 +435,13 @@ class TestNNInput(unittest.TestCase):
         rewards = {'role': [], 'combo': []}
         rewards['role'] = [RR(27, 4, 0.2, 0.1)]
         draft = Draft(rewards=rewards)
-        _, nn_rewards = draft.make_nn_input()
-        reward = nn_rewards[0]
+        _, nn_role_rewards, _ = draft.make_nn_input()
+        reward = nn_role_rewards[0]
         # It is A to ban so first value should be A's.
         self.assertEqual(reward[0], 0.2)
         self.assertEqual(reward[1], 0.1)
         active_features = set()
-        active_features.add(2) # Role reward indicator.
-        offset = 3
+        offset = 2
         active_features.add(offset + 4)
         offset += 5
         active_features.add(offset + 27)
@@ -453,8 +452,8 @@ class TestNNInput(unittest.TestCase):
         self.check_active_features(active_features, reward)
         # Now checking values when it is B to select.
         draft.apply(27)
-        _, nn_rewards = draft.make_nn_input()
-        reward = nn_rewards[0]
+        _, nn_role_rewards, _ = draft.make_nn_input()
+        reward = nn_role_rewards[0]
         self.assertEqual(reward[0], 0.1)
         self.assertEqual(reward[1], 0.2)
         reward[0] = 0
@@ -465,13 +464,12 @@ class TestNNInput(unittest.TestCase):
         rewards = {'role': [RR(0, 0, 0, 0)], 'combo': []}
         rewards['combo'] = [CR({0, 9}, {17, 22, 41}, 0.5, 0.9)]
         draft = Draft(rewards=rewards)
-        _, nn_rewards = draft.make_nn_input()
-        # Reward 0 will be the role reward (so I can ban a champ).
-        reward = nn_rewards[1]
+        _, _, nn_combo_rewards = draft.make_nn_input()
+        reward = nn_combo_rewards[0]
         self.assertEqual(reward[0], 0.5)
         self.assertEqual(reward[1], 0.9)
         active_features = set()
-        offset = 3 + 5
+        offset = 2
         active_features.add(offset + 0)
         active_features.add(offset + 9)
         offset += draft.num_champs
@@ -483,35 +481,50 @@ class TestNNInput(unittest.TestCase):
         self.check_active_features(active_features, reward)
         # Checking when B to select.
         draft.apply(0)
-        _, nn_rewards = draft.make_nn_input()
-        reward = nn_rewards[1]
+        _, _, nn_combo_rewards = draft.make_nn_input()
+        reward = nn_combo_rewards[0]
         self.assertEqual(reward[0], 0.9)
         self.assertEqual(reward[1], 0.5)
         reward[0] = 0
         reward[1] = 0
         self.check_active_features(active_features, reward)
 
-    def test_multiple_rewards(self):
-        rewards = {'role': [RR(0, 0, 0.5, 0.8)],
-                   'combo': [CR({2, 8}, set(), 0.9, 0.1)]
+    def test_stacked_rewards(self):
+        rewards = {'role': [RR(0, 0, 0.5, 0.8), RR(1, 1, 0.3, 0.2)],
+                   'combo': [CR({2, 8}, set(), 0.9, 0.1),  CR({0}, {1}, 0.2, 0.8)]
                    }
         # Setting history up to A's first pick.
         history = [-1 for _ in range(4)]
         open_roles_history = [(tuple(range(5)), tuple(range(5))) for _ in range(5)]
         draft = Draft(history=history, rewards=rewards)
         draft.roles['open_history'] = open_roles_history
-        _, nn_rewards = draft.make_nn_input()
-        self.assertEqual(nn_rewards[0, 0], 0.5)
-        self.assertEqual(nn_rewards[0, 1], 0.8)
-        self.assertEqual(nn_rewards[1, 0], 0.9)
-        self.assertEqual(nn_rewards[1, 1], 0.1)
-        nn_rewards[:, 0] = 0
-        nn_rewards[:, 1] = 0
-        role_active_features = {2, 3, 8} # Role indicator, role 0, champ 0
-        offset = 3 + 5
-        combo_active_features = {offset + 2, offset + 8}
-        self.check_active_features(role_active_features, nn_rewards[0])
-        self.check_active_features(combo_active_features, nn_rewards[1])
+        _, nn_role_rewards, nn_combo_rewards = draft.make_nn_input()
+        # Role 0
+        self.assertEqual(nn_role_rewards[0, 0], 0.5)
+        self.assertEqual(nn_role_rewards[0, 1], 0.8)
+        # Role 1
+        self.assertEqual(nn_role_rewards[1, 0], 0.3)
+        self.assertEqual(nn_role_rewards[1, 1], 0.2)
+        # Combo 0
+        self.assertEqual(nn_combo_rewards[0, 0], 0.9)
+        self.assertEqual(nn_combo_rewards[0, 1], 0.1)
+        # Combo 1
+        self.assertEqual(nn_combo_rewards[1, 0], 0.2)
+        self.assertEqual(nn_combo_rewards[1, 1], 0.8)
+        # Check other features.
+        nn_role_rewards[:, 0] = 0
+        nn_role_rewards[:, 1] = 0
+        nn_combo_rewards[:, 0] = 0
+        nn_combo_rewards[:, 1] = 0
+        role_0_active_features = {2, 7} # Role 0, champ 0
+        role_1_active_features = {3, 8} # Role 1, champ 1
+        offset = 2
+        combo_0_active_features = {offset + 2, offset + 8}
+        combo_1_active_features = {offset + 0, offset + draft.num_champs + 1}
+        self.check_active_features(role_0_active_features, nn_role_rewards[0])
+        self.check_active_features(role_1_active_features, nn_role_rewards[1])
+        self.check_active_features(combo_0_active_features, nn_combo_rewards[0])
+        self.check_active_features(combo_1_active_features, nn_combo_rewards[1])
 
 
 if __name__ == '__main__':

@@ -321,41 +321,56 @@ class Draft:
     # created once at the start and cached as they do not change from
     # state to state. The only thing that does change is the ordering
     # of values for each reward (depending if it is A or B to pick).
-    # Each reward is represented as a vector with the following set
-    # of features:
+    # The role and combo rewards are given seperate vector 
+    # representations.
+    # Role:
     # - 2 real values for indicating the value of the reward for the
     #   selecting and enemy team
-    # - 1 binary feature indicating if it is a role or combo reward
-    # - (n = num roles) binary features for indicating the role in
-    #   the reward if applicable
+    # - (n = num roles) binary features for indicating the role
+    # - (n = num champs) binary features for indicating the champ
+    # Combo:
+    # - 2 real values for indicating the value of the reward for the
+    #   selecting and enemy team
     # - (2 * n = num champs) binary features for indicating the champs
     #   required for the selecting and enemy team
     def _set_nn_rewards_input(self):
-        num_rewards = len(self.rewards['role']) + len(self.rewards['combo'])
-        num_features = 2 + 1 + NUM_ROLES + (2 * self.num_champs)
-        nn_rewards = np.zeros((num_rewards, num_features))
-        A_values = np.empty(num_rewards)
-        B_values = np.empty(num_rewards)
-        all_rewards = chain(self.rewards['role'], self.rewards['combo'])
-        for i, reward in enumerate(all_rewards):
-            A_values[i] = reward.A_value
-            B_values[i] = reward.B_value
-            nn_reward = nn_rewards[i]
+        nn_input = {}
+
+        # Role.
+        num_role_rewards = len(self.rewards['role'])
+        num_role_features = 2 + NUM_ROLES + self.num_champs
+        nn_role_rewards = np.zeros((num_role_rewards, num_role_features))
+        role_A_values = np.empty(num_role_rewards)
+        role_B_values = np.empty(num_role_rewards)
+        for i, reward in enumerate(self.rewards['role']):
+            role_A_values[i] = reward.A_value
+            role_B_values[i] = reward.B_value
+            nn_reward = nn_role_rewards[i]
             offset = 2 # Skipping the reward values.
-            if isinstance(reward, RoleReward):
-                nn_reward[offset + 0] = 1
-                offset += 1
-                nn_reward[offset + reward.role] = 1
-                offset += NUM_ROLES
-                nn_reward[offset + reward.champ] = 1
-            else:
-                offset += 1 + NUM_ROLES
-                for champ in reward.team_champs:
-                    nn_reward[offset + champ] = 1
-                offset += self.num_champs
-                for champ in reward.enemy_champs:
-                    nn_reward[offset + champ] = 1
-        self.rewards['nn_input'] = (A_values, B_values, nn_rewards)
+            nn_reward[offset + reward.role] = 1
+            offset += NUM_ROLES
+            nn_reward[offset + reward.champ] = 1
+        nn_input['role'] = (role_A_values, role_B_values, nn_role_rewards)
+
+        # Combo.
+        num_combo_rewards = len(self.rewards['combo'])
+        num_combo_features = 2 + (2 * self.num_champs)
+        nn_combo_rewards = np.zeros((num_combo_rewards, num_combo_features))
+        combo_A_values = np.empty(num_combo_rewards)
+        combo_B_values = np.empty(num_combo_rewards)
+        for i, reward in enumerate(self.rewards['combo']):
+            combo_A_values[i] = reward.A_value
+            combo_B_values[i] = reward.B_value
+            nn_reward = nn_combo_rewards[i]
+            offset = 2 # Skipping the reward values.
+            for champ in reward.team_champs:
+                nn_reward[offset + champ] = 1
+            offset += self.num_champs
+            for champ in reward.enemy_champs:
+                nn_reward[offset + champ] = 1
+        nn_input['combo'] = (combo_A_values, combo_B_values, nn_combo_rewards)
+
+        self.rewards['nn_input'] = nn_input
 
     # Creates the NN input representation for the state of the draft
     # at a given position in its history. This is a single vector
@@ -452,13 +467,19 @@ class Draft:
         if pos is None:
             pos = len(self.history)
         nn_draft_state = self._make_nn_draft_state_input(pos)
-        A_values,  B_values, nn_rewards = self.rewards['nn_input']
+        nn_rewards = self.rewards['nn_input']
+        role_A_values, role_B_values, nn_role_rewards = nn_rewards['role']
+        combo_A_values, combo_B_values, nn_combo_rewards = nn_rewards['combo']
         # Setting the 'my team' and 'enemy team' values.
         team, _ = self.to_select(pos)
         if team == A:
-            nn_rewards[:, 0] = A_values
-            nn_rewards[:, 1] = B_values
+            nn_role_rewards[:, 0] = role_A_values
+            nn_role_rewards[:, 1] = role_B_values
+            nn_combo_rewards[:, 0] = combo_A_values
+            nn_combo_rewards[:, 1] = combo_B_values
         else:
-            nn_rewards[:, 0] = B_values
-            nn_rewards[:, 1] = A_values
-        return nn_draft_state, nn_rewards
+            nn_role_rewards[:, 0] = role_B_values
+            nn_role_rewards[:, 1] = role_A_values
+            nn_combo_rewards[:, 0] = combo_B_values
+            nn_combo_rewards[:, 1] = combo_A_values
+        return nn_draft_state, nn_role_rewards, nn_combo_rewards
