@@ -476,8 +476,8 @@ class TestNNInput(unittest.TestCase):
         _, nn_role_rewards, _ = draft.make_nn_input()
         reward = nn_role_rewards[0]
         # It is A to ban so first value should be A's.
-        self.assertEqual(reward[0], 0.2)
-        self.assertEqual(reward[1], 0.1)
+        self.assertAlmostEqual(reward[0], 0.2)
+        self.assertAlmostEqual(reward[1], 0.1)
         active_features = set()
         offset = 2
         active_features.add(offset + 4)
@@ -492,8 +492,8 @@ class TestNNInput(unittest.TestCase):
         draft.apply(27)
         _, nn_role_rewards, _ = draft.make_nn_input()
         reward = nn_role_rewards[0]
-        self.assertEqual(reward[0], 0.1)
-        self.assertEqual(reward[1], 0.2)
+        self.assertAlmostEqual(reward[0], 0.1)
+        self.assertAlmostEqual(reward[1], 0.2)
         reward[0] = 0
         reward[1] = 0
         self.check_active_features(active_features, reward)
@@ -504,8 +504,8 @@ class TestNNInput(unittest.TestCase):
         draft = Draft(rewards=rewards)
         _, _, nn_combo_rewards = draft.make_nn_input()
         reward = nn_combo_rewards[0]
-        self.assertEqual(reward[0], 0.5)
-        self.assertEqual(reward[1], 0.9)
+        self.assertAlmostEqual(reward[0], 0.5)
+        self.assertAlmostEqual(reward[1], 0.9)
         active_features = set()
         offset = 2
         active_features.add(offset + 0)
@@ -521,8 +521,8 @@ class TestNNInput(unittest.TestCase):
         draft.apply(0)
         _, _, nn_combo_rewards = draft.make_nn_input()
         reward = nn_combo_rewards[0]
-        self.assertEqual(reward[0], 0.9)
-        self.assertEqual(reward[1], 0.5)
+        self.assertAlmostEqual(reward[0], 0.9)
+        self.assertAlmostEqual(reward[1], 0.5)
         reward[0] = 0
         reward[1] = 0
         self.check_active_features(active_features, reward)
@@ -538,17 +538,17 @@ class TestNNInput(unittest.TestCase):
         draft.roles['open_history'] = open_roles_history
         _, nn_role_rewards, nn_combo_rewards = draft.make_nn_input()
         # Role 0
-        self.assertEqual(nn_role_rewards[0, 0], 0.5)
-        self.assertEqual(nn_role_rewards[0, 1], 0.8)
+        self.assertAlmostEqual(nn_role_rewards[0, 0], 0.5)
+        self.assertAlmostEqual(nn_role_rewards[0, 1], 0.8)
         # Role 1
-        self.assertEqual(nn_role_rewards[1, 0], 0.3)
-        self.assertEqual(nn_role_rewards[1, 1], 0.2)
+        self.assertAlmostEqual(nn_role_rewards[1, 0], 0.3)
+        self.assertAlmostEqual(nn_role_rewards[1, 1], 0.2)
         # Combo 0
-        self.assertEqual(nn_combo_rewards[0, 0], 0.9)
-        self.assertEqual(nn_combo_rewards[0, 1], 0.1)
+        self.assertAlmostEqual(nn_combo_rewards[0, 0], 0.9)
+        self.assertAlmostEqual(nn_combo_rewards[0, 1], 0.1)
         # Combo 1
-        self.assertEqual(nn_combo_rewards[1, 0], 0.2)
-        self.assertEqual(nn_combo_rewards[1, 1], 0.8)
+        self.assertAlmostEqual(nn_combo_rewards[1, 0], 0.2)
+        self.assertAlmostEqual(nn_combo_rewards[1, 1], 0.8)
         # Check other features.
         nn_role_rewards[:, 0] = 0
         nn_role_rewards[:, 1] = 0

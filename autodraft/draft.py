@@ -357,9 +357,10 @@ class Draft:
         # Role.
         num_role_rewards = len(self.rewards['role'])
         num_role_features = 2 + NUM_ROLES + self.num_champs
-        nn_role_rewards = np.zeros((num_role_rewards, num_role_features))
-        role_A_values = np.empty(num_role_rewards)
-        role_B_values = np.empty(num_role_rewards)
+        nn_role_rewards = np.zeros((num_role_rewards, num_role_features),
+                                    dtype=np.float32)
+        role_A_values = np.empty(num_role_rewards, dtype=np.float32)
+        role_B_values = np.empty(num_role_rewards, dtype=np.float32)
         for i, reward in enumerate(self.rewards['role']):
             role_A_values[i] = reward.A_value
             role_B_values[i] = reward.B_value
