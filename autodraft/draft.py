@@ -127,6 +127,33 @@ class Draft:
         self.roles['open_history'].append((A_open_roles, B_open_roles))
         self.history.append(action)
 
+    # To ensure valid actions only contain champs who can fill an open
+    # role we maintain a set of open roles and a list of roles
+    # partially open (when a selected champ can play more than one).
+    # By checking if the number of unique roles, in some subset of the
+    # partial roles, is equal to the number of champs who can play them
+    # we can determine when they are no longer open.
+    def _update_open_roles(self, champ, team_roles):
+        champ_roles = {rr.role for rr in self.rewards['rrs_lookup'][champ]}
+        options = champ_roles.intersection(team_roles['open'])
+        for n_champs in range(len(team_roles['partial']), 0, -1):
+            for partial_subset in combinations(team_roles['partial'], n_champs):
+                unique_roles = options.union(*partial_subset)
+                if len(unique_roles) == n_champs + 1:
+                    for roles in partial_subset:
+                        team_roles['partial'].remove(roles)
+                    for roles in team_roles['partial']:
+                        roles -= unique_roles
+                    team_roles['open'] -= unique_roles
+                    return
+        # New champ role(s) was unable to resolve with anything else.
+        if len(options) == 1:
+            team_roles['open'] -= options
+            for roles in team_roles['partial']:
+                roles -= options
+        else:
+            team_roles['partial'].append(options)
+
     # Returns champs that have not been picked or banned, have been
     # assigned a role in a role reward and for pick actions can play
     # in at least one open role for team to pick. Without enforcing
@@ -176,33 +203,6 @@ class Draft:
 
     def clone(self):
         return Draft(self.history.copy(), self.rewards, deepcopy(self.roles))
-
-    # To ensure valid actions only contain champs who can fill an open
-    # role we maintain a set of open roles and a list of roles
-    # partially open (when a selected champ can play more than one).
-    # By checking if the number of unique roles, in some subset of the
-    # partial roles, is equal to the number of champs who can play them
-    # we can determine when they are no longer open.
-    def _update_open_roles(self, champ, team_roles):
-        champ_roles = {rr.role for rr in self.rewards['rrs_lookup'][champ]}
-        options = champ_roles.intersection(team_roles['open'])
-        for n_champs in range(len(team_roles['partial']), 0, -1):
-            for partial_subset in combinations(team_roles['partial'], n_champs):
-                unique_roles = options.union(*partial_subset)
-                if len(unique_roles) == n_champs + 1:
-                    for roles in partial_subset:
-                        team_roles['partial'].remove(roles)
-                    for roles in team_roles['partial']:
-                        roles -= unique_roles
-                    team_roles['open'] -= unique_roles
-                    return
-        # New champ role(s) was unable to resolve with anything else.
-        if len(options) == 1:
-            team_roles['open'] -= options
-            for roles in team_roles['partial']:
-                roles -= options
-        else:
-            team_roles['partial'].append(options)
 
     # Basic implementation of generating role and combo (synergy and
     # counter) rewards needed for a draft. This is unlikely to
@@ -309,8 +309,7 @@ class Draft:
             reward = ComboReward(champs, set(), *rand_team_values())
             rewards['combo'].append(reward)
         for team_champs, enemy_champs in counters:
-            reward = ComboReward(team_champs, enemy_champs,
-                                 *rand_team_values())
+            reward = ComboReward(team_champs, enemy_champs, *rand_team_values())
             rewards['combo'].append(reward)
         return rewards
 
