@@ -388,9 +388,10 @@ class Draft:
 
         # Combo.
         num_combo_rewards = len(self.rewards['combo'])
-        nn_combo_rewards = np.zeros((num_combo_rewards, self.combo_reward_dim()))
-        combo_A_values = np.empty(num_combo_rewards)
-        combo_B_values = np.empty(num_combo_rewards)
+        nn_combo_rewards = np.zeros((num_combo_rewards, self.combo_reward_dim()),
+                                     dtype=np.float32)
+        combo_A_values = np.empty(num_combo_rewards, dtype=np.float32)
+        combo_B_values = np.empty(num_combo_rewards, dtype=np.float32)
         for i, reward in enumerate(self.rewards['combo']):
             combo_A_values[i] = reward.A_value
             combo_B_values[i] = reward.B_value
