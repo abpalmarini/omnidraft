@@ -69,6 +69,7 @@ class Draft:
     # Zero-sum evalution from team A's perspective in accordance to
     # the supplied rewards.
     def terminal_value(self):
+        assert self.terminal()
         try:
             return self._terminal_value
         except AttributeError:
