@@ -79,6 +79,8 @@ PretrainBatch = namedtuple(
 )
 
 
+# Collates a list of input examples into tensors that the neural
+# network can recieve.
 def pretrain_collate(batch):
     batch_states = []
     batch_role_rs = []
@@ -95,9 +97,8 @@ def pretrain_collate(batch):
         batch_value_hats.append(value_hat)
 
     # The draft state, role rewards and combo rewards will be embedded
-    # separately before being concatenated together to form the entire
-    # sequence the transformer model will receive. They must therefore
-    # be padded separately.
+    # separately before being stacked to form the sequence input for
+    # the transformer so they must be padded separately.
     states = torch.stack(batch_states)
     role_rs = pad_sequence(batch_role_rs, batch_first=True)
     combo_rs = pad_sequence(batch_combo_rs, batch_first=True)
@@ -107,10 +108,9 @@ def pretrain_collate(batch):
 
     # The fact that role and combo rewards got padded separately must
     # be taken into account when creating the attention mask for the
-    # final sequence. The final sequence will consist of the draft
-    # state embedding, followed by the role rewards and then the combo
-    # rewards. Here, 1 is for elements that can be attended to and 0
-    # if they are to be ignored.
+    # final sequence (state embedding, followed by role rewards,
+    # followed by combo rewards). Here, 1 is for elements that can be
+    # attended to and 0 if they are to be ignored.
     state_mask = torch.ones((len(batch), 1))
     attended_role_rs = [torch.ones(len(rs)) for rs in batch_role_rs]
     role_rs_mask = pad_sequence(attended_role_rs, batch_first=True)
