@@ -7,7 +7,7 @@ from autodraft.pretrain import PretrainDataset
 class TestPretrainExamples(unittest.TestCase):
 
     def test_correct_A_examples(self):
-        pretrain_dataset = PretrainDataset(Draft, None)
+        pretrain_dataset = PretrainDataset(None)
         for seed in range(0, 10, 2):
             # Can simulate the draft that will be created initially.
             random.seed(seed)
@@ -61,7 +61,7 @@ class TestPretrainExamples(unittest.TestCase):
             self.assertAlmostEqual(combo_rs[0][1], cr.B_value)
 
     def test_correct_B_examples(self):
-        pretrain_dataset = PretrainDataset(Draft, None)
+        pretrain_dataset = PretrainDataset(None)
         for seed in range(1, 10, 2):
             random.seed(seed)
             draft = Draft()

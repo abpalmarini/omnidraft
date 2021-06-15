@@ -5,11 +5,12 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
+from .draft import Draft
+
 
 class PretrainDataset(Dataset):
 
-    def __init__(self, draft_class, seed_range):
-        self.draft_class = draft_class
+    def __init__(self, seed_range):
         self.seed_range = seed_range
 
     def __len__(self):
@@ -25,7 +26,7 @@ class PretrainDataset(Dataset):
     # and value targets.
     def create_example(self, seed):
         random.seed(seed)
-        draft = self.draft_class()
+        draft = Draft()
 
         def optimal_team_B_final_action(draft):
             optimal_action = None
