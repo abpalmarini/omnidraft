@@ -1,10 +1,12 @@
 import unittest
 import random
+import torch
 from autodraft.draft import Draft
-from autodraft.pretrain import PretrainDataset
+from autodraft.pretrain import PretrainDataset, pretrain_collate
+from autodraft.model import DeepDraftNetwork
 
 
-class TestPretrainExamples(unittest.TestCase):
+class TestPretrain(unittest.TestCase):
 
     def test_correct_A_examples(self):
         pretrain_dataset = PretrainDataset(None)
@@ -96,6 +98,27 @@ class TestPretrainExamples(unittest.TestCase):
             cr = draft.rewards['combo'][0]
             self.assertAlmostEqual(combo_rs[0][0], cr.B_value)
             self.assertAlmostEqual(combo_rs[0][1], cr.A_value)
+
+    def test_correct_attention_mask(self):
+        # From inspection example 1 is shorter than 0 so we pass it
+        # through the model first, then with example 0 and check that
+        # the outputs are the same.
+        pretrain_dataset = PretrainDataset(None)
+        solo = pretrain_collate([pretrain_dataset.create_example(1)])
+        batch = pretrain_collate([pretrain_dataset.create_example(1),
+                                  pretrain_dataset.create_example(0)])
+        model = DeepDraftNetwork(Draft.state_dim(),
+                                 Draft.role_reward_dim(),
+                                 Draft.combo_reward_dim(),
+                                 Draft.num_champs)
+        model.eval()
+        with torch.no_grad():
+            solo_p, solo_v = model(solo.states, solo.role_rs, solo.combo_rs)
+            batch_p, batch_v = model(batch.states, batch.role_rs,
+                                     batch.combo_rs, batch.padding_mask)
+        for i in range(Draft.num_champs):
+            self.assertAlmostEqual(solo_p[0][i].item(), batch_p[0][i].item(), 5)
+        self.assertAlmostEqual(solo_v[0].item(), batch_v[0].item(), 5)
 
 
 if __name__ == '__main__':
