@@ -123,7 +123,7 @@ def pretrain_collate(batch):
     combo_rs = pad_sequence(batch_combo_rs, batch_first=True)
 
     action_hats = torch.tensor(batch_action_hats)
-    value_hats = torch.tensor(batch_value_hats)
+    value_hats = torch.tensor(batch_value_hats).unsqueeze(1)
 
     # The fact that role and combo rewards got padded separately must
     # be taken into account when creating the attention mask for the
