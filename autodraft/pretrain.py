@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
-from draft import Draft
+from .draft import Draft
 
 
 class PretrainDataset(Dataset):
