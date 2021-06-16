@@ -3,7 +3,7 @@ import random
 import torch
 from autodraft.draft import Draft
 from autodraft.pretrain import PretrainDataset, pretrain_collate
-from autodraft.model import DeepDraftNetwork
+from autodraft.model import DeepDraftModel
 
 
 class TestPretrain(unittest.TestCase):
@@ -107,7 +107,7 @@ class TestPretrain(unittest.TestCase):
         solo = pretrain_collate([pretrain_dataset.create_example(1)])
         batch = pretrain_collate([pretrain_dataset.create_example(1),
                                   pretrain_dataset.create_example(0)])
-        model = DeepDraftNetwork(Draft.state_dim(),
+        model = DeepDraftModel(Draft.state_dim(),
                                  Draft.role_reward_dim(),
                                  Draft.combo_reward_dim(),
                                  Draft.num_champs)
