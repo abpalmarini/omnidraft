@@ -107,9 +107,9 @@ class TestPretrain(unittest.TestCase):
         solo = pretrain_collate([pretrain_dataset.create_example(1)])
         batch = pretrain_collate([pretrain_dataset.create_example(1),
                                   pretrain_dataset.create_example(0)])
-        model = DeepDraftModel(Draft.state_dim(),
-                                 Draft.role_reward_dim(),
-                                 Draft.combo_reward_dim(),
+        model = DeepDraftModel(Draft.state_dim,
+                                 Draft.role_reward_dim,
+                                 Draft.combo_reward_dim,
                                  Draft.num_champs)
         model.eval()
         with torch.no_grad():

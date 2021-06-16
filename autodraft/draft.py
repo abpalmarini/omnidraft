@@ -48,6 +48,13 @@ class Draft:
               (B, PICK))
     num_champs = 50
 
+    # Dimensions of neural network input representations for the
+    # draft state and rewards. See _make_nn_draft_state_input and
+    # _set_nn_rewards_input for explanation.
+    state_dim = 3 + len(format) + (2 * NUM_ROLES) + (4 * num_champs)
+    role_reward_dim = 2 + NUM_ROLES + num_champs
+    combo_reward_dim = 2 + (2 * num_champs)
+
     def __init__(self, history=None, rewards=None, roles=None):
         self.history = history or []
         self.rewards = rewards or self._generate_rewards()
@@ -336,21 +343,6 @@ class Draft:
         roles['open_history'] = [(tuple(range(5)), tuple(range(5)))]
         return roles
 
-    @classmethod
-    def role_reward_dim(cls):
-        # See _set_nn_rewards_input for explanation.
-        return 2 + NUM_ROLES + cls.num_champs
-
-    @classmethod
-    def combo_reward_dim(cls):
-        # See _set_nn_rewards_input for explanation.
-        return 2 + (2 * cls.num_champs)
-
-    @classmethod
-    def state_dim(cls):
-        # See _make_nn_draft_state_input for explanation.
-        return 3 + len(cls.format) + (2 * NUM_ROLES) + (4 * cls.num_champs)
-
     # Creates the NN input representation for each reward. These are
     # created once at the start and cached as they do not change from
     # state to state. The only thing that does change is the ordering
@@ -372,7 +364,7 @@ class Draft:
 
         # Role.
         num_role_rewards = len(self.rewards['role'])
-        nn_role_rewards = np.zeros((num_role_rewards, self.role_reward_dim()),
+        nn_role_rewards = np.zeros((num_role_rewards, self.role_reward_dim),
                                     dtype=np.float32)
         role_A_values = np.empty(num_role_rewards, dtype=np.float32)
         role_B_values = np.empty(num_role_rewards, dtype=np.float32)
@@ -388,7 +380,7 @@ class Draft:
 
         # Combo.
         num_combo_rewards = len(self.rewards['combo'])
-        nn_combo_rewards = np.zeros((num_combo_rewards, self.combo_reward_dim()),
+        nn_combo_rewards = np.zeros((num_combo_rewards, self.combo_reward_dim),
                                      dtype=np.float32)
         combo_A_values = np.empty(num_combo_rewards, dtype=np.float32)
         combo_B_values = np.empty(num_combo_rewards, dtype=np.float32)
@@ -421,7 +413,7 @@ class Draft:
     # - (4 * n = num champs) binary features for indicating what the
     #   selecting and enemy team have picked and banned
     def _make_nn_draft_state_input(self, pos):
-        draft_state = np.zeros(self.state_dim(), dtype=np.float32)
+        draft_state = np.zeros(self.state_dim, dtype=np.float32)
         offset = 0
 
         # Turn information.
