@@ -88,12 +88,12 @@ class PretrainDataset(Dataset):
 PretrainBatch = namedtuple(
     'PretrainBatch',
     [
-        'states',       # size [batch_size, state_dim]
-        'role_rs',      # size [batch_size, num_role_rs, role_r_dim]
-        'combo_rs',     # size [batch_size, num_combo_rs, combo_r_dim]
-        'action_hats',  # size [batch_size]
-        'value_hats',   # size [batch_size]
-        'padding_mask', # size [batch_size, 1 + num_role_rs + num_combo_rs]
+        'states',         # size [batch_size, state_dim]
+        'role_rs',        # size [batch_size, num_role_rs, role_r_dim]
+        'combo_rs',       # size [batch_size, num_combo_rs, combo_r_dim]
+        'action_hats',    # size [batch_size]
+        'value_hats',     # size [batch_size]
+        'attention_mask', # size [batch_size, 1 + num_role_rs + num_combo_rs]
     ],
 )
 
@@ -135,7 +135,8 @@ def pretrain_collate(batch):
     role_rs_mask = pad_sequence(attended_role_rs, batch_first=True)
     attended_combo_rs = [torch.ones(len(rs)) for rs in batch_combo_rs]
     combo_rs_mask = pad_sequence(attended_combo_rs, batch_first=True)
-    padding_mask = torch.cat((state_mask, role_rs_mask, combo_rs_mask), dim=1)
+    masks = (state_mask, role_rs_mask, combo_rs_mask)
+    attention_mask = torch.cat(masks, dim=1)
 
     return PretrainBatch(
         states,
@@ -143,7 +144,7 @@ def pretrain_collate(batch):
         combo_rs,
         action_hats,
         value_hats,
-        padding_mask,
+        attention_mask,
     )
 
 

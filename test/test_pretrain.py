@@ -115,7 +115,7 @@ class TestPretrain(unittest.TestCase):
         with torch.no_grad():
             solo_p, solo_v = model(solo.states, solo.role_rs, solo.combo_rs)
             batch_p, batch_v = model(batch.states, batch.role_rs,
-                                     batch.combo_rs, batch.padding_mask)
+                                     batch.combo_rs, batch.attention_mask)
         for i in range(Draft.num_champs):
             self.assertAlmostEqual(solo_p[0][i].item(), batch_p[0][i].item(), 5)
         self.assertAlmostEqual(solo_v[0].item(), batch_v[0].item(), 5)
