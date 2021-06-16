@@ -5,6 +5,7 @@ from collections import namedtuple
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
+import pytorch_lightning as pl
 
 from .draft import Draft
 
@@ -136,9 +137,46 @@ def pretrain_collate(batch):
     combo_rs_mask = pad_sequence(attended_combo_rs, batch_first=True)
     padding_mask = torch.cat((state_mask, role_rs_mask, combo_rs_mask), dim=1)
 
-    return PretrainBatch(states,
-                         role_rs,
-                         combo_rs,
-                         action_hats,
-                         value_hats,
-                         padding_mask)
+    return PretrainBatch(
+        states,
+        role_rs,
+        combo_rs,
+        action_hats,
+        value_hats,
+        padding_mask,
+    )
+
+
+class PretrainDataModule(pl.LightningDataModule):
+
+    def __init__(self, batch_size=1, num_workers=0):
+        super().__init__()
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+        self.val_seed_range = range(0, 10000)
+        self.train_seed_range = range(10000, int(1e6))
+
+    def prepare_data(self):
+        # Create and download validation examples if not already saved.
+        PretrainDataset(self.val_seed_range, preload=True)
+
+    def setup(self, stage=None):
+        self.train_dataset = PretrainDataset(self.train_seed_range)
+        self.val_dataset = PretrainDataset(self.val_seed_range, preload=True)
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            collate_fn=pretrain_collate,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            collate_fn=pretrain_collate,
+        )
