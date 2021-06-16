@@ -1,3 +1,4 @@
+import os
 import random
 from collections import namedtuple
 
@@ -10,15 +11,31 @@ from .draft import Draft
 
 class PretrainDataset(Dataset):
 
-    def __init__(self, seed_range):
+    def __init__(self, seed_range, preload=False):
         self.seed_range = seed_range
+        self.preload = preload
+
+        # Optionally save and load example data beforehand. (Useful
+        # for validation set where examples will be resued).
+        if preload:
+            data_dir = './data/'
+            file_name = 'pretrain_{}_{}.pt'.format(seed_range[0], seed_range[-1])
+            try:
+                self.examples = torch.load(data_dir + file_name)
+            except FileNotFoundError:
+                self.examples = [self.create_example(seed) for seed in seed_range]
+                os.makedirs(data_dir, exist_ok=True)
+                torch.save(self.examples, data_dir + file_name)
 
     def __len__(self):
         return len(self.seed_range)
 
     def __getitem__(self, index):
-        seed = self.seed_range[index]
-        return self.create_example(seed)
+        if self.preload:
+            return self.examples[index]
+        else:
+            seed = self.seed_range[index]
+            return self.create_example(seed)
 
     # To create the example input a draft with random rewards is created
     # and random actions are applied up to a team's final action. The
