@@ -19,23 +19,23 @@ class TestPretrain(unittest.TestCase):
                 draft.apply(action)
 
             example = pretrain_dataset.create_example(seed)
-            state, role_rs, combo_rs, action_hat, value_hat = example
+            state, role_rs, combo_rs, target_action, target_value = example
 
-            # Check that value_hat returned is in accordance with team B
+            # Check that target_value returned is in accordance with team B
             # playing optimally.
             draft_copy = draft.clone()
-            draft_copy.apply(action_hat)
+            draft_copy.apply(target_action)
             # All team B actions (except the optimal one) should lead A
             # to getting a higher value than expected.
             for action in draft_copy.legal_actions():
                 draft_copy_2 = draft_copy.clone()
                 draft_copy_2.apply(action)
-                self.assertLessEqual(value_hat, draft_copy_2.terminal_value())
+                self.assertLessEqual(target_value, draft_copy_2.terminal_value())
 
             # Check that no other A action leads to higher value if team B
             # plays optimally.
             for action in draft.legal_actions():
-                if action == action_hat:
+                if action == target_action:
                     continue
                 draft_copy = draft.clone()
                 draft_copy.apply(action)
@@ -48,7 +48,7 @@ class TestPretrain(unittest.TestCase):
                     # A's perspective.
                     if terminal_value < best_value:
                         best_value = terminal_value
-                self.assertLess(best_value, value_hat)
+                self.assertLess(best_value, target_value)
 
             # Ensure correct state, role_rs and combo_rs are provided for
             # these targets.
@@ -72,20 +72,20 @@ class TestPretrain(unittest.TestCase):
                 draft.apply(action)
 
             example = pretrain_dataset.create_example(seed)
-            state, role_rs, combo_rs, action_hat, value_hat = example
+            state, role_rs, combo_rs, target_action, target_value = example
 
             # Check that target action leads to target value.
             draft_copy = draft.clone()
-            draft_copy.apply(action_hat)
-            self.assertEqual(-draft_copy.terminal_value(), value_hat)
+            draft_copy.apply(target_action)
+            self.assertEqual(-draft_copy.terminal_value(), target_value)
 
             # Check that no other action leads to higher target value.
             for action in draft.legal_actions():
-                if action == action_hat:
+                if action == target_action:
                     continue
                 draft_copy = draft.clone()
                 draft_copy.apply(action)
-                self.assertLess(-draft_copy.terminal_value(), value_hat)
+                self.assertLess(-draft_copy.terminal_value(), target_value)
 
             # Ensure correct state, role_rs and combo_rs are provided for
             # these targets.

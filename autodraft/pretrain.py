@@ -65,34 +65,34 @@ class PretrainDataset(Dataset):
             for _ in range(len(draft.format) - 2):
                 action = random.choice(draft.legal_actions())
                 draft.apply(action)
-            action_hat = None
-            value_hat = -1000
+            target_action = None
+            target_value = -1000
             for action in draft.legal_actions():
                 draft_copy = draft.clone()
                 draft_copy.apply(action)
                 # Find max value given team B plays optimally.
                 _, B_terminal_value = optimal_team_B_final_action(draft_copy)
                 terminal_value = -B_terminal_value
-                if terminal_value > value_hat:
-                    value_hat = terminal_value
-                    action_hat = action
+                if terminal_value > target_value:
+                    target_value = terminal_value
+                    target_action = action
         else:
             for _ in range(len(draft.format) - 1):
                 action = random.choice(draft.legal_actions())
                 draft.apply(action)
-            action_hat, value_hat = optimal_team_B_final_action(draft)
+            target_action, target_value = optimal_team_B_final_action(draft)
 
-        return *draft.make_nn_input(), action_hat, value_hat
+        return *draft.make_nn_input(), target_action, target_value
 
 
 PretrainBatch = namedtuple(
     'PretrainBatch',
     [
-        'states',         # size [batch_size, state_dim]
-        'role_rs',        # size [batch_size, num_role_rs, role_r_dim]
-        'combo_rs',       # size [batch_size, num_combo_rs, combo_r_dim]
-        'action_hats',    # size [batch_size]
-        'value_hats',     # size [batch_size]
+        'states', # size [batch_size, state_dim]
+        'role_rs', # size [batch_size, num_role_rs, role_r_dim]
+        'combo_rs', # size [batch_size, num_combo_rs, combo_r_dim]
+        'target_actions', # size [batch_size]
+        'target_values', # size [batch_size]
         'attention_mask', # size [batch_size, 1 + num_role_rs + num_combo_rs]
     ],
 )
@@ -104,16 +104,16 @@ def pretrain_collate(batch):
     batch_states = []
     batch_role_rs = []
     batch_combo_rs = []
-    batch_action_hats = []
-    batch_value_hats = []
+    batch_target_actions = []
+    batch_target_values = []
 
     for example in batch:
-        state, role_rs, combo_rs, action_hat, value_hat = example
+        state, role_rs, combo_rs, target_action, target_value = example
         batch_states.append(torch.from_numpy(state))
         batch_role_rs.append(torch.from_numpy(role_rs))
         batch_combo_rs.append(torch.from_numpy(combo_rs))
-        batch_action_hats.append(action_hat)
-        batch_value_hats.append(value_hat)
+        batch_target_actions.append(target_action)
+        batch_target_values.append(target_value)
 
     # The draft state, role rewards and combo rewards will be embedded
     # separately before being stacked to form the sequence input for
@@ -122,8 +122,8 @@ def pretrain_collate(batch):
     role_rs = pad_sequence(batch_role_rs, batch_first=True)
     combo_rs = pad_sequence(batch_combo_rs, batch_first=True)
 
-    action_hats = torch.tensor(batch_action_hats)
-    value_hats = torch.tensor(batch_value_hats).unsqueeze(1)
+    target_actions = torch.tensor(batch_target_actions)
+    target_values = torch.tensor(batch_target_values).unsqueeze(1)
 
     # The fact that role and combo rewards got padded separately must
     # be taken into account when creating the attention mask for the
@@ -142,8 +142,8 @@ def pretrain_collate(batch):
         states,
         role_rs,
         combo_rs,
-        action_hats,
-        value_hats,
+        target_actions,
+        target_values,
         attention_mask,
     )
 
