@@ -3,6 +3,7 @@ import random
 from collections import namedtuple
 
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import pytorch_lightning as pl
@@ -155,8 +156,8 @@ class PretrainDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-        self.val_seed_range = range(0, 10000)
         self.train_seed_range = range(10000, int(1e6))
+        self.val_seed_range = range(0, 10000)
 
     def prepare_data(self):
         # Create and download validation examples if not already saved.
@@ -181,3 +182,53 @@ class PretrainDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             collate_fn=pretrain_collate,
         )
+
+
+class LitPretrainModule(pl.LightningModule):
+
+    def __init__(self, model):
+        super().__init__()
+
+        self.model = model
+
+    def shared_step(self, batch):
+        policy_logits, values = self.model(
+            batch.states,
+            batch.role_rs,
+            batch.combo_rs,
+            batch.attention_mask,
+        )
+
+        # Similar loss to AlphaZero except that in pretraining the model
+        # is learning to predict the optimal final pick rather than
+        # from self-play search results.
+        policy_loss = F.cross_entropy(policy_logits, batch.target_actions)
+        value_loss = F.mse_loss(values, batch.target_values)
+        loss = policy_loss + value_loss
+
+        return policy_loss, value_loss, loss
+
+    def training_step(self, batch, batch_idx):
+        policy_loss, value_loss, loss = self.shared_step(batch)
+
+        self.log_dict({
+            'train_policy_loss': policy_loss,
+            'train_value_loss': value_loss,
+            'train_loss': loss,
+        })
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        policy_loss, value_loss, loss = self.shared_step(batch)
+
+        self.log_dict({
+            'val_policy_loss': policy_loss,
+            'val_value_loss': value_loss,
+            'val_loss': loss,
+        })
+
+    def configure_optimizers(self):
+        # Used for getting set up right now.
+        opt = torch.optim.Adam(self.model.parameters(), lr=1e-4, weight_decay=0.01)
+        return opt
