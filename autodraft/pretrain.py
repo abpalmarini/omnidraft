@@ -151,27 +151,48 @@ def pretrain_collate(batch):
 
 class PretrainDataModule(pl.LightningDataModule):
 
-    def __init__(self, batch_size=1, num_workers=0):
+    def __init__(
+        self,
+        train_seed_range=range(10000, int(1e6)),
+        preload_train_data=False,
+        val_seed_range=range(0, 10000),
+        preload_val_data=True,
+        batch_size=32,
+        num_workers=0,
+        shuffle=False,
+    ):
         super().__init__()
+
+        self.train_seed_range = train_seed_range
+        self.preload_train_data = preload_train_data
+        self.val_seed_range = val_seed_range
+        self.preload_val_data = preload_val_data
+
         self.batch_size = batch_size
         self.num_workers = num_workers
-
-        self.train_seed_range = range(10000, int(1e6))
-        self.val_seed_range = range(0, 10000)
+        self.shuffle = shuffle
 
     def prepare_data(self):
-        # Create and download validation examples if not already saved.
-        PretrainDataset(self.val_seed_range, preload=True)
+        # Create and download examples if required.
+        PretrainDataset(self.train_seed_range, preload=self.preload_train_data)
+        PretrainDataset(self.val_seed_range, preload=self.preload_val_data)
 
     def setup(self, stage=None):
-        self.train_dataset = PretrainDataset(self.train_seed_range)
-        self.val_dataset = PretrainDataset(self.val_seed_range, preload=True)
+        self.train_dataset = PretrainDataset(
+            self.train_seed_range,
+            preload=self.preload_train_data,
+        )
+        self.val_dataset = PretrainDataset(
+            self.val_seed_range,
+            preload=self.preload_val_data,
+        )
 
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            shuffle=self.shuffle,
             collate_fn=pretrain_collate,
         )
 
@@ -184,12 +205,16 @@ class PretrainDataModule(pl.LightningDataModule):
         )
 
 
-class LitPretrainModule(pl.LightningModule):
+class LitPretrainModel(pl.LightningModule):
 
-    def __init__(self, model):
+    def __init__(self, model, lr=1e-4, weight_decay=0.01):
         super().__init__()
 
         self.model = model
+
+        self.lr = lr
+        self.weight_decay = weight_decay
+
 
     def shared_step(self, batch):
         policy_logits, values = self.model(
@@ -229,6 +254,9 @@ class LitPretrainModule(pl.LightningModule):
         })
 
     def configure_optimizers(self):
-        # Used for getting set up right now.
-        opt = torch.optim.Adam(self.model.parameters(), lr=1e-4, weight_decay=0.01)
-        return opt
+        optimizer = torch.optim.Adam(
+            self.model.parameters(),
+            lr=self.lr,
+            weight_decay=self.weight_decay,
+        )
+        return optimizer
