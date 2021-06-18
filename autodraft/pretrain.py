@@ -88,13 +88,13 @@ class PretrainDataset(Dataset):
 
 PretrainBatch = namedtuple(
     'PretrainBatch',
-    [
-        'states', # size [batch_size, state_dim]
-        'role_rs', # size [batch_size, num_role_rs, role_r_dim]
-        'combo_rs', # size [batch_size, num_combo_rs, combo_r_dim]
-        'target_actions', # size [batch_size]
-        'target_values', # size [batch_size]
-        'attention_mask', # size [batch_size, 1 + num_role_rs + num_combo_rs]
+    [                     # Sizes:
+        'states',         # (batch_size, state_dim)
+        'role_rs',        # (batch_size, num_role_rs, role_r_dim)
+        'combo_rs',       # (batch_size, num_combo_rs, combo_r_dim)
+        'target_actions', # (batch_size)
+        'target_values',  # (batch_size)
+        'attention_mask', # (batch_size, 1 + num_role_rs + num_combo_rs)
     ],
 )
 
@@ -266,7 +266,7 @@ class LitPretrainModel(pl.LightningModule):
         })
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=self.lr,
             weight_decay=self.weight_decay,
