@@ -215,8 +215,7 @@ class LitPretrainModel(pl.LightningModule):
         self.lr = lr
         self.weight_decay = weight_decay
 
-
-    def shared_step(self, batch):
+    def training_step(self, batch, batch_idx):
         policy_logits, values = self.model(
             batch.states,
             batch.role_rs,
@@ -231,11 +230,6 @@ class LitPretrainModel(pl.LightningModule):
         value_loss = F.mse_loss(values, batch.target_values)
         loss = policy_loss + value_loss
 
-        return policy_loss, value_loss, loss
-
-    def training_step(self, batch, batch_idx):
-        policy_loss, value_loss, loss = self.shared_step(batch)
-
         self.log_dict({
             'train_policy_loss': policy_loss,
             'train_value_loss': value_loss,
@@ -245,12 +239,30 @@ class LitPretrainModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        policy_loss, value_loss, loss = self.shared_step(batch)
+        policy_logits, values = self.model(
+            batch.states,
+            batch.role_rs,
+            batch.combo_rs,
+            batch.attention_mask,
+        )
+
+        policy_loss = F.cross_entropy(policy_logits, batch.target_actions)
+        value_loss = F.mse_loss(values, batch.target_values)
+        loss = policy_loss + value_loss
+
+        # Action prediction accuracy and how far off the model is from
+        # estimating the correct value.
+        predicted_actions = torch.argmax(policy_logits, dim=1)
+        correct = torch.sum(predicted_actions == batch.target_actions)
+        action_accuracy = correct / len(batch.target_actions)
+        value_diff = (values - batch.target_values).abs().mean()
 
         self.log_dict({
             'val_policy_loss': policy_loss,
             'val_value_loss': value_loss,
             'val_loss': loss,
+            'val_action_accuracy': action_accuracy,
+            'val_value_diff': value_diff,
         })
 
     def configure_optimizers(self):
