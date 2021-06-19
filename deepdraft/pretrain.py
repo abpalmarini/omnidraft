@@ -83,7 +83,8 @@ class PretrainDataset(Dataset):
                 draft.apply(action)
             target_action, target_value = optimal_team_B_final_action(draft)
 
-        return *draft.make_nn_input(), target_action, target_value
+        draft_state, role_rs, combo_rs = draft.make_nn_input()
+        return draft_state, role_rs, combo_rs, target_action, target_value
 
 
 PretrainBatch = namedtuple(
