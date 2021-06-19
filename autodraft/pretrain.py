@@ -207,11 +207,18 @@ class PretrainDataModule(pl.LightningDataModule):
 
 class LitPretrainModel(pl.LightningModule):
 
-    def __init__(self, model, lr=1e-4, weight_decay=0.01):
+    def __init__(
+        self,
+        model,
+        mse_value_weight=1,
+        lr=1e-4,
+        weight_decay=0.01
+    ):
         super().__init__()
 
         self.model = model
 
+        self.mse_value_weight = mse_value_weight
         self.lr = lr
         self.weight_decay = weight_decay
 
@@ -227,7 +234,7 @@ class LitPretrainModel(pl.LightningModule):
         # is learning to predict the optimal final pick rather than
         # from self-play search results.
         policy_loss = F.cross_entropy(policy_logits, batch.target_actions)
-        value_loss = F.mse_loss(values, batch.target_values)
+        value_loss = F.mse_loss(values, batch.target_values) * self.mse_value_weight
         loss = policy_loss + value_loss
 
         self.log_dict({
@@ -247,7 +254,7 @@ class LitPretrainModel(pl.LightningModule):
         )
 
         policy_loss = F.cross_entropy(policy_logits, batch.target_actions)
-        value_loss = F.mse_loss(values, batch.target_values)
+        value_loss = F.mse_loss(values, batch.target_values) * self.mse_value_weight
         loss = policy_loss + value_loss
 
         # Action prediction accuracy and how far off the model is from
