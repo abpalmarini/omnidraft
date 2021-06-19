@@ -1,9 +1,11 @@
 import unittest
 import random
+
 import torch
-from autodraft.draft import Draft
-from autodraft.pretrain import PretrainDataset, pretrain_collate
-from autodraft.model import DeepDraftModel
+
+from deepdraft.draft import Draft
+from deepdraft.pretrain import PretrainDataset, pretrain_collate
+from deepdraft.model import DeepDraftModel
 
 
 class TestPretrain(unittest.TestCase):

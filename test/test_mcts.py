@@ -1,7 +1,8 @@
 import unittest 
 import random
-from autodraft.mcts import Node, run_mcts
-from autodraft.draft import Draft, RoleReward
+
+from deepdraft.mcts import Node, run_mcts
+from deepdraft.draft import Draft, RoleReward
 
 
 class Config:

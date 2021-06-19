@@ -1,7 +1,8 @@
 import unittest 
-from autodraft.draft import Draft
-from autodraft.draft import RoleReward as RR
-from autodraft.draft import ComboReward as CR
+
+from deepdraft.draft import Draft
+from deepdraft.draft import RoleReward as RR
+from deepdraft.draft import ComboReward as CR
 
 
 def open_roles(draft):
