@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
+import transformers
 
-from transformers import BertConfig
 from .positionless_bert import BertModel
 
 
@@ -13,7 +13,7 @@ class DeepDraftModel(nn.Module):
     def __init__(self, state_dim, role_r_dim, combo_r_dim, num_champs):
         super().__init__()
 
-        config = BertConfig()
+        config = transformers.BertConfig()
 
         self.embed_state = nn.Linear(state_dim, config.hidden_size)
         self.embed_role_rs = nn.Linear(role_r_dim, config.hidden_size)
@@ -65,3 +65,22 @@ class DeepDraftModel(nn.Module):
         values = self.value_head(draft_state_output)
 
         return policy_logits, values
+
+    # Transformers tend to generalise to new tasks fairly well
+    # (https://arxiv.org/abs/2103.05247) so I may as well use a
+    # pretrained one from NLP as a starting point.
+    def set_transformer_weights_to_nlp_bert(self):
+        bert = transformers.BertModel.from_pretrained('bert-base-uncased')
+        bert_state_dict = bert.state_dict()
+
+        unused_layers = (
+            'embeddings.word_embeddings.weight',
+            'embeddings.token_type_embeddings.weight',
+            'embeddings.position_embeddings.weight',
+            'pooler.dense.weight',
+            'pooler.dense.bias',
+        )
+        for unused_layer in unused_layers:
+            del bert_state_dict[unused_layer]
+
+        self.transformer.load_state_dict(bert_state_dict)
