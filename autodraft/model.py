@@ -22,12 +22,18 @@ class DeepDraftModel(nn.Module):
         # Default HuggingFace BERT with token type and position
         # embeddings removed. The transformer will be reasoning over
         # the state and provided rewards where position is irrelevant.
-        self.transformer = BertModel(config)
+        self.transformer = BertModel(config, add_pooling_layer=False)
 
-        # Simple policy and value heads that are applied to the last
-        # hidden representation of the draft state.
-        self.policy_head = nn.Linear(config.hidden_size, num_champs)
-        self.value_head = nn.Linear(config.hidden_size, 1)
+        self.policy_head = nn.Sequential(
+            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.Tanh(),
+            nn.Linear(config.hidden_size, num_champs),
+        )
+        self.value_head = nn.Sequential(
+            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.Tanh(),
+            nn.Linear(config.hidden_size, 1),
+        )
 
     def forward(self, states, role_rs, combo_rs, attention_mask=None):
         # Embed the state, role rewards and combo rewards separately.
@@ -49,11 +55,13 @@ class DeepDraftModel(nn.Module):
         )
 
         # Extract the final hidden representation of the draft state
-        # (first element in sequence) to be used for predicting the
-        # policy and expected value.
-        state_output = transformer_outputs.pooler_output
+        # (first element in sequence) which will have aggregated
+        # knowledge from the rewards to predict the policy and value.
+        sequence_output = transformer_outputs[0] # (batch size, sequence size, hidden size)
+        draft_state_output = sequence_output[:, 0, :]
 
-        policy_logits = self.policy_head(state_output)
-        values = self.value_head(state_output)
+        # Send the draft state output (body) to the two heads.
+        policy_logits = self.policy_head(draft_state_output)
+        values = self.value_head(draft_state_output)
 
         return policy_logits, values
