@@ -212,7 +212,8 @@ class LitPretrainModel(pl.LightningModule):
         model,
         mse_value_weight=1,
         lr=1e-4,
-        weight_decay=0.01
+        weight_decay=0.01,
+        warmup_steps=0,
     ):
         super().__init__()
 
@@ -221,6 +222,7 @@ class LitPretrainModel(pl.LightningModule):
         self.mse_value_weight = mse_value_weight
         self.lr = lr
         self.weight_decay = weight_decay
+        self.warmup_steps = warmup_steps
 
     def training_step(self, batch, batch_idx):
         policy_logits, values = self.model(
@@ -278,4 +280,12 @@ class LitPretrainModel(pl.LightningModule):
             lr=self.lr,
             weight_decay=self.weight_decay,
         )
-        return optimizer
+        if self.warmup_steps:
+            # Linear learning rate warmup.
+            scheduler = torch.optim.lr_scheduler.LambdaLR(
+                optimizer,
+                lambda steps: min(1., (steps + 1) / self.warmup_steps),
+            )
+            return [optimizer], [{'scheduler': scheduler, 'interval': 'step'}]
+        else:
+            return optimizer
