@@ -10,10 +10,17 @@ from .positionless_bert import BertModel
 # best champ to select and how much value it believes it will receive.
 class DeepDraftModel(nn.Module):
 
-    def __init__(self, state_dim, role_r_dim, combo_r_dim, num_champs):
+    def __init__(
+        self,
+        state_dim,
+        role_r_dim,
+        combo_r_dim,
+        num_champs,
+        **kwargs,
+    ):
         super().__init__()
 
-        config = transformers.BertConfig()
+        config = transformers.BertConfig(**kwargs)
 
         self.embed_state = nn.Linear(state_dim, config.hidden_size)
         self.embed_role_rs = nn.Linear(role_r_dim, config.hidden_size)
@@ -70,6 +77,9 @@ class DeepDraftModel(nn.Module):
     # (https://arxiv.org/abs/2103.05247) so I may as well use a
     # pretrained one from NLP as a starting point.
     def set_transformer_weights_to_nlp_bert(self):
+        # Only valid if using full sized BERT.
+        assert self.config == transformers.BertConfig()
+
         bert = transformers.BertModel.from_pretrained('bert-base-uncased')
         bert_state_dict = bert.state_dict()
 
