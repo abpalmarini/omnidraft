@@ -31,6 +31,8 @@ class DeepDraftModel(nn.Module):
         # the state and provided rewards where position is irrelevant.
         self.transformer = BertModel(config, add_pooling_layer=False)
 
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+
         self.policy_head = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.Tanh(),
@@ -61,10 +63,12 @@ class DeepDraftModel(nn.Module):
             attention_mask=attention_mask,
         )
 
+        sequence_output = transformer_outputs[0] # (batch size, sequence size, hidden size)
+        sequence_output = self.layernorm(sequence_output)
+
         # Extract the final hidden representation of the draft state
         # (first element in sequence) which will have aggregated
         # knowledge from the rewards to predict the policy and value.
-        sequence_output = transformer_outputs[0] # (batch size, sequence size, hidden size)
         draft_state_output = sequence_output[:, 0, :]
 
         # Send the draft state output (body) to the two heads.
