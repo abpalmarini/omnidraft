@@ -11,6 +11,11 @@ import pytorch_lightning as pl
 from .draft import Draft
 
 
+# Rather than throw the agent directly into self-play I figured giving
+# it a chance to learn the meaning of the rewards first would be
+# helpful. I can't tell it how to draft in the early stages, but I can
+# tell it what the optimal final pick is beacause there will only be one
+# champ that maximises the team's total reward.
 class PretrainDataset(Dataset):
 
     def __init__(self, seed_range, preload=False):
