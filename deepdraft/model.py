@@ -40,8 +40,10 @@ class DeepDraftModel(nn.Module):
         )
         self.value_head = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
-            nn.Tanh(),
-            nn.Linear(config.hidden_size, 1),
+            nn.ReLU(),
+            nn.Linear(config.hidden_size, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1),
         )
 
     def forward(self, states, role_rs, combo_rs, attention_mask=None):
