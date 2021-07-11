@@ -1,3 +1,12 @@
+""" 
+Draft simulator originally to be used with an AlphaZero like agent.                                            
+
+After pivoting the project to use negamax on bit fields in C this is                                           
+mostly redundant. However, due to it already being thoroughly tested I                                         
+will keep it around to so that I can run tests on it and ensure that my                                        
+new approach is working correctly.                                                                             
+"""
+
 import random
 import numpy as np
 from itertools import combinations, chain

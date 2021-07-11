@@ -1,8 +1,14 @@
+"""
+These are NOT tests for work done in the current project, but saying I
+am keeping 'draft_az.py' for testing purposes I might as well keep its
+own tests as well.
+"""
+
 import unittest 
 
-from deepdraft.draft import Draft
-from deepdraft.draft import RoleReward as RR
-from deepdraft.draft import ComboReward as CR
+from .draft_az import Draft
+from .draft_az import RoleReward as RR
+from .draft_az import ComboReward as CR
 
 
 def open_roles(draft):
