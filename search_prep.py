@@ -3,7 +3,10 @@ Various functions for turning raw draft and reward detials into the
 bit level data types needed for search.
 """
 
+import itertools
 
+
+# Represents a *unique* hero-role combination.
 class Hero:
 
     def __init__(self, role_r, all_synergy_rs, all_counter_rs):
@@ -43,3 +46,29 @@ def get_ordered_heroes(role_rs, synergy_rs, counter_rs):
     heroes.sort(key=lambda hero: hero.potential, reverse=True)
     hero_nums = {(hero.name, hero.role): num for num, hero in enumerate(heroes)}
     return heroes, hero_nums  
+
+
+# Now that heroes have been ordered, and additional ones created for
+# flex picks, synergy rewards using these numbers can be created.
+# Multiple versions are created to accomadate for the fact that heroes
+# playing more than one role are treated as being uniqe.
+def translate_synergy_rs(synergy_rs, hero_nums):
+    new_synergy_rs = []
+
+    def valid_synergy_mappings(heroes):
+        valid = []
+        hero_names, hero_roles = zip(*heroes)
+        for possible_roles in itertools.product(*hero_roles):
+            if len(set(possible_roles)) != len(heroes):
+                # only sets of heroes in uniqe roles are valid
+                continue
+            synergy_hero_nums = []
+            for hero_name, role in zip(hero_names, possible_roles):
+                synergy_hero_nums.append(hero_nums[(hero_name, role)])
+            valid.append(synergy_hero_nums)
+        return valid
+
+    for r in synergy_rs:
+        for heroes in valid_synergy_mappings(r.heroes):
+            new_synergy_rs.append((heroes, r.A_value, r.B_value))
+    return new_synergy_rs
