@@ -163,5 +163,53 @@ class TestSearchPrep(unittest.TestCase):
         )
         self.assertEqual(new_counter_rs, all_correct)
 
+    def test_get_hero_nums_per_role(self):
+        role_rs = [
+            RoleR('Taka', 0, 0, 9),
+            RoleR('Krul', 1, 0, 8),
+            RoleR('Krul', 2, 0, 7),
+            RoleR('Rona', 3, 0, 6),
+            RoleR('Rona', 4, 0, 5),
+            RoleR('Gwen', 1, 0, 3),
+            RoleR('Gwen', 2, 0, 2),
+            RoleR('Lyra', 0, 0, 1),
+        ]
+        ordered_heroes, _ = get_ordered_heroes(role_rs, [], [])
+        hero_nums_per_role = get_hero_nums_per_role(ordered_heroes)
+        correct = [
+            [0, 7],
+            [1, 5],
+            [2, 6],
+            [3],
+            [4],
+        ]
+        self.assertEqual(hero_nums_per_role, correct)
+
+    def test_get_same_hero_refs(self):
+        role_rs = [
+            RoleR('Taka', 0, 0, 9),
+            RoleR('Krul', 1, 0, 8),
+            RoleR('Krul', 2, 0, 7),
+            RoleR('Rona', 3, 0, 6),
+            RoleR('Rona', 4, 0, 5),
+            RoleR('Gwen', 1, 0, 3),
+            RoleR('Gwen', 2, 0, 2),
+            RoleR('Lyra', 0, 0, 1),
+        ]
+        ordered_heroes, hero_nums = get_ordered_heroes(role_rs, [], [])
+        same_hero_refs = get_same_hero_refs(ordered_heroes, hero_nums)
+        correct = [
+            [0],
+            [1, 2],
+            [1, 2],
+            [3, 4],
+            [3, 4],
+            [5, 6],
+            [5, 6],
+            [7],
+        ]
+        self.assertEqual(same_hero_refs, correct)
+
+
 if __name__ == '__main__':
     unittest.main()

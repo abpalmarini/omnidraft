@@ -100,3 +100,26 @@ def translate_counter_rs(counter_rs, hero_nums):
         for heroes, adversaries in valid_counter_nums(r.heroes, r.adversaries):
             new_counter_rs.append((heroes, adversaries, r.A_value, r.B_value))
     return new_counter_rs
+
+
+def get_hero_nums_per_role(ordered_heroes):
+    role_heroes = [[] for _ in range(5)]
+    for hero_num, hero in enumerate(ordered_heroes):
+        role_heroes[hero.role].append(hero_num)
+    return role_heroes
+
+# Returns a list where element n contains a list of all hero num
+# occurences that refer to hero n, including itself. Once turned
+# into a bitfield the bitwise AND of the negation and the legal
+# actions can quickly remove the now illegal heroes.
+def get_same_hero_refs(ordered_heroes, hero_nums):
+    all_refs = []
+    for hero in ordered_heroes:
+        refs = []
+        for role in range(5):
+            # will be true for at least one (its role)
+            if (hero.name, role) in hero_nums:
+                refs.append(hero_nums[(hero.name, role)])
+        all_refs.append(refs)
+    return all_refs
+
