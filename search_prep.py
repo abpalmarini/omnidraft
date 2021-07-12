@@ -50,25 +50,53 @@ def get_ordered_heroes(role_rs, synergy_rs, counter_rs):
 
 # Now that heroes have been ordered, and additional ones created for
 # flex picks, synergy rewards using these numbers can be created.
-# Multiple versions are created to accomadate for the fact that heroes
-# playing more than one role are treated as being uniqe.
+# Multiple versions are created to accommodate for the fact that heroes
+# playing more than one role are treated as being unique.
 def translate_synergy_rs(synergy_rs, hero_nums):
     new_synergy_rs = []
 
-    def valid_synergy_mappings(heroes):
+    def valid_synergy_nums(heroes):
         valid = []
         hero_names, hero_roles = zip(*heroes)
-        for possible_roles in itertools.product(*hero_roles):
-            if len(set(possible_roles)) != len(heroes):
-                # only sets of heroes in uniqe roles are valid
+        for roles in itertools.product(*hero_roles):
+            if len(set(roles)) != len(heroes):
+                # only sets of heroes in unique roles are valid
                 continue
-            synergy_hero_nums = []
-            for hero_name, role in zip(hero_names, possible_roles):
-                synergy_hero_nums.append(hero_nums[(hero_name, role)])
-            valid.append(synergy_hero_nums)
+            synergy_nums = []
+            for name, role in zip(hero_names, roles):
+                synergy_nums.append(hero_nums[(name, role)])
+            valid.append(synergy_nums)
         return valid
 
     for r in synergy_rs:
-        for heroes in valid_synergy_mappings(r.heroes):
+        for heroes in valid_synergy_nums(r.heroes):
             new_synergy_rs.append((heroes, r.A_value, r.B_value))
     return new_synergy_rs
+
+
+def translate_counter_rs(counter_rs, hero_nums):
+    new_counter_rs = []
+
+    def valid_counter_nums(heroes, adversaries):
+        valid = []
+        hero_names, hero_roles = zip(*heroes)
+        adversary_names, adversary_roles = zip(*adversaries)
+        for roles_h in itertools.product(*hero_roles):
+            if len(set(roles_h)) != len(heroes):
+                continue
+            for roles_a in itertools.product(*adversary_roles):
+                if len(set(roles_a)) != len(adversaries):
+                    continue
+                counter_nums_h = []
+                for name, role in zip(hero_names, roles_h):
+                    counter_nums_h.append(hero_nums[(name, role)])
+                counter_nums_a = []
+                for name, role in zip(adversary_names, roles_a):
+                    counter_nums_a.append(hero_nums[(name, role)])
+                valid.append((counter_nums_h, counter_nums_a))
+        return valid
+
+    for r in counter_rs:
+        for heroes, adversaries in valid_counter_nums(r.heroes, r.adversaries):
+            new_counter_rs.append((heroes, adversaries, r.A_value, r.B_value))
+    return new_counter_rs

@@ -35,7 +35,7 @@ class TestSearchPrep(unittest.TestCase):
         counter_rs = [CounterR([('Rona', [3])], [('Krul', [0, 1])], 10, 10)]
         heroes, hero_nums = get_ordered_heroes(role_rs, synergy_rs, counter_rs)
         self.assertEqual(hero_nums[('Rona', 3)], 0)
-        self.assertEqual(heroes[0].potential, 21)
+        self.assertEqual(heroes[0].potential, 21)  # doesn't get duplicate for both kruls
 
     def test_translate_synergy_rs(self):
         role_rs = [
@@ -47,11 +47,10 @@ class TestSearchPrep(unittest.TestCase):
             RoleR('Gwen', 1, 0, 1),
             RoleR('Gwen', 2, 0, 0),
         ]
+        all_correct = []
+
         # 4 new synergies should be created
         synergy_1 = SynergyR([('Taka', [0]), ('Krul', [1, 2]), ('Rona', [3, 4])], 2, 1)
-        # only 2 synergies between compatible roles should be created
-        synergy_2 = SynergyR([('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])], 0, 1)
-
         _, hero_nums = get_ordered_heroes(role_rs, [synergy_1], [])
         new_synergy_rs = translate_synergy_rs([synergy_1], hero_nums)
         self.assertEqual(len(new_synergy_rs), 4)
@@ -62,8 +61,10 @@ class TestSearchPrep(unittest.TestCase):
             ([0, 2, 4], 2, 1),
         ]
         self.assertEqual(new_synergy_rs, correct_synergy_rs)
-        return
-
+        all_correct += correct_synergy_rs
+        
+        # only 2 synergies between compatible roles should be created
+        synergy_2 = SynergyR([('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])], 0, 1)
         _, hero_nums = get_ordered_heroes(role_rs, [synergy_2], [])
         new_synergy_rs = translate_synergy_rs([synergy_2], hero_nums)
         self.assertEqual(len(new_synergy_rs), 2)
@@ -72,11 +73,95 @@ class TestSearchPrep(unittest.TestCase):
             ([0, 2, 5], 0, 1),
         ]
         self.assertEqual(new_synergy_rs, correct_synergy_rs)
+        all_correct += correct_synergy_rs
 
+        # test both combined
         _, hero_nums = get_ordered_heroes(role_rs, [synergy_1, synergy_2], [])
         new_synergy_rs = translate_synergy_rs([synergy_1, synergy_2], hero_nums)
-        self.assertEqual(len(new_synergy_rs), 6)
+        self.assertEqual(new_synergy_rs, all_correct)
 
+    def test_translate_counter_rs(self):
+        role_rs = [
+            RoleR('Taka', 0, 2, 9),
+            RoleR('Krul', 1, 1, 9),
+            RoleR('Krul', 2, 0, 9),
+            RoleR('Rona', 3, 0, 8),
+            RoleR('Rona', 4, 0, 7),
+            RoleR('Gwen', 1, 0, 4),
+            RoleR('Gwen', 2, 0, 3),
+            RoleR('Lyra', 3, 0, 2),
+            RoleR('Lyra', 4, 0, 1),
+        ]
+        all_correct = []
+
+        # doesn't matter about clashes in roles across teams
+        counter_1 = CounterR([('Krul', [2])], [('Gwen', [2])], 1, 0)
+        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_1])
+        new_counter_rs = translate_counter_rs([counter_1], hero_nums)
+        correct_counter_rs = [([2], [6], 1, 0)]
+        self.assertEqual(new_counter_rs, correct_counter_rs)
+        all_correct += new_counter_rs
+
+        # only 2 should be created due to hero team
+        counter_2 = CounterR(
+            [('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])],
+            [('Rona', [3])],
+            0,
+            1,
+        )
+        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_2])
+        new_counter_rs = translate_counter_rs([counter_2], hero_nums)
+        correct_counter_rs = [
+            ([0, 1, 6], [3], 0, 1),
+            ([0, 2, 5], [3], 0, 1),
+        ]
+        self.assertEqual(new_counter_rs, correct_counter_rs)
+        all_correct += new_counter_rs
+
+        # same 2 as above should be created for each enemy hero-role num
+        counter_3 = CounterR(
+            [('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])],
+            [('Rona', [3, 4])],
+            0,
+            1,
+        )
+        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_3])
+        new_counter_rs = translate_counter_rs([counter_3], hero_nums)
+        correct_counter_rs = [
+            ([0, 1, 6], [3], 0, 1),
+            ([0, 1, 6], [4], 0, 1),
+            ([0, 2, 5], [3], 0, 1),
+            ([0, 2, 5], [4], 0, 1),
+        ]
+        self.assertEqual(new_counter_rs, correct_counter_rs)
+        all_correct += new_counter_rs
+
+        # clashes in both heroes and adversaries
+        counter_4 = CounterR(
+            [('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])],
+            [('Rona', [3, 4]), ('Lyra', [3, 4])],
+            1,
+            0,
+        )
+        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_4])
+        new_counter_rs = translate_counter_rs([counter_4], hero_nums)
+        correct_counter_rs = [
+            ([0, 1, 6], [3, 8], 1, 0),
+            ([0, 1, 6], [4, 7], 1, 0),
+            ([0, 2, 5], [3, 8], 1, 0),
+            ([0, 2, 5], [4, 7], 1, 0),
+        ]
+        self.assertEqual(new_counter_rs, correct_counter_rs)
+        all_correct += new_counter_rs
+
+        # test all combined
+        _, hero_nums = get_ordered_heroes(
+            role_rs, [], [counter_1, counter_2, counter_3, counter_4],
+        )
+        new_counter_rs = translate_counter_rs(
+            [counter_1, counter_2, counter_3, counter_4], hero_nums,
+        )
+        self.assertEqual(new_counter_rs, all_correct)
 
 if __name__ == '__main__':
     unittest.main()
