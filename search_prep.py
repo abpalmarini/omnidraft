@@ -49,6 +49,10 @@ class Hero:
         return rewards
 
     # Simple approach that just totals all reward values.
+    #
+    # @Later can experiment with alternative approaches that take into
+    # account the difficulty (size) of achieving a synergy/counter as
+    # well as being countered themself.
     def calculate_potential(self):
         potential = 0
         potential += self.A_role_value + self.B_role_value
@@ -84,8 +88,8 @@ def translate_synergy_rs(synergy_rs, hero_nums):
                 # only sets of heroes in unique roles are valid
                 continue
             synergy_nums = []
-            for name, role in zip(hero_names, roles):
-                synergy_nums.append(hero_nums[(name, role)])
+            for hero_name, role in zip(hero_names, roles):
+                synergy_nums.append(hero_nums[(hero_name, role)])
             valid.append(synergy_nums)
         return valid
 
@@ -110,11 +114,11 @@ def translate_counter_rs(counter_rs, hero_nums):
                 if len(set(roles_a)) != len(adversaries):
                     continue
                 counter_nums_h = []
-                for name, role in zip(hero_names, roles_h):
-                    counter_nums_h.append(hero_nums[(name, role)])
+                for hero_name, role in zip(hero_names, roles_h):
+                    counter_nums_h.append(hero_nums[(hero_name, role)])
                 counter_nums_a = []
-                for name, role in zip(adversary_names, roles_a):
-                    counter_nums_a.append(hero_nums[(name, role)])
+                for hero_name, role in zip(adversary_names, roles_a):
+                    counter_nums_a.append(hero_nums[(hero_name, role)])
                 valid.append((counter_nums_h, counter_nums_a))
         return valid
 
@@ -124,15 +128,16 @@ def translate_counter_rs(counter_rs, hero_nums):
     return new_counter_rs
 
 
-def get_hero_nums_per_role(ordered_heroes):
+def get_heroes_per_role(ordered_heroes):
     role_heroes = [[] for _ in range(5)]
     for hero_num, hero in enumerate(ordered_heroes):
         role_heroes[hero.role].append(hero_num)
     return role_heroes
 
+
 # Returns a list where element n contains a list of all hero num
-# occurences that refer to hero n, including itself. Once turned
-# into a bitfield the bitwise AND of the negation and the legal
+# occurrences that refer to hero n, including itself. Once turned
+# into a bit field the bitwise AND of the negation and the legal
 # actions can quickly remove the now illegal heroes.
 def get_same_hero_refs(ordered_heroes, hero_nums):
     all_refs = []
@@ -145,3 +150,56 @@ def get_same_hero_refs(ordered_heroes, hero_nums):
         all_refs.append(refs)
     return all_refs
 
+
+# As flex picks map to a different hero num for every role they play,
+# there can be many possible 'teams'. All valid ones (no role clashes)
+# should be accounted for in search. This does not effect bans as the
+# same roles will be open, and all duplicates made illegal, no matter
+# which variation is selected.
+#
+# @Later an outer function can handle cases where selections made based
+# on the AI's suggestion can eliminate the other flex possibilities as
+# we know the intended role for maximum value.
+def get_picks_n_bans(draft, hero_nums):
+    banned_names = []
+    team_A_names = []
+    team_B_names = []
+    for (team, selection), hero_name in zip(draft.format, draft.history):
+        if selection == BAN or selection == BAN_BAN:
+            banned_names.append(hero_name)
+        elif team == A:
+            team_A_names.append(hero_name)
+        else:
+            team_B_names.append(hero_name)
+
+    picks_n_bans = []  # holds all sets of possible teams and bans
+
+    banned = []
+    for hero_name in banned_names:
+        for role in range(5):
+            if (hero_name, role) in hero_nums:
+                banned.append(hero_nums[(hero_name, role)])
+                break  # only one role variation needed for bans
+
+    def all_roles(hero_name):
+        return [role for role in range(5) if (hero_name, role) in hero_nums]
+
+    team_A_roles = [all_roles(hero_name) for hero_name in team_A_names]
+    team_B_roles = [all_roles(hero_name) for hero_name in team_B_names]
+
+    # check all playable role assignements across both teams
+    for roles_A in itertools.product(*team_A_roles):
+        if len(set(roles_A)) != len(team_A_names):
+            continue
+        for roles_B in itertools.product(*team_B_roles):
+            if len(set(roles_B)) != len(team_B_names):
+                continue
+            team_A = []
+            for hero_name, role in zip(team_A_names, roles_A):
+                team_A.append(hero_nums[(hero_name, role)])
+            team_B = []
+            for hero_name, role in zip(team_B_names, roles_B):
+                team_B.append(hero_nums[(hero_name, role)])
+            picks_n_bans.append((team_A, team_B, banned))
+
+    return picks_n_bans
