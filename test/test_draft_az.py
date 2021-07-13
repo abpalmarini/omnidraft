@@ -82,6 +82,8 @@ class TestLegalActions(unittest.TestCase):
         # Champ 5 should now become available to team B though.
         self.assertEqual(draft.legal_actions(), [5])
 
+    # Removing the drafts ability to add random legal actions
+    """
     def test_rewards_updated_for_adding_new_legal_champ(self):
         # Starting with one reward to ensure new ones are being added
         # and not overwriting.
@@ -119,6 +121,7 @@ class TestLegalActions(unittest.TestCase):
             reward = draft.rewards['rrs_lookup'][champ][0]
             new_champs_roles.add(reward.role)
         self.assertEqual(new_champs_roles, {0, 3, 4})
+    """
 
 
 class TestOpenRoles(unittest.TestCase):

@@ -193,11 +193,11 @@ class Draft:
         if to_select == (A, PICK):
             legal = [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                      if has_open_role(rrs, self.roles['A']) and available(champ)]
-            return legal or self._add_legal_champs(self.roles['A']['open'])
+            return legal # or self._add_legal_champs(self.roles['A']['open'])
         elif to_select == (B, PICK):
             legal = [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                      if has_open_role(rrs, self.roles['B']) and available(champ)]
-            return legal or self._add_legal_champs(self.roles['B']['open'])
+            return legal # or self._add_legal_champs(self.roles['B']['open'])
         else:
             return [champ for champ, rrs in enumerate(self.rewards['rrs_lookup'])
                     if bool(rrs) and available(champ)]
