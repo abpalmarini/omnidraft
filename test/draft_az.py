@@ -219,7 +219,12 @@ class Draft:
         return new_champs
 
     def clone(self):
-        return Draft(self.history.copy(), self.rewards, deepcopy(self.roles))
+        draft_clone = Draft(self.history.copy(), self.rewards, deepcopy(self.roles))
+        # HACK because this file is only used for testing now. In
+        # reality if I'm using a different format I should inherit
+        # from this class with new format.
+        draft_clone.format = self.format
+        return draft_clone
 
     # Basic implementation of generating role and combo (synergy and
     # counter) rewards needed for a draft. This is unlikely to
