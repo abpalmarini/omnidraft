@@ -4,11 +4,6 @@ from collections import namedtuple
 from search_prep import *
 
 
-RoleR = namedtuple('RoleR', ['hero_name', 'role', 'A_value', 'B_value'])
-SynergyR = namedtuple('SynergyR', ['heroes', 'A_value', 'B_value'])
-CounterR = namedtuple('CounterR', ['heroes', 'adversaries', 'A_value', 'B_value'])
-
-
 class TestSearchPrep(unittest.TestCase):
 
     def test_correctly_ordered_heroes(self):

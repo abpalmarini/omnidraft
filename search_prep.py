@@ -1,9 +1,30 @@
 """
-Various functions for turning raw draft and reward detials into the
+Various functions for turning raw draft and reward details into the
 bit level data types needed for search.
 """
 
+from collections import namedtuple
 import itertools
+
+# @Unclear where to put these. C file will also need.
+A         = 1
+B         = 2
+PICK      = 3
+PICK_PICK = 4
+BAN       = 5
+BAN_BAN   = 6
+PICK_BAN  = 7
+BAN_PICK  = 8
+
+# Format assumed to contain a list of tuples of team and selection type.
+Draft = namedtuple('Draft', ['format', 'history'])
+
+# For synergies and counters the heroes (and adversaries) are expected
+# to be a list of tuples with each tuple containing the hero name and a
+# list of applicable roles.
+RoleR = namedtuple('RoleR', ['hero_name', 'role', 'A_value', 'B_value'])
+SynergyR = namedtuple('SynergyR', ['heroes', 'A_value', 'B_value'])
+CounterR = namedtuple('CounterR', ['heroes', 'adversaries', 'A_value', 'B_value'])
 
 
 # Represents a *unique* hero-role combination.
@@ -74,6 +95,7 @@ def translate_synergy_rs(synergy_rs, hero_nums):
     return new_synergy_rs
 
 
+# Same as for synergies, but also taking into account the adversaries.
 def translate_counter_rs(counter_rs, hero_nums):
     new_counter_rs = []
 
