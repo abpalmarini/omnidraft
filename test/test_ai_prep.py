@@ -1,10 +1,10 @@
 import unittest 
 from collections import namedtuple
 
-from prep_ai import *
+from ai_prep import *
 
 
-class TestPrepAI(unittest.TestCase):
+class TestAIPrep(unittest.TestCase):
 
     def test_correctly_ordered_heroes(self):
         # check with just role rewards

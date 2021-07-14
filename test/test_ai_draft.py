@@ -3,7 +3,7 @@ import itertools
 import random
 
 from test.draft_az import draft_az
-from prep_ai import *
+from ai_prep import *
 
 INF = 30000
 
@@ -21,7 +21,6 @@ def scale_rewards(draft):
 # well as role, synergy and counter rewards separated out and with an
 # indicator on applicable roles for a synergy to be granted.
 def translate_old_draft(draft):
-    # translate the old draft format into expected new one
     new_format = []
     for stage in range(len(draft.format)):
         team, selection = draft.format[stage]
