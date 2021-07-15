@@ -13,7 +13,9 @@ struct h_info h_infos[MAX_NUM_HEROES];
 
 struct draft_stage draft[MAX_DRAFT_LEN]; 
 
-
+//
+// Fast Negamax search algorithm for drafting.
+//
 int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta)
 {
     if (stage == draft_len)
@@ -21,7 +23,214 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
         // guaranteed that team is A and e_team is B
         return terminal_value(team, e_team);
 
-    return 0;
+    int value = -INF;
+    switch (draft[stage].selection) {
+        case PICK:
+            for (int h = 0; h < num_heroes; h++) {
+                // check hero is in selecting team's legal actions
+                if (!(legal & (1ULL << h)))
+                    continue;
+
+                // switch teams and legal actions around
+                // after updating them for next stage
+                int child_value = -negamax(
+                    e_team,
+                    team | (1ULL << h),
+                    e_legal & h_infos[h].diff_h,
+                    legal & h_infos[h].diff_role_and_h,
+                    stage + 1,
+                    -beta,
+                    -alpha
+                );
+
+                if (child_value >= value)
+                    value = child_value;
+
+                if (value >= alpha)
+                    alpha = value;
+
+                if (alpha >= beta)
+                    break;
+            }
+            break;
+
+        case BAN:
+            for (int h = 0; h < num_heroes; h++) {
+                // save time searching redundant states by only
+                // considering to ban heroes the enemies can pick
+                if (!(e_legal & (1ULL << h)))
+                    continue;
+
+                int child_value = -negamax(
+                    e_team,
+                    team,
+                    e_legal & h_infos[h].diff_h,
+                    legal & h_infos[h].diff_h,
+                    stage + 1,
+                    -beta,
+                    -alpha
+                );
+
+
+                if (child_value >= value)
+                    value = child_value;
+
+                if (value >= alpha)
+                    alpha = value;
+
+                if (alpha >= beta)
+                    break;
+            }
+            break;
+
+        case PICK_PICK:
+            for (int h = 0; h < num_heroes; h++) {
+                if (!(legal & (1ULL << h)))
+                    continue;
+
+                u64 new_team = team | (1ULL << h);
+                u64 new_legal = legal & h_infos[h].diff_role_and_h;
+                u64 new_e_legal = e_legal & h_infos[h].diff_h;
+
+                // order in double pick is irrelevant
+                // so earlier pairs can be skipped
+                for (int h2 = h + 1; h2 < num_heroes; h2++) {
+                    if (!(new_legal & (1ULL << h2)))
+                        continue;
+
+                    int child_value = -negamax(
+                        e_team,
+                        new_team | (1ULL << h2),
+                        new_e_legal & h_infos[h2].diff_h,
+                        new_legal & h_infos[h2].diff_role_and_h,
+                        stage + 2,
+                        -beta,
+                        -alpha
+                    );
+
+                    if (child_value >= value)
+                        value = child_value;
+
+                    if (value >= alpha)
+                        alpha = value;
+
+                    if (alpha >= beta)
+                        break;
+                }
+            }
+            break;
+
+        case PICK_BAN:
+            for (int h = 0; h < num_heroes; h++) {
+                if (!(legal & (1ULL << h)))
+                    continue;
+
+                u64 new_team = team | (1ULL << h);
+                u64 new_legal = legal & h_infos[h].diff_role_and_h;
+                u64 new_e_legal = e_legal & h_infos[h].diff_h;
+
+                // order of selections matter here
+                for (int h2 = 0; h2 < num_heroes; h2++) {
+                    // also switch to enemy legals for ban
+                    if (!(new_e_legal & (1ULL << h2)))
+                        continue;
+
+                    int child_value = -negamax(
+                        e_team,
+                        new_team,
+                        new_e_legal & h_infos[h2].diff_h,
+                        new_legal & h_infos[h2].diff_h,
+                        stage + 2,
+                        -beta,
+                        -alpha
+                    );
+
+                    if (child_value >= value)
+                        value = child_value;
+
+                    if (value >= alpha)
+                        alpha = value;
+
+                    if (alpha >= beta)
+                        break;
+                }
+            }
+            break;
+
+        case BAN_PICK:
+            for (int h = 0; h < num_heroes; h++) {
+                if (!(e_legal & (1ULL << h)))
+                    continue;
+
+                u64 new_legal = legal & h_infos[h].diff_h;
+                u64 new_e_legal = e_legal & h_infos[h].diff_h;
+
+                // again: order of selection matters
+                for (int h2 = 0; h2 < num_heroes; h2++) {
+                    // switch to selecting team legal actions for pick
+                    if (!(new_legal & (1ULL << h2)))
+                        continue;
+
+                    int child_value = -negamax(
+                        e_team,
+                        team | (1ULL << h2),
+                        new_e_legal & h_infos[h2].diff_h,
+                        new_legal & h_infos[h2].diff_role_and_h,
+                        stage + 2,
+                        -beta,
+                        -alpha
+                    );
+
+                    if (child_value >= value)
+                        value = child_value;
+
+                    if (value >= alpha)
+                        alpha = value;
+
+                    if (alpha >= beta)
+                        break;
+                }
+            }
+            break;
+
+        case BAN_BAN:
+            for (int h = 0; h < num_heroes; h++) {
+                if (!(e_legal & (1ULL << h)))
+                    continue;
+
+                u64 new_legal = legal & h_infos[h].diff_h;
+                u64 new_e_legal = e_legal & h_infos[h].diff_h;
+
+                // order for double bans is irrelevant
+                for (int h2 = h + 1; h2 < num_heroes; h2++) {
+                    if (!(new_e_legal & (1ULL << h2)))
+                        continue;
+
+                    int child_value = -negamax(
+                        e_team,
+                        team,
+                        new_e_legal & h_infos[h2].diff_h,
+                        new_legal & h_infos[h2].diff_h,
+                        stage + 2,
+                        -beta,
+                        -alpha
+                    );
+
+                    if (child_value >= value)
+                        value = child_value;
+
+                    if (value >= alpha)
+                        alpha = value;
+
+                    if (alpha >= beta)
+                        break;
+
+                }
+            }
+            break;
+    }
+
+    return value;
 }
 
 
