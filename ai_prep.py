@@ -6,25 +6,27 @@ bit level data types needed for search.
 from collections import namedtuple
 import itertools
 
-# @Unclear where to put these. C file will also need.
-A         = 1
-B         = 2
-PICK      = 3
-PICK_PICK = 4
-BAN       = 5
-BAN_BAN   = 6
-PICK_BAN  = 7
-BAN_PICK  = 8
+# Make sure these stay the same as defined in ai_draft.h
+A         = 0
+B         = 1
+
+PICK      = 0
+BAN       = 1
+PICK_PICK = 2
+PICK_BAN  = 3
+BAN_PICK  = 4
+BAN_BAN   = 5
+
 
 # Format assumed to contain a list of tuples of team and selection type.
 Draft = namedtuple('Draft', ['format', 'history'])
 
-# For synergies and counters the heroes (and adversaries) are expected
+# For synergies and counters the heroes (and foes) are expected
 # to be a list of tuples with each tuple containing the hero name and a
 # list of applicable roles.
 RoleR = namedtuple('RoleR', ['hero_name', 'role', 'A_value', 'B_value'])
 SynergyR = namedtuple('SynergyR', ['heroes', 'A_value', 'B_value'])
-CounterR = namedtuple('CounterR', ['heroes', 'adversaries', 'A_value', 'B_value'])
+CounterR = namedtuple('CounterR', ['heroes', 'foes', 'A_value', 'B_value'])
 
 
 # Represents a *unique* hero-role combination.
@@ -99,32 +101,32 @@ def translate_synergy_rs(synergy_rs, hero_nums):
     return new_synergy_rs
 
 
-# Same as for synergies, but also taking into account the adversaries.
+# Same as for synergies, but also taking into account the foes.
 def translate_counter_rs(counter_rs, hero_nums):
     new_counter_rs = []
 
-    def valid_counter_nums(heroes, adversaries):
+    def valid_counter_nums(heroes, foes):
         valid = []
         hero_names, hero_roles = zip(*heroes)
-        adversary_names, adversary_roles = zip(*adversaries)
+        foe_names, foe_roles = zip(*foes)
         for roles_h in itertools.product(*hero_roles):
             if len(set(roles_h)) != len(heroes):
                 continue
-            for roles_a in itertools.product(*adversary_roles):
-                if len(set(roles_a)) != len(adversaries):
+            for roles_a in itertools.product(*foe_roles):
+                if len(set(roles_a)) != len(foes):
                     continue
                 counter_nums_h = []
                 for hero_name, role in zip(hero_names, roles_h):
                     counter_nums_h.append(hero_nums[(hero_name, role)])
                 counter_nums_a = []
-                for hero_name, role in zip(adversary_names, roles_a):
+                for hero_name, role in zip(foe_names, roles_a):
                     counter_nums_a.append(hero_nums[(hero_name, role)])
                 valid.append((counter_nums_h, counter_nums_a))
         return valid
 
     for r in counter_rs:
-        for heroes, adversaries in valid_counter_nums(r.heroes, r.adversaries):
-            new_counter_rs.append((heroes, adversaries, r.A_value, r.B_value))
+        for heroes, foes in valid_counter_nums(r.heroes, r.foes):
+            new_counter_rs.append((heroes, foes, r.A_value, r.B_value))
     return new_counter_rs
 
 
