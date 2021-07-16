@@ -205,3 +205,10 @@ def get_picks_n_bans(draft, hero_nums):
             picks_n_bans.append((team_A, team_B, banned))
 
     return picks_n_bans
+
+
+# Heroes in the search algorithm are represented by the bit
+# corresponding to their hero number in a word. I.e. 2 to the 
+# power of hero num.
+def bit_format(heroes):
+    return sum(2**hero_num for hero_num in heroes)

@@ -352,6 +352,10 @@ class TestAIPrep(unittest.TestCase):
         self.assertEqual(team_B, [2, 4])
         self.assertEqual(banned, [6, 5])
 
+    def test_bit_format(self):
+        heroes = {1, 4, 5}
+        self.assertEqual(bit_format(heroes), int('110010', 2))
+
 
 if __name__ == '__main__':
     unittest.main()
