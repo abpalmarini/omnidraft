@@ -1,7 +1,7 @@
 import unittest 
 from collections import namedtuple
 
-from ai_prep import *
+from autodraft.ai_prep import *
 
 
 class TestAIPrep(unittest.TestCase):
@@ -172,11 +172,11 @@ class TestAIPrep(unittest.TestCase):
         ordered_heroes, _ = get_ordered_heroes(role_rs, [], [])
         hero_nums_per_role = get_heroes_per_role(ordered_heroes)
         correct = [
-            [0, 7],
-            [1, 5],
-            [2, 6],
-            [3],
-            [4],
+            {0, 7},
+            {1, 5},
+            {2, 6},
+            {3},
+            {4},
         ]
         self.assertEqual(hero_nums_per_role, correct)
 
@@ -194,14 +194,14 @@ class TestAIPrep(unittest.TestCase):
         ordered_heroes, hero_nums = get_ordered_heroes(role_rs, [], [])
         same_hero_refs = get_same_hero_refs(ordered_heroes, hero_nums)
         correct = [
-            [0],
-            [1, 2],
-            [1, 2],
-            [3, 4],
-            [3, 4],
-            [5, 6],
-            [5, 6],
-            [7],
+            {0},
+            {1, 2},
+            {1, 2},
+            {3, 4},
+            {3, 4},
+            {5, 6},
+            {5, 6},
+            {7},
         ]
         self.assertEqual(same_hero_refs, correct)
 

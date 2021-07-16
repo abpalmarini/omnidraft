@@ -131,9 +131,9 @@ def translate_counter_rs(counter_rs, hero_nums):
 
 
 def get_heroes_per_role(ordered_heroes):
-    role_heroes = [[] for _ in range(5)]
+    role_heroes = [set() for _ in range(5)]
     for hero_num, hero in enumerate(ordered_heroes):
-        role_heroes[hero.role].append(hero_num)
+        role_heroes[hero.role].add(hero_num)
     return role_heroes
 
 
@@ -144,11 +144,11 @@ def get_heroes_per_role(ordered_heroes):
 def get_same_hero_refs(ordered_heroes, hero_nums):
     all_refs = []
     for hero in ordered_heroes:
-        refs = []
+        refs = set() 
         for role in range(5):
             # will be true for at least one (its role)
             if (hero.name, role) in hero_nums:
-                refs.append(hero_nums[(hero.name, role)])
+                refs.add(hero_nums[(hero.name, role)])
         all_refs.append(refs)
     return all_refs
 
