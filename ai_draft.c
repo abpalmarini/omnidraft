@@ -1,20 +1,39 @@
 #include "ai_draft.h"
 
+// sizes
 int num_heroes;
 int num_synergy_rs;
 int num_counter_rs;
 int draft_len;
 
+// rewards
 struct role_r role_rs[MAX_NUM_HEROES];
 struct synergy_r synergy_rs[MAX_SYNERGIES];
 struct counter_r counter_rs[MAX_COUNTERS];
 
+// info needed to update legal actions
 struct h_info h_infos[MAX_NUM_HEROES];
 
+// team selecting and selection type for each stage in draft
 struct draft_stage draft[MAX_DRAFT_LEN]; 
+
 
 //
 // Fast Negamax search algorithm for drafting.
+//
+// Heroes (numbered based on reward potential and given a different
+// number for each role they play) are represented by a bit in the
+// teams and legal actions. These are swapped around and updated with
+// each recursive call, eliminating the need to track teams or undo
+// state. A bitwise OR between a team and hero (retrieved by shifting
+// 1 by the hero's index num) will add the hero to the team. A bitwise
+// AND between a hero and legal actions will determine if it is
+// available. A bitwise AND between legal actions and all heroes that
+// play a different role (for picks) or are not the same underlying
+// hero (for bans and enemy picks) will turn any still legal heroes
+// illegal. Additionally, synergies and counters can be evaluated by
+// comparing the reward heroes to the bitwise AND between themselves
+// and some team.
 //
 int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta)
 {
@@ -70,7 +89,6 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     -beta,
                     -alpha
                 );
-
 
                 if (child_value >= value)
                     value = child_value;

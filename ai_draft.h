@@ -49,6 +49,7 @@ enum team
     A = 0, 
     B = 1,
 };
+
 enum selection 
 {
     PICK = 0,
@@ -64,5 +65,8 @@ struct draft_stage
     enum team team;
     enum selection selection;
 };
+
+
+int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta);
 
 int terminal_value(u64 team_A, u64 team_B);
