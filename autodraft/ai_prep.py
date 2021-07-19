@@ -167,7 +167,7 @@ def get_picks_n_bans(draft, hero_nums):
     team_A_names = []
     team_B_names = []
     for (team, selection), hero_name in zip(draft.format, draft.history):
-        if selection == BAN or selection == BAN_BAN:
+        if selection == BAN or selection == BAN_BAN or selection == BAN_PICK:
             banned_names.append(hero_name)
         elif team == A:
             team_A_names.append(hero_name)

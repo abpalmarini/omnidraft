@@ -307,6 +307,40 @@ class TestAIPrep(unittest.TestCase):
         self.assertEqual(team_Bs[3], [2, 4])
         self.assertEqual(banned, [6, 5])
 
+    def test_get_picks_n_bans_with_ban_pick(self):
+        small_format = [
+            (A, PICK),
+            (B, PICK),
+            (A, BAN),
+            (B, BAN_PICK),
+            (B, PICK),
+            (A, PICK),
+        ]
+        role_rs = [
+            RoleR('Taka', 0, 1, 9),
+            RoleR('Krul', 1, 0, 9),
+            RoleR('Krul', 2, 0, 8),
+            RoleR('Rona', 3, 0, 7),
+            RoleR('Rona', 4, 0, 6),
+            RoleR('Skye', 4, 0, 5),
+            RoleR('Gwen', 1, 0, 4),
+            RoleR('Reza', 3, 0, 3),
+            RoleR('Lyra', 1, 0, 2),
+            RoleR('Lyra', 2, 0, 1),
+        ]
+        _, hero_nums = get_ordered_heroes(role_rs, [], [])
+
+        # banned flex heroes don't cause multiple teams to be created
+        history = ['Taka', 'Rona', 'Skye', 'Gwen', 'Reza', 'Lyra']
+        draft = Draft(small_format, history)
+        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        self.assertEqual(len(team_As), 2)
+        self.assertEqual(len(team_Bs), 1)
+        self.assertEqual(team_As[0], [0, 8])
+        self.assertEqual(team_As[1], [0, 9])
+        self.assertEqual(team_Bs[0], [4, 7])
+        self.assertEqual(banned, [5, 6])  
+
     def test_bit_format(self):
         heroes = {1, 4, 5}
         self.assertEqual(bit_format(heroes), int('110010', 2))
