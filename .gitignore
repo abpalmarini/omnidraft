@@ -1,3 +1,6 @@
 __pycache__/
 .*.swp
-data/
+*.o
+*.so
+
+_draft_ai.*

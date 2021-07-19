@@ -1,4 +1,4 @@
-#include "ai_draft.h"
+#include "draft_ai.h"
 
 // sizes
 int num_heroes;
@@ -69,8 +69,8 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     alpha = value;
 
                 if (alpha >= beta)
-                    break;
-            }
+                    goto cutoff;    // used for consitency with double selections
+            }                       // a normal break would work fine here
             break;
 
         case BAN:
@@ -97,7 +97,7 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     alpha = value;
 
                 if (alpha >= beta)
-                    break;
+                    goto cutoff;
             }
             break;
 
@@ -133,7 +133,7 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         alpha = value;
 
                     if (alpha >= beta)
-                        break;
+                        goto cutoff;
                 }
             }
             break;
@@ -170,7 +170,7 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         alpha = value;
 
                     if (alpha >= beta)
-                        break;
+                        goto cutoff;
                 }
             }
             break;
@@ -206,7 +206,7 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         alpha = value;
 
                     if (alpha >= beta)
-                        break;
+                        goto cutoff;
                 }
             }
             break;
@@ -241,13 +241,14 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         alpha = value;
 
                     if (alpha >= beta)
-                        break;
+                        goto cutoff;
 
                 }
             }
             break;
     }
 
+cutoff:
     return value;
 }
 
@@ -299,3 +300,146 @@ int terminal_value(u64 team_A, u64 team_B)
 
     return value;
 }
+
+
+//
+// Outer search function that takes in any combination of 
+// picks and bans, sets up initial bit format variables,
+// then calls negamax for the selecting team.
+//
+// Assumes that teams/bans that are not full terminate with
+// a -1.
+// 
+int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[])
+{
+    u64 team_A = 0;                         // init teams as being empty
+    u64 team_B = 0;
+    u64 team_A_legal = 0xFFFFFFFFFFFFFFFF;  // init all heroes as legal
+    u64 team_B_legal = 0xFFFFFFFFFFFFFFFF;
+    int stage = 0;
+
+    // remove banned heroes (including flex nums) from legals
+    for (int i = 0; i < MAX_DRAFT_LEN - 10; i++) {
+        int hero_num = banned_nums[i];
+        if (hero_num == -1)
+            break;
+
+        team_A_legal &= h_infos[hero_num].diff_h;
+        team_B_legal &= h_infos[hero_num].diff_h;
+
+        stage += 1;
+    }
+
+    // team A picks
+    for (int i = 0; i < 5; i++) {
+        int hero_num = team_A_nums[i];
+        if (hero_num == -1)
+            break;
+
+        team_A |= (1ULL << hero_num);
+
+        team_A_legal &= h_infos[hero_num].diff_role_and_h;
+        team_B_legal &= h_infos[hero_num].diff_h;
+
+        stage += 1;
+    }
+
+    // team B picks
+    for (int i = 0; i < 5; i++) {
+        int hero_num = team_B_nums[i];
+        if (hero_num == -1)
+            break;
+
+        team_B |= (1ULL << hero_num);
+
+        team_B_legal &= h_infos[hero_num].diff_role_and_h;
+        team_A_legal &= h_infos[hero_num].diff_h;
+
+        stage += 1;
+    }
+
+    // run negamax with initial state
+    int value;
+    if (draft[stage].team == A) {
+        value = negamax(
+            team_A,
+            team_B,
+            team_A_legal,
+            team_B_legal,
+            stage,
+            -INF,
+            INF
+        );
+    } else {
+        value = negamax(
+            team_B,
+            team_A,
+            team_B_legal,
+            team_A_legal,
+            stage,
+            -INF,
+            INF
+        );
+    }
+
+    // after implementing the TT I would retrieve the best action(s)
+    // from it at this point using the zobrist hash created at start
+    return value;
+}
+
+
+// ======================================================================
+// I need a way to go from receiving a draft format and set of rewards in
+// python to initialising the global variables required for calling
+// searches. For now having python do most of the processing and 
+// initialising individual elements seems easiest. However, I may want to 
+// change this @Later. The following are used as part of the python 
+// init_draft_ai function.
+
+void set_role_r(int hero_num, int A_value, int B_value)
+{
+    role_rs[hero_num].A_value = A_value;
+    role_rs[hero_num].B_value = B_value;
+}
+
+
+void set_synergy_r(int i, u64 heroes, int A_value, int B_value)
+{
+    synergy_rs[i].heroes = heroes;
+    synergy_rs[i].A_value = A_value;
+    synergy_rs[i].B_value = B_value;
+}
+
+
+void set_counter_r(int i, u64 heroes, u64 foes, int A_value, int B_value)
+{
+    counter_rs[i].heroes = heroes;
+    counter_rs[i].foes = foes;
+    counter_rs[i].A_value = A_value;
+    counter_rs[i].B_value = B_value;
+}
+
+
+void set_draft_stage(int stage, int team, int selection)
+{
+    draft[stage].team = team;
+    draft[stage].selection = selection;
+}
+
+
+void set_h_info(int hero_num, u64 same_role_and_h, u64 same_h)
+{
+    h_infos[hero_num].diff_role_and_h = ~same_role_and_h;
+    h_infos[hero_num].diff_h = ~same_h;
+}
+
+
+void set_sizes(int heroes, int synergy_rs, int counter_rs, int draft)
+{
+    num_heroes = heroes;
+    num_synergy_rs = synergy_rs;
+    num_counter_rs = counter_rs;
+    draft_len = draft;
+}
+
+// ======================================================================
