@@ -174,8 +174,6 @@ def get_picks_n_bans(draft, hero_nums):
         else:
             team_B_names.append(hero_name)
 
-    picks_n_bans = []  # holds all sets of possible teams and bans
-
     banned = []
     for hero_name in banned_names:
         for role in range(5):
@@ -189,22 +187,26 @@ def get_picks_n_bans(draft, hero_nums):
     team_A_roles = [all_roles(hero_name) for hero_name in team_A_names]
     team_B_roles = [all_roles(hero_name) for hero_name in team_B_names]
 
-    # check all playable role assignements across both teams
+    team_As = []
+    team_Bs = []
+
     for roles_A in itertools.product(*team_A_roles):
         if len(set(roles_A)) != len(team_A_names):
             continue
-        for roles_B in itertools.product(*team_B_roles):
-            if len(set(roles_B)) != len(team_B_names):
-                continue
-            team_A = []
-            for hero_name, role in zip(team_A_names, roles_A):
-                team_A.append(hero_nums[(hero_name, role)])
-            team_B = []
-            for hero_name, role in zip(team_B_names, roles_B):
-                team_B.append(hero_nums[(hero_name, role)])
-            picks_n_bans.append((team_A, team_B, banned))
+        team_A = []
+        for hero_name, role in zip(team_A_names, roles_A):
+            team_A.append(hero_nums[(hero_name, role)])
+        team_As.append(team_A)
 
-    return picks_n_bans
+    for roles_B in itertools.product(*team_B_roles):
+        if len(set(roles_B)) != len(team_B_names):
+            continue
+        team_B = []
+        for hero_name, role in zip(team_B_names, roles_B):
+            team_B.append(hero_nums[(hero_name, role)])
+        team_Bs.append(team_B)
+
+    return team_As, team_Bs, banned
 
 
 # Heroes in the search algorithm are represented by the bit
