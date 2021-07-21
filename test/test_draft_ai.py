@@ -462,7 +462,7 @@ class TestDraftAI(unittest.TestCase):
         self.assertEqual(value, target_value)
         # self.assertEqual(action, target_action)
 
-    def test_flex_pick_in_history_A(self):
+    def test_flex_pick_in_history_A_pick(self):
         random.seed(6)
         old_draft = draft_az.Draft()
         scale_rewards(old_draft)
@@ -497,11 +497,80 @@ class TestDraftAI(unittest.TestCase):
         self.assertEqual(value, target_value)
         # self.assertEqual(action, target_action)
 
-    def test_flex_pick_in_history_B(self):
-        # for some reason the target value is not appearing any combination of 
-        # starting heroes, i'll need to look into this once I see if things 
-        # are how they should be with the other ones to help narrow down problems
-        # and look at what my C one is showing as legal etc.
+    def test_flex_pick_in_history_A_ban(self):
+        random.seed(6)
+        old_draft = draft_az.Draft()
+        scale_rewards(old_draft)
+        old_draft.format = (
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.BAN),
+            (draft_az.A, draft_az.BAN),  # starting from here
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+        )
+        # from inspection the following are all flex picks [1, 20, 29, 31, 39, 43]
+        # this history will mean for each team comp the enemies can respond with 5
+        # of their own
+        old_draft.apply(1)   # roles: 1, 2, 3
+        old_draft.apply(39)  # roles: 1, 2, 3
+        old_draft.apply(43)  # roles: 3, 4
+        old_draft.apply(20)  # roles: 2, 4
+        old_draft.apply(2)   # roles: 0
+        old_draft.apply(7)   # roles: 2
+        old_draft.apply(10)
+
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        target_value, target_action = -586, 45  # hard coding after running once
+
+        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
+        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+
+        self.assertEqual(value, target_value)
+        # self.assertEqual(action, target_action)
+
+    def test_flex_pick_in_history_B_pick_pick(self):
+        random.seed(11)
+        old_draft = draft_az.Draft()
+        scale_rewards(old_draft)
+        old_draft.format = (
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),  # starting from here
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+        )
+        # from inspection the following are all flex picks [1, 20, 29, 31, 39, 43]
+        # this history will mean for each team comp the enemies can respond with 5
+        # of their own
+        old_draft.apply(3)  # 1, 3
+        old_draft.apply(16) # 2, 3, 4
+        old_draft.apply(40) # 0, 1
+        old_draft.apply(15) # 0, 2
+        old_draft.apply(44) # 4
+
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        # target_value = -target_value
+        target_value, target_action = 1346, 11
+
+        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
+        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+
+        self.assertEqual(value, target_value)
+        # self.assertEqual(action, target_action)
+
+    def test_flex_pick_in_history_B_pick_ban(self):
         random.seed(6)
         old_draft = draft_az.Draft()
         scale_rewards(old_draft)
@@ -531,6 +600,43 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         # target_value = -target_value  # get value in terms of team B's perspective
         target_value, target_action = 2027, 10  # hard coding after running once
+
+        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
+        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+
+        self.assertEqual(value, target_value)
+        # self.assertEqual(action, target_action)
+
+    def test_flex_pick_in_history_B_ban_pick(self):
+        random.seed(6)
+        old_draft = draft_az.Draft()
+        scale_rewards(old_draft)
+        old_draft.format = (
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.BAN),
+            (draft_az.B, draft_az.BAN),  # starting from here
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+        )
+        # from inspection the following are all flex picks [1, 20, 29, 31, 39, 43]
+        # this history will mean for each team comp the enemies can respond with 5
+        # of their own
+        old_draft.apply(1)   # roles: 1, 2, 3
+        old_draft.apply(39)  # roles: 1, 2, 3
+        old_draft.apply(43)  # roles: 3, 4
+        old_draft.apply(20)  # roles: 2, 4
+        old_draft.apply(2)   # roles: 0
+
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        # target_value = -target_value
+        target_value, target_action = 925, 45  # hard coding after running once
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
@@ -575,7 +681,6 @@ class TestDraftAI(unittest.TestCase):
 
         self.assertEqual(value, target_value)
         # self.assertEqual(action, target_action)
-
 
 
 if __name__ == '__main__':
