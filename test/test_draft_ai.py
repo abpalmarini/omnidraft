@@ -200,13 +200,13 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
-        picks_n_bans = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
 
         # for now only dealing with histories containing no role ambiguity
-        if len(picks_n_bans) != 1:
+        if len(team_As) != 1 or len(team_Bs) != 1:
             self.assertTrue(False)
 
-        team_A, team_B, banned = picks_n_bans[0]
+        team_A, team_B = team_As[0], team_Bs[0]
         END = [-1]  # run_search expects teams and bans to terminate with a -1
         value = lib.run_search(team_A + END, team_B + END, banned + END)
         return value, None
