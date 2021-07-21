@@ -144,13 +144,12 @@ class TestDraftAI(unittest.TestCase):
     # is only required once it would probably be best if I decoupled the
     # draft format and history.
     def run_c_search(self, draft, role_rs, synergy_rs, counter_rs):
-        # *********************************************************************
         ordered_heroes, hero_nums = get_ordered_heroes(
             role_rs,
             synergy_rs,
             counter_rs,
         )
-
+        # *********************************************************************
         # set the role rewards
         for hero_num, hero in enumerate(ordered_heroes):
             lib.set_role_r(hero_num, hero.A_role_value, hero.B_role_value)
@@ -637,6 +636,48 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         # target_value = -target_value
         target_value, target_action = 925, 45  # hard coding after running once
+
+        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
+        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+
+        self.assertEqual(value, target_value)
+        # self.assertEqual(action, target_action)
+
+    def test_flex_pick_in_history_B_ban_ban(self):
+        random.seed(6)
+        old_draft = draft_az.Draft()
+        scale_rewards(old_draft)
+        old_draft.format = (
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.BAN),
+            (draft_az.A, draft_az.BAN),
+            (draft_az.B, draft_az.BAN),  # starting from here
+            (draft_az.B, draft_az.BAN),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+        )
+        # from inspection the following are all flex picks [1, 20, 29, 31, 39, 43]
+        # this history will mean for each team comp the enemies can respond with 5
+        # of their own
+        old_draft.apply(1)   # roles: 1, 2, 3
+        old_draft.apply(39)  # roles: 1, 2, 3
+        old_draft.apply(43)  # roles: 3, 4
+        old_draft.apply(20)  # roles: 2, 4
+        old_draft.apply(2)   # roles: 0
+        old_draft.apply(10)
+
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        # target_value = -target_value
+        target_value, target_action = 30000, 16  # I believe this means it is possible
+                                                 # for B to force A into situation with
+                                                 # no legal actions
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
