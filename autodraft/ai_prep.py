@@ -112,16 +112,16 @@ def translate_counter_rs(counter_rs, hero_nums):
         for roles_h in itertools.product(*hero_roles):
             if len(set(roles_h)) != len(heroes):
                 continue
-            for roles_a in itertools.product(*foe_roles):
-                if len(set(roles_a)) != len(foes):
+            for roles_f in itertools.product(*foe_roles):
+                if len(set(roles_f)) != len(foes):
                     continue
                 counter_nums_h = []
                 for hero_name, role in zip(hero_names, roles_h):
                     counter_nums_h.append(hero_nums[(hero_name, role)])
-                counter_nums_a = []
-                for hero_name, role in zip(foe_names, roles_a):
-                    counter_nums_a.append(hero_nums[(hero_name, role)])
-                valid.append((counter_nums_h, counter_nums_a))
+                counter_nums_f = []
+                for hero_name, role in zip(foe_names, roles_f):
+                    counter_nums_f.append(hero_nums[(hero_name, role)])
+                valid.append((counter_nums_h, counter_nums_f))
         return valid
 
     for r in counter_rs:
