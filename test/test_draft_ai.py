@@ -4,7 +4,7 @@ import random
 
 from test.draft_az import draft_az
 from autodraft.ai_prep import *
-from _draft_ai import lib
+from _draft_ai import ffi, lib
 
 INF = 30000
 
@@ -199,16 +199,39 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
+        # only implemented root level pick for now
+        if draft.format[len(draft.history)][1] != PICK:
+            self.assertTrue(False, "not a PICK")
+
         team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
 
-        # for now only dealing with histories containing no role ambiguity
-        if len(team_As) != 1 or len(team_Bs) != 1:
-            self.assertTrue(False)
+        # prepare input for C search...I don't know if this is best way
+        if draft.format[len(draft.history)][0] == A:
+            team_size = len(team_As[0])
+            e_team_size = len(team_Bs[0])
+            start_teams = [ffi.new('int[]', team) for team in team_As]
+            start_e_teams = [ffi.new('int[]', team) for team in team_Bs]
+        else:
+            team_size = len(team_Bs[0])
+            e_team_size = len(team_As[0])
+            start_teams = [ffi.new('int[]', team) for team in team_Bs]
+            start_e_teams = [ffi.new('int[]', team) for team in team_As]
+        num_teams = len(start_teams)
+        num_e_teams = len(start_e_teams)
+        banned_size = len(banned)
 
-        team_A, team_B = team_As[0], team_Bs[0]
-        END = [-1]  # run_search expects teams and bans to terminate with a -1
-        value = lib.run_search(team_A + END, team_B + END, banned + END)
-        return value, None
+        search_result = lib.run_main_search(
+            num_teams,
+            num_e_teams,
+            team_size,
+            e_team_size,
+            banned_size,
+            start_teams,
+            start_e_teams,
+            banned,
+        )
+
+        return search_result.value, ordered_heroes[search_result.best_hero].name
 
     
     def test_A_last_pick_counter(self):
@@ -243,7 +266,7 @@ class TestDraftAI(unittest.TestCase):
         draft = Draft(SIMPLE_FORMAT, history)
         value, action = self.run_c_search(draft, role_rs, [], counter_rs)
         self.assertEqual(value, 1)
-        # self.assertEqual(action, 'Vox')
+        self.assertEqual(action, 'Vox')
  
     def test_A_last_pick_synergy(self):
         role_rs = [
@@ -276,7 +299,7 @@ class TestDraftAI(unittest.TestCase):
         draft = Draft(SIMPLE_FORMAT, history)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, [])
         self.assertEqual(value, -1)
-        # self.assertEqual(action, 'Ozo')
+        self.assertEqual(action, 'Ozo')
 
     def test_B_last_pick(self):
         role_rs = [
@@ -314,7 +337,7 @@ class TestDraftAI(unittest.TestCase):
         draft = Draft(SIMPLE_FORMAT, history)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
         self.assertEqual(value, 2)
-        # self.assertEqual(action, 'Vox')
+        self.assertEqual(action, 'Vox')
 
     def test_double_picks(self):
         random.seed(0)
@@ -494,7 +517,7 @@ class TestDraftAI(unittest.TestCase):
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        self.assertEqual(action, target_action)
 
     def test_flex_pick_in_history_A_ban(self):
         random.seed(6)
@@ -721,7 +744,7 @@ class TestDraftAI(unittest.TestCase):
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        self.assertEqual(action, target_action)
 
 
 if __name__ == '__main__':

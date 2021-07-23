@@ -398,6 +398,11 @@ int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[])
 // roles are treated differently. If hero X plays two roles and X is 
 // selected in a real draft, we must consider X playing in both roles.
 //
+// Each root search function is similar to its standard negamax
+// counterpart with the exception that it also tracks the action that
+// leads to the optimal value and checks all relevant team and enemy
+// starting lineups per action.
+//
 struct search_result run_main_search(
     int num_teams,
     int num_e_teams,
@@ -440,6 +445,87 @@ struct search_result run_main_search(
             banned
         );
     }
+
+    // call root function to deal with specific selection type
+    int stage = team_size + e_team_size + banned_size;
+    switch (draft[stage].selection) {
+        case PICK:
+            return root_search_pick(
+                num_teams,
+                num_e_teams,
+                teams,
+                e_teams,
+                legals,
+                e_legals,
+                stage
+            );
+
+        default:
+            return (struct search_result) {};
+    }
+}
+
+
+struct search_result root_search_pick(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+)
+{
+    int value = -INF;
+    int best_hero;
+
+    for (int h = 0; h < num_heroes; h++) {
+        u64 hero = (1ULL << h);
+
+        // for each hero consider every starting lineup
+        for (int team_i = 0; team_i < num_teams; team_i++) {
+            u64 legal = legals[team_i];
+            if (!(legal & hero))
+                continue;
+
+            // if legal we can find the value of this hero-lineup
+            // combination by searching for enemies best response
+            int team_value = INF;
+
+            u64 team = teams[team_i] | hero;
+            legal &= h_infos[h].diff_role_and_h;
+
+            for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
+                int child_value = -negamax(
+                    e_teams[e_team_i],
+                    team,
+                    e_legals[e_team_i] & h_infos[h].diff_h,
+                    legal,
+                    stage + 1,
+                    -INF,
+                    -value    // use current best value
+                );
+
+                // true value assumes enemies use their best lineup
+                if (child_value <= team_value)
+                    team_value = child_value;
+
+                // skip rest of enemy lineups if they have a response
+                // in which selecting team gets a less-than-best value
+                if (team_value <= value)
+                    break;
+            }
+
+            // can safely update best value and hero after having
+            // considered all enemy starting lineups and responses
+            if (team_value > value) {
+                value = team_value;
+                best_hero = h;
+            }
+        }
+    }
+
+    return (struct search_result) {.value = value, .best_hero = best_hero};
 }
 
 
@@ -453,6 +539,7 @@ u64 team_bit_repr(int team_size, int team_nums[])
     for (int i = 0; i < team_size; i++) {
         team |= (1ULL << team_nums[i]);
     }
+
     return team;
 }
 

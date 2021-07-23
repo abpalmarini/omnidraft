@@ -18,6 +18,24 @@ ffibuilder.cdef(
 
     // search
     int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[]);
+
+    struct search_result
+    {
+        int value;
+        int best_hero;
+        int best_hero_2;  // only applies for stages with a double selection
+    };
+
+    struct search_result run_main_search(
+        int num_teams,
+        int num_e_teams,
+        int team_size,
+        int e_team_size,
+        int banned_size,
+        int** start_teams,
+        int** start_e_teams,
+        int* banned
+    );
     """
 )
 

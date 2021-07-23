@@ -80,6 +80,36 @@ struct search_result
 int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta);
 int terminal_value(u64 team_A, u64 team_B);
 int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[]);
+struct search_result run_main_search(
+    int num_teams,
+    int num_e_teams,
+    int team_size,
+    int e_team_size,
+    int banned_size,
+    int** start_teams,
+    int** start_e_teams,
+    int* banned
+);
+struct search_result root_search_pick(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+);
+
+// helpers (turn arrays of team nums into bit representation)
+u64 team_bit_repr(int team_size, int team_nums[]);
+u64 legal_bit_repr(
+    int team_size,
+    int e_team_size,
+    int banned_size,
+    int team_nums[],
+    int e_team_nums[],
+    int banned_nums[]
+);
 
 // set up functions used to init all global variables required for search
 void set_role_r(int hero_num, int A_value, int B_value);
