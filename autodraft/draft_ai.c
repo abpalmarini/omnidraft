@@ -388,6 +388,109 @@ int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[])
 }
 
 
+// 
+// Outer search function. Takes in any starting hero num lineups (that
+// includes all possible role assignments) for both teams and bans.
+// Sets up initial bit format variables then calls the appropriate root 
+// selection search to return optimal value and action(s).
+//
+// There may be many starting lineups because heroes who play multiple
+// roles are treated differently. If hero X plays two roles and X is 
+// selected in a real draft, we must consider X playing in both roles.
+//
+struct search_result run_main_search(
+    int num_teams,
+    int num_e_teams,
+    int team_size,
+    int e_team_size,
+    int banned_size,
+    int** start_teams,
+    int** start_e_teams,
+    int* banned
+)
+{
+    // starting state variables for all hero role assignments
+    u64 teams[num_teams];
+    u64 e_teams[num_e_teams];
+    u64 legals[num_teams];
+    u64 e_legals[num_e_teams];
+
+    // init starting team variables
+    for (int i = 0; i < num_teams; i++) {
+        teams[i] = team_bit_repr(team_size, start_teams[i]);
+        legals[i] = legal_bit_repr(
+            team_size,
+            e_team_size,
+            banned_size,
+            start_teams[i],
+            start_e_teams[0],  // any enemy team can be used as all hero variations are removed
+            banned
+        );
+    }
+
+    // init starting enemy variables
+    for (int i = 0; i < num_e_teams; i++) {
+        e_teams[i] = team_bit_repr(e_team_size, start_e_teams[i]);
+        e_legals[i] = legal_bit_repr(
+            e_team_size,
+            team_size,
+            banned_size,
+            start_e_teams[i],
+            start_teams[0],
+            banned
+        );
+    }
+}
+
+
+// 
+// Turn array of hero nums into their bit representation.
+//
+u64 team_bit_repr(int team_size, int team_nums[])
+{
+    u64 team = 0;  // start with empty team
+
+    for (int i = 0; i < team_size; i++) {
+        team |= (1ULL << team_nums[i]);
+    }
+    return team;
+}
+
+
+// 
+// Get the legal actions for a team in bit representation given 
+// arrays of hero nums for team, enemy and bans.
+//
+u64 legal_bit_repr(
+    int team_size,
+    int e_team_size,
+    int banned_size,
+    int team_nums[],
+    int e_team_nums[],
+    int banned_nums[]
+)
+{
+    u64 legal = 0xFFFFFFFFFFFFFFFF;  // init all heroes as legal
+
+    // remove team heroes (and their shared roles and flex nums)
+    for (int i = 0; i < team_size; i++) {
+        legal &= h_infos[team_nums[i]].diff_role_and_h;
+    }
+
+    // remove selected enemy heroes (including flex nums)
+    for (int i = 0; i < e_team_size; i++) {
+        legal &= h_infos[e_team_nums[i]].diff_h;
+    }
+
+    // remove banned heroes (including flex nums)
+    for (int i = 0; i < banned_size; i++) {
+        legal &= h_infos[banned_nums[i]].diff_h;
+    }
+
+    return legal;
+}
+
+
 // ======================================================================
 // I need a way to go from receiving a draft format and set of rewards in
 // python to initialising the global variables required for calling

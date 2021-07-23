@@ -67,6 +67,15 @@ struct draft_stage
 };
 
 
+// returned by outer search function
+struct search_result
+{
+    int value;
+    int best_hero;
+    int best_hero_2;  // only applies for stages with a double selection
+};
+
+
 // search
 int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta);
 int terminal_value(u64 team_A, u64 team_B);
