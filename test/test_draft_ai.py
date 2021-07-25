@@ -352,6 +352,12 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = 1386, 2  # hard coding after running once
 
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 9
+
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
@@ -418,6 +424,12 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = 437, 9  # hard coding after running once
 
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 11
+
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
@@ -450,6 +462,12 @@ class TestDraftAI(unittest.TestCase):
         # target_value = -target_value  # get value in terms of team B's perspective
         target_value, target_action = -28, 11  # hard coding after running once
 
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 1
+
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
@@ -479,6 +497,12 @@ class TestDraftAI(unittest.TestCase):
 
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = 1422, 26  # hard coded after running once
+
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 29
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
@@ -588,6 +612,12 @@ class TestDraftAI(unittest.TestCase):
         # target_value = -target_value
         target_value, target_action = 1346, 11
 
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 38
+
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
@@ -625,6 +655,12 @@ class TestDraftAI(unittest.TestCase):
         # target_value = -target_value  # get value in terms of team B's perspective
         target_value, target_action = 2027, 10  # hard coding after running once
 
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 40
+
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
@@ -661,6 +697,12 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         # target_value = -target_value
         target_value, target_action = 925, 45  # hard coding after running once
+
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 10
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
@@ -703,6 +745,12 @@ class TestDraftAI(unittest.TestCase):
         target_value, target_action = 30000, 16  # I believe this means it is possible
                                                  # for B to force A into situation with
                                                  # no legal actions
+
+        # get second action as well
+        # old_draft_c = old_draft.clone()
+        # old_draft_c.apply(target_action)
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 31
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
