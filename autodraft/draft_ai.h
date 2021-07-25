@@ -90,7 +90,7 @@ struct search_result run_main_search(
     int** start_e_teams,
     int* banned
 );
-struct search_result root_search_pick(
+struct search_result root_pick(
     int num_teams,
     int num_e_teams,
     u64 teams[],
@@ -99,7 +99,7 @@ struct search_result root_search_pick(
     u64 e_legals[],
     int stage
 );
-struct search_result root_search_ban(
+struct search_result root_ban(
     int num_teams,
     int num_e_teams,
     u64 teams[],

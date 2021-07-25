@@ -303,6 +303,8 @@ int terminal_value(u64 team_A, u64 team_B)
 
 
 //
+// ** Will be deleted when run_main_search is complete. **
+//
 // Outer search function that takes in any combination of 
 // picks and bans, sets up initial bit format variables,
 // then calls negamax for the selecting team.
@@ -389,14 +391,23 @@ int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[])
 
 
 // 
-// Outer search function. Takes in any starting hero num lineups (that
-// includes all possible role assignments) for both teams and bans.
-// Sets up initial bit format variables then calls the appropriate root 
-// selection search to return optimal value and action(s).
+// Outer search function. Takes in any history of hero num lineups for
+// both teams and bans, initialises bit format variables, then calls
+// the appropriate root selection search to return optimal value and 
+// action(s).
 //
-// There may be many starting lineups because heroes who play multiple
-// roles are treated differently. If hero X plays two roles and X is 
-// selected in a real draft, we must consider X playing in both roles.
+// The root functions are similar to their selection counterpart in
+// negamax. However, they also track the optimal action and deal with
+// the fact that teams could have many starting lineups. There may be
+// many because heroes who play multiple roles are treated differently.
+// If hero X plays two roles and X is selected in a real draft, we must
+// consider X being played in either role. The value of selecting a hero
+// (or two) is therefore the minimum value returned for each enemy team
+// starting lineup used, which in turn is the maximum value of using each
+// selecting team lineup vs it. The enemy gets preference on which lineup
+// to use as it is them to select after the hero being evaluated is 
+// selected--their action will be based on the lineup that gets them most
+// value.
 //
 struct search_result run_main_search(
     int num_teams,
@@ -445,7 +456,7 @@ struct search_result run_main_search(
     int stage = team_size + e_team_size + banned_size;
     switch (draft[stage].selection) {
         case PICK:
-            return root_search_pick(
+            return root_pick(
                 num_teams,
                 num_e_teams,
                 teams,
@@ -456,7 +467,7 @@ struct search_result run_main_search(
             );
 
         case BAN:
-            return root_search_ban(
+            return root_ban(
                 num_teams,
                 num_e_teams,
                 teams,
@@ -472,7 +483,7 @@ struct search_result run_main_search(
 }
 
 
-struct search_result root_search_pick(
+struct search_result root_pick(
     int num_teams,
     int num_e_teams,
     u64 teams[],
@@ -540,7 +551,7 @@ struct search_result root_search_pick(
 }
 
 
-struct search_result root_search_ban(
+struct search_result root_ban(
     int num_teams,
     int num_e_teams,
     u64 teams[],
