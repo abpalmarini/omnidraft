@@ -289,7 +289,7 @@ int terminal_value(u64 team_A, u64 team_B)
     }
 
     // role rewards 
-    u64 hero = 1;  // represents hero 0 (first bit)
+    u64 hero = 1ULL;  // represents hero 0 (first bit)
     for (int i = 0; i < num_heroes; i++) {
         if (team_A & hero)
             value += role_rs[i].A_value;
@@ -398,11 +398,6 @@ int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[])
 // roles are treated differently. If hero X plays two roles and X is 
 // selected in a real draft, we must consider X playing in both roles.
 //
-// Each root search function is similar to its standard negamax
-// counterpart with the exception that it also tracks the action that
-// leads to the optimal value and checks all relevant team and enemy
-// starting lineups per action.
-//
 struct search_result run_main_search(
     int num_teams,
     int num_e_teams,
@@ -460,6 +455,17 @@ struct search_result run_main_search(
                 stage
             );
 
+        case BAN:
+            return root_search_ban(
+                num_teams,
+                num_e_teams,
+                teams,
+                e_teams,
+                legals,
+                e_legals,
+                stage
+            );
+
         default:
             return (struct search_result) {};
     }
@@ -480,49 +486,90 @@ struct search_result root_search_pick(
     int best_hero;
 
     for (int h = 0; h < num_heroes; h++) {
-        u64 hero = (1ULL << h);
+        // value of hero is the min value
+        // for each enemy starting lineup
+        int h_value = INF;
+        u64 hero = 1ULL << h;
 
-        // for each hero consider every starting lineup
-        for (int team_i = 0; team_i < num_teams; team_i++) {
-            u64 legal = legals[team_i];
-            if (!(legal & hero))
-                continue;
+        for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
+            // value of an enemy lineup is the max
+            // value for each team starting lineup
+            int e_team_value = -INF;
 
-            // if legal we can find the value of this hero-lineup
-            // combination by searching for enemies best response
-            int team_value = INF;
+            for (int team_i = 0; team_i < num_teams; team_i++) {
+                if (!(legals[team_i] & hero))
+                    continue;
 
-            u64 team = teams[team_i] | hero;
-            legal &= h_infos[h].diff_role_and_h;
-
-            for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
                 int child_value = -negamax(
                     e_teams[e_team_i],
-                    team,
+                    teams[team_i] | hero,
                     e_legals[e_team_i] & h_infos[h].diff_h,
-                    legal,
+                    legals[team_i] & h_infos[h].diff_role_and_h,
                     stage + 1,
                     -INF,
                     -value    // use current best value
                 );
 
-                // true value assumes enemies use their best lineup
-                if (child_value <= team_value)
-                    team_value = child_value;
+                if (child_value > e_team_value)
+                    e_team_value = child_value;
 
-                // skip rest of enemy lineups if they have a response
-                // in which selecting team gets a less-than-best value
-                if (team_value <= value)
+                // skip evaluating rest of team lineups if 
+                // enemy already has a better value
+                if (e_team_value >= h_value)
                     break;
             }
 
-            // can safely update best value and hero after having
-            // considered all enemy starting lineups and responses
-            if (team_value > value) {
-                value = team_value;
-                best_hero = h;
+            if (e_team_value < h_value)
+                h_value = e_team_value;
+
+            // skip rest of enemy lineups if they already have a
+            // lineup where team gets a less-than-best value
+            if (h_value <= value)
+                break;
+        }
+
+        if (h_value > value) {
+            value = h_value;
+            best_hero = h;
+        }
+    }
+
+    return (struct search_result) {.value = value, .best_hero = best_hero};
+}
+
+
+struct search_result root_search_ban(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+)
+{
+    int value = -INF;
+    int best_hero;
+
+    for (int h = 0; h < num_heroes; h++) {
+        u64 hero = (1ULL << h);
+
+        // if hero is legal for at least one enemy lineup we must
+        // consider the response values of all enemy lineups (not
+        // only those where it is legal) as its possible the enemy
+        // can get a better value in one where it is illegal
+        int is_legal = 0;
+        for (int i = 0; i < num_e_teams; i++) {
+            if (e_legals[i] & hero) {
+                is_legal = 1;
+                break;
             }
         }
+        if (!is_legal)
+            continue;
+
+        /* NOT COMPLETE. HAD TO CHANGE PICK */
+
     }
 
     return (struct search_result) {.value = value, .best_hero = best_hero};

@@ -200,7 +200,8 @@ class TestDraftAI(unittest.TestCase):
         # *********************************************************************
 
         # only implemented root level pick for now
-        if draft.format[len(draft.history)][1] != PICK:
+        selection = draft.format[len(draft.history)][1] 
+        if selection != PICK:
             self.assertTrue(False, "not a PICK")
 
         team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
@@ -230,9 +231,10 @@ class TestDraftAI(unittest.TestCase):
             start_e_teams,
             banned,
         )
+        value = search_result.value
+        action = ordered_heroes[search_result.best_hero].name
 
-        return search_result.value, ordered_heroes[search_result.best_hero].name
-
+        return value, action
     
     def test_A_last_pick_counter(self):
         role_rs = [
@@ -385,7 +387,7 @@ class TestDraftAI(unittest.TestCase):
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        self.assertEqual(action, target_action)
 
     def test_double_bans(self):
         random.seed(2)
@@ -548,14 +550,14 @@ class TestDraftAI(unittest.TestCase):
         old_draft.apply(7)   # roles: 2
         old_draft.apply(10)
 
-        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = -586, 45  # hard coding after running once
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        self.assertEqual(action, target_action)
 
     def test_flex_pick_in_history_B_pick_pick(self):
         random.seed(11)
