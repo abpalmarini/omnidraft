@@ -528,6 +528,8 @@ struct search_result root_search_pick(
                 break;
         }
 
+        // only updating after evaluating team best response
+        // to every starting lineup enemy could use
         if (h_value > value) {
             value = h_value;
             best_hero = h;
@@ -552,12 +554,11 @@ struct search_result root_search_ban(
     int best_hero;
 
     for (int h = 0; h < num_heroes; h++) {
-        u64 hero = (1ULL << h);
-
         // if hero is legal for at least one enemy lineup we must
         // consider the response values of all enemy lineups (not
         // only those where it is legal) as its possible the enemy
         // can get a better value in one where it is illegal
+        u64 hero = 1ULL << h;
         int is_legal = 0;
         for (int i = 0; i < num_e_teams; i++) {
             if (e_legals[i] & hero) {
@@ -568,8 +569,40 @@ struct search_result root_search_ban(
         if (!is_legal)
             continue;
 
-        /* NOT COMPLETE. HAD TO CHANGE PICK */
+        int h_value = INF;
+        
+        for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
+            int e_team_value = -INF;
 
+            for (int team_i = 0; team_i < num_teams; team_i++) {
+                int child_value = -negamax(
+                    e_teams[e_team_i],
+                    teams[team_i],
+                    e_legals[e_team_i] & h_infos[h].diff_h,
+                    legals[team_i] & h_infos[h].diff_h,
+                    stage + 1,
+                    -INF,
+                    -value
+                );
+
+                if (child_value > e_team_value)
+                    e_team_value = child_value;
+
+                if (e_team_value >= h_value)
+                    break;
+            }
+
+            if (e_team_value < h_value)
+                h_value = e_team_value;
+
+            if (h_value <= value)
+                break;
+        }
+
+        if (h_value > value) {
+            value = h_value;
+            best_hero = h;
+        }
     }
 
     return (struct search_result) {.value = value, .best_hero = best_hero};

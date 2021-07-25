@@ -201,8 +201,8 @@ class TestDraftAI(unittest.TestCase):
 
         # only implemented root level pick for now
         selection = draft.format[len(draft.history)][1] 
-        if selection != PICK:
-            self.assertTrue(False, "not a PICK")
+        if selection != PICK and selection != BAN:
+            self.assertTrue(False, "not a PICK or BAN")
 
         team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
 
