@@ -108,6 +108,15 @@ struct search_result root_ban(
     u64 e_legals[],
     int stage
 );
+struct search_result root_pick_pick(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+);
 
 // helpers (turn arrays of team nums into bit representation)
 u64 team_bit_repr(int team_size, int team_nums[]);

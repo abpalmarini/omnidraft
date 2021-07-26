@@ -199,10 +199,10 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
-        # only implemented root level pick for now
+        allowed_selections = {PICK, BAN, PICK_PICK}  # only implemented the following
         selection = draft.format[len(draft.history)][1] 
-        if selection != PICK and selection != BAN:
-            self.assertTrue(False, "not a PICK or BAN")
+        if selection not in allowed_selections:
+            self.assertTrue(False, "NOT IMPLEMENTED YET")
 
         team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
 
@@ -233,8 +233,11 @@ class TestDraftAI(unittest.TestCase):
         )
         value = search_result.value
         action = ordered_heroes[search_result.best_hero].name
-
-        return value, action
+        if selection == PICK or selection == BAN:
+            return value, action
+        else:
+            action_2 = ordered_heroes[search_result.best_hero_2].name
+            return value, action, action_2
     
     def test_A_last_pick_counter(self):
         role_rs = [
@@ -357,12 +360,15 @@ class TestDraftAI(unittest.TestCase):
         # old_draft_c.apply(target_action)
         # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
         target_action_2 = 9
+        target_actions = (target_action, target_action_2)
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        # order of actions does not matter for two picks
+        self.assertTrue((action, action_2) == target_actions 
+                        or (action_2, action) == target_actions)
 
     def test_single_bans(self):
         random.seed(1)
@@ -498,17 +504,11 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = 1422, 26  # hard coded after running once
 
-        # get second action as well
-        # old_draft_c = old_draft.clone()
-        # old_draft_c.apply(target_action)
-        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
-        target_action_2 = 29
-
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        self.assertEqual(action, target_action)
 
     def test_flex_pick_in_history_A_pick(self):
         random.seed(6)
@@ -617,12 +617,15 @@ class TestDraftAI(unittest.TestCase):
         # old_draft_c.apply(target_action)
         # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
         target_action_2 = 38
+        target_actions = (target_action, target_action_2)
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        # order of actions does not matter for two picks
+        self.assertTrue((action, action_2) == target_actions 
+                        or (action_2, action) == target_actions)
 
     def test_flex_pick_in_history_B_pick_ban(self):
         random.seed(6)

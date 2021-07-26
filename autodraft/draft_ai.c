@@ -453,6 +453,10 @@ struct search_result run_main_search(
     }
 
     // call root function to deal with specific selection type
+    //
+    // (i'd like to generalise these, as fundamentally they are
+    // all doing the same thing, but they each have slight differences at
+    // various stages that it doesn't seem worth it)
     int stage = team_size + e_team_size + banned_size;
     switch (draft[stage].selection) {
         case PICK:
@@ -468,6 +472,17 @@ struct search_result run_main_search(
 
         case BAN:
             return root_ban(
+                num_teams,
+                num_e_teams,
+                teams,
+                e_teams,
+                legals,
+                e_legals,
+                stage
+            );
+
+        case PICK_PICK:
+            return root_pick_pick(
                 num_teams,
                 num_e_teams,
                 teams,
@@ -617,6 +632,87 @@ struct search_result root_ban(
     }
 
     return (struct search_result) {.value = value, .best_hero = best_hero};
+}
+
+
+struct search_result root_pick_pick(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+)
+{
+    int value = -INF;
+    int best_hero;
+    int best_hero_2;
+
+    for (int h = 0; h < num_heroes; h++) {
+        // @Later can skip hastle of checking redundant h for 
+        // each h2 by ensuring it is legal for at least one team
+        for (int h2 = h + 1; h2 < num_heroes; h2++) {
+            int h_pair_value = INF;
+
+            for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
+                int e_team_value = -INF;
+
+                for (int team_i = 0; team_i < num_teams; team_i++) {
+                    // initial state for this enemy-team combo
+                    u64 team = teams[team_i];
+                    u64 e_team = e_teams[e_team_i];
+                    u64 legal = legals[team_i];
+                    u64 e_legal = e_legals[e_team_i];
+
+                    // check and update state if first hero legal
+                    if (!(legal & (1ULL << h)))
+                        continue;
+                    team |= (1ULL << h);
+                    legal &= h_infos[h].diff_role_and_h;
+                    e_legal &= h_infos[h].diff_h;
+
+                    // check and update state if second hero legal
+                    if (!(legal & (1ULL << h2)))
+                        continue;
+                    team |= (1ULL << h2);
+                    legal &= h_infos[h2].diff_role_and_h;
+                    e_legal &= h_infos[h2].diff_h;
+
+                    // if both are normal we continue like root_pick
+                    int child_value = -negamax(
+                        e_team,
+                        team,
+                        e_legal,
+                        legal,
+                        stage + 2,
+                        -INF,
+                        -value
+                    );
+
+                    if (child_value > e_team_value)
+                        e_team_value = child_value;
+
+                    if (e_team_value >= h_pair_value)
+                        break;
+                }
+
+                if (e_team_value < h_pair_value)
+                    h_pair_value = e_team_value;
+
+                if (h_pair_value <= value)
+                    break;
+            }
+
+            if (h_pair_value > value) {
+                value = h_pair_value;
+                best_hero = h;
+                best_hero_2 = h2;
+            }
+        }
+    }
+
+    return (struct search_result) {value, best_hero, best_hero_2};
 }
 
 
