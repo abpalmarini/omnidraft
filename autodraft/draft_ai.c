@@ -512,6 +512,10 @@ struct search_result root_pick(
     int best_hero;
 
     for (int h = 0; h < num_heroes; h++) {
+        // directly skip hero if we know it isn't legal for any lineup
+        if (!legal_for_any_lineup(h, num_teams, legals))
+            continue;
+
         // value of hero is the min value
         // for each enemy starting lineup
         int h_value = INF;
@@ -523,6 +527,8 @@ struct search_result root_pick(
             int e_team_value = -INF;
 
             for (int team_i = 0; team_i < num_teams; team_i++) {
+                // still need to check for hero being legal
+                // in this specific starting lineup
                 if (!(legals[team_i] & hero))
                     continue;
 
@@ -584,15 +590,7 @@ struct search_result root_ban(
         // consider the response values of all enemy lineups (not
         // only those where it is legal) as its possible the enemy
         // can get a better value in one where it is illegal
-        u64 hero = 1ULL << h;
-        int is_legal = 0;
-        for (int i = 0; i < num_e_teams; i++) {
-            if (e_legals[i] & hero) {
-                is_legal = 1;
-                break;
-            }
-        }
-        if (!is_legal)
+        if (!legal_for_any_lineup(h, num_e_teams, e_legals))
             continue;
 
         int h_value = INF;
@@ -650,8 +648,10 @@ struct search_result root_pick_pick(
     int best_hero_2;
 
     for (int h = 0; h < num_heroes; h++) {
-        // @Later can skip hastle of checking redundant h for 
-        // each h2 by ensuring it is legal for at least one team
+        // directly skip hero if we know it isn't legal for any lineup
+        if (!legal_for_any_lineup(h, num_teams, legals))
+            continue;
+
         for (int h2 = h + 1; h2 < num_heroes; h2++) {
             int h_pair_value = INF;
 
@@ -713,6 +713,23 @@ struct search_result root_pick_pick(
     }
 
     return (struct search_result) {value, best_hero, best_hero_2};
+}
+
+
+//
+// Checks if a given hero is legal in any of a team's
+// starting lineup legal actions.
+//
+int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[])
+{
+    u64 hero = 1ULL << hero_num;
+
+    for (int i = 0; i < num_teams; i++) {
+        if (legals[i] & hero)
+            return 1;
+    }
+
+    return 0;
 }
 
 

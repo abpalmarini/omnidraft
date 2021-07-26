@@ -118,7 +118,8 @@ struct search_result root_pick_pick(
     int stage
 );
 
-// helpers (turn arrays of team nums into bit representation)
+// helpers
+int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[]);
 u64 team_bit_repr(int team_size, int team_nums[]);
 u64 legal_bit_repr(
     int team_size,
