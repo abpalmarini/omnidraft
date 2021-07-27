@@ -117,6 +117,24 @@ struct search_result root_pick_pick(
     u64 e_legals[],
     int stage
 );
+struct search_result root_pick_ban(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+);
+struct search_result root_ban_pick(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+);
 
 // helpers
 int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[]);

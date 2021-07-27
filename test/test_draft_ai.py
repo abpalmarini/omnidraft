@@ -199,9 +199,9 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
-        allowed_selections = {PICK, BAN, PICK_PICK}  # only implemented the following
         selection = draft.format[len(draft.history)][1] 
-        if selection not in allowed_selections:
+        if selection == BAN_BAN:
+            # still to implement double ban
             self.assertTrue(False, "NOT IMPLEMENTED YET")
 
         team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
@@ -475,10 +475,12 @@ class TestDraftAI(unittest.TestCase):
         target_action_2 = 1
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        # order of selections matter for pick then ban
+        self.assertEqual(action, target_action)
+        self.assertEqual(action_2, target_action_2)
 
     def test_ban_then_pick(self):
         random.seed(4)
@@ -665,10 +667,12 @@ class TestDraftAI(unittest.TestCase):
         target_action_2 = 40
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        # order of selection matters for pick then ban
+        self.assertEqual(action, target_action)
+        self.assertEqual(action_2, target_action_2)
 
     def test_flex_pick_in_history_B_ban_pick(self):
         random.seed(6)
@@ -708,10 +712,12 @@ class TestDraftAI(unittest.TestCase):
         target_action_2 = 10
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        # order of selection matters for ban then pick
+        self.assertEqual(action, target_action)
+        self.assertEqual(action_2, target_action_2)
 
     def test_flex_pick_in_history_B_ban_ban(self):
         random.seed(6)

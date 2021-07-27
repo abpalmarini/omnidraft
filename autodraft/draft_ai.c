@@ -492,6 +492,28 @@ struct search_result run_main_search(
                 stage
             );
 
+        case PICK_BAN:
+            return root_pick_ban(
+                num_teams,
+                num_e_teams,
+                teams,
+                e_teams,
+                legals,
+                e_legals,
+                stage
+            );
+
+        case BAN_PICK:
+            return root_ban_pick(
+                num_teams,
+                num_e_teams,
+                teams,
+                e_teams,
+                legals,
+                e_legals,
+                stage
+            );
+
         default:
             return (struct search_result) {};
     }
@@ -680,6 +702,188 @@ struct search_result root_pick_pick(
                     e_legal &= h_infos[h2].diff_h;
 
                     // if both are normal we continue like root_pick
+                    int child_value = -negamax(
+                        e_team,
+                        team,
+                        e_legal,
+                        legal,
+                        stage + 2,
+                        -INF,
+                        -value
+                    );
+
+                    if (child_value > e_team_value)
+                        e_team_value = child_value;
+
+                    if (e_team_value >= h_pair_value)
+                        break;
+                }
+
+                if (e_team_value < h_pair_value)
+                    h_pair_value = e_team_value;
+
+                if (h_pair_value <= value)
+                    break;
+            }
+
+            if (h_pair_value > value) {
+                value = h_pair_value;
+                best_hero = h;
+                best_hero_2 = h2;
+            }
+        }
+    }
+
+    return (struct search_result) {value, best_hero, best_hero_2};
+}
+
+
+struct search_result root_pick_ban(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+)
+{
+    int value = -INF;
+    int best_hero;
+    int best_hero_2;
+
+    for (int h = 0; h < num_heroes; h++) {
+        // directly skip pick hero if no team lineup can pick it
+        if (!legal_for_any_lineup(h, num_teams, legals))
+            continue;
+        u64 pick_hero = 1ULL << h;
+
+        // updated enemy legals only to allow for checking of ban hero
+        u64 updated_e_legals[num_e_teams];
+        for (int i = 0; i < num_e_teams; i++) {
+            updated_e_legals[i] = e_legals[i] & h_infos[h].diff_h;
+        }
+
+        for (int h2 = 0; h2 < num_heroes; h2++) {
+            // only skipping ban hero if illegal in all enemy lineups
+            if (!legal_for_any_lineup(h2, num_e_teams, updated_e_legals))
+                continue;
+
+            int h_pair_value = INF;
+
+            for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
+                int e_team_value = -INF;
+
+                for (int team_i = 0; team_i < num_teams; team_i++) {
+                    // initial state for this enemy-team combo
+                    u64 team = teams[team_i];
+                    u64 e_team = e_teams[e_team_i];
+                    u64 legal = legals[team_i];
+                    u64 e_legal = e_legals[e_team_i];
+
+                    // update state for pick if legal
+                    // for this specific team lineup
+                    if (!(legal & pick_hero))
+                        continue;
+                    team |= pick_hero;
+                    legal &= h_infos[h].diff_role_and_h;
+                    e_legal &= h_infos[h].diff_h;
+
+                    // update state for ban
+                    legal &= h_infos[h2].diff_h;
+                    e_legal &= h_infos[h2].diff_h;
+
+                    int child_value = -negamax(
+                        e_team,
+                        team,
+                        e_legal,
+                        legal,
+                        stage + 2,
+                        -INF,
+                        -value
+                    );
+
+                    if (child_value > e_team_value)
+                        e_team_value = child_value;
+
+                    if (e_team_value >= h_pair_value)
+                        break;
+                }
+
+                if (e_team_value < h_pair_value)
+                    h_pair_value = e_team_value;
+
+                if (h_pair_value <= value)
+                    break;
+            }
+
+            if (h_pair_value > value) {
+                value = h_pair_value;
+                best_hero = h;
+                best_hero_2 = h2;
+            }
+        }
+    }
+
+    return (struct search_result) {value, best_hero, best_hero_2};
+}
+
+
+struct search_result root_ban_pick(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+)
+{
+    int value = -INF;
+    int best_hero;
+    int best_hero_2;
+
+    for (int h = 0; h < num_heroes; h++) {
+        // only skipping ban hero if illegal in all enemy lineups
+        if (!legal_for_any_lineup(h, num_e_teams, e_legals))
+            continue;
+
+        // updated team legals only to allow for checking of pick hero
+        u64 updated_legals[num_teams];
+        for (int i = 0; i < num_teams; i++) {
+            updated_legals[i] = legals[i] & h_infos[h].diff_h;
+        }
+
+        for (int h2 = 0; h2 < num_heroes; h2++) {
+            // directly skip pick hero if no team lineup can pick it
+            if (!legal_for_any_lineup(h2, num_teams, updated_legals))
+                continue;
+            u64 pick_hero = 1ULL << h2;
+
+            int h_pair_value = INF;
+
+            for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
+                int e_team_value = -INF;
+
+                for (int team_i = 0; team_i < num_teams; team_i++) {
+                    // initial state for this enemy-team combo
+                    u64 team = teams[team_i];
+                    u64 e_team = e_teams[e_team_i];
+                    u64 legal = legals[team_i];
+                    u64 e_legal = e_legals[e_team_i];
+
+                    // update state for ban
+                    legal &= h_infos[h].diff_h;
+                    e_legal &= h_infos[h].diff_h;
+
+                    // update state for pick if legal
+                    // for this specific team lineup
+                    if (!(legal & pick_hero))
+                        continue;
+                    team |= pick_hero;
+                    legal &= h_infos[h2].diff_role_and_h;
+                    e_legal &= h_infos[h2].diff_h;
+
                     int child_value = -negamax(
                         e_team,
                         team,
