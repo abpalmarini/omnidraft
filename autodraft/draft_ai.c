@@ -674,7 +674,17 @@ struct search_result root_pick_pick(
         if (!legal_for_any_lineup(h, num_teams, legals))
             continue;
 
+        // updated team legals only to allow for checking of second hero
+        u64 updated_legals[num_teams];
+        for (int i = 0; i < num_teams; i++) {
+            updated_legals[i] = legals[i] & h_infos[h].diff_role_and_h;
+        }
+
         for (int h2 = h + 1; h2 < num_heroes; h2++) {
+            // directly skip if no lineup can second pick this hero
+            if (!legal_for_any_lineup(h2, num_teams, updated_legals))
+                continue;
+
             int h_pair_value = INF;
 
             for (int e_team_i = 0; e_team_i < num_e_teams; e_team_i++) {
