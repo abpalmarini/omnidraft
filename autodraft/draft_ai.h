@@ -90,50 +90,16 @@ struct search_result run_main_search(
     int** start_e_teams,
     int* banned
 );
-struct search_result root_pick(
+int flex_search(
     int num_teams,
     int num_e_teams,
     u64 teams[],
     u64 e_teams[],
     u64 legals[],
     u64 e_legals[],
-    int stage
-);
-struct search_result root_ban(
-    int num_teams,
-    int num_e_teams,
-    u64 teams[],
-    u64 e_teams[],
-    u64 legals[],
-    u64 e_legals[],
-    int stage
-);
-struct search_result root_pick_pick(
-    int num_teams,
-    int num_e_teams,
-    u64 teams[],
-    u64 e_teams[],
-    u64 legals[],
-    u64 e_legals[],
-    int stage
-);
-struct search_result root_pick_ban(
-    int num_teams,
-    int num_e_teams,
-    u64 teams[],
-    u64 e_teams[],
-    u64 legals[],
-    u64 e_legals[],
-    int stage
-);
-struct search_result root_ban_pick(
-    int num_teams,
-    int num_e_teams,
-    u64 teams[],
-    u64 e_teams[],
-    u64 legals[],
-    u64 e_legals[],
-    int stage
+    int stage,
+    int alpha,
+    int beta
 );
 
 // helpers
