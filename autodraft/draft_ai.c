@@ -460,6 +460,8 @@ struct search_result run_main_search(
 //
 // Traverses global tree in multiple locations to deal with
 // histories that contain heroes who can play multiple roles. 
+// This ensures the true optimal value is returned no matter
+// what the enemies select or which lineup they choose to use.
 //
 int flex_search(
     int num_teams,
@@ -473,6 +475,37 @@ int flex_search(
     int beta
 )
 {
+    // if enemy can't swtich lineups then the value is the highest
+    // value the selecting team can achieve with its lineups vs it
+    if (num_e_teams == 1) {
+        int value = -INF;
+
+        for (int i = 0; i < num_teams; i++) {
+            int team_value = negamax(
+                teams[i],
+                e_teams[0],
+                legals[i],
+                e_legals[0],
+                stage,
+                alpha,
+                beta
+            );
+
+            if (team_value >= value)
+                value = team_value;
+
+            if (value >= alpha)
+                alpha = value;
+
+            // can skip other lineups if enemy has better options
+            if (alpha >= beta)
+                break;
+        }
+
+        return value;
+    }
+
+    return 0;
 }
 
 
