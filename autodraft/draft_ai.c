@@ -475,9 +475,9 @@ int flex_search(
     int beta
 )
 {
-    // if enemy can't swtich lineups then the value is the highest
-    // value the selecting team can achieve with its lineups vs it
     if (num_e_teams == 1) {
+        // if enemy can't swtich lineups then value is highest the
+        // selecting team can achieve with one of its lineups vs it
         int value = -INF;
 
         for (int i = 0; i < num_teams; i++) {
@@ -503,6 +503,31 @@ int flex_search(
         }
 
         return value;
+    } else if (stage == draft_len) {
+        // for each A lineup find best (min) value B can get
+        // then take best (max) value A can get as final value
+        // (each team gets their best lineup if terminal state)
+        int value_max = -INF;
+
+        for (int i = 0; i < num_teams; i++) {
+            int value_min = INF;
+
+            for (int j = 0; j < num_e_teams; j++) {
+                int value = terminal_value(teams[i], e_teams[j]);
+
+                if (value < value_min)
+                    value_min = value;
+
+                if (value_min <= value_max)
+                    // team A won't use this lineup
+                    break;
+            }
+
+            if (value_min > value_max)
+                value_max = value_min;
+        }
+
+        return value_max;
     }
 
     return 0;
