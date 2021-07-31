@@ -99,7 +99,7 @@ int hero_in_team_update(
     u64 new_legals[]
 );
 void hero_out_of_team_update(int hero_num, int num_teams, u64 legals[], u64 new_legals[]);
-struct search_result run_main_search(
+struct search_result run_search(
     int num_teams,
     int num_e_teams,
     int team_size,
@@ -109,7 +109,6 @@ struct search_result run_main_search(
     int** start_e_teams,
     int* banned
 );
-int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[]);
 
 // helpers
 int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[]);

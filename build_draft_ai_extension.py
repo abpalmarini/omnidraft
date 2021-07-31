@@ -17,16 +17,13 @@ ffibuilder.cdef(
     void set_sizes(int heroes, int synergy_rs, int counter_rs, int draft);
 
     // search
-    int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[]);
-
     struct search_result
     {
         int value;
         int best_hero;
         int best_hero_2;  // only applies for stages with a double selection
     };
-
-    struct search_result run_main_search(
+    struct search_result run_search(
         int num_teams,
         int num_e_teams,
         int team_size,

@@ -217,7 +217,7 @@ class TestDraftAI(unittest.TestCase):
         num_e_teams = len(start_e_teams)
         banned_size = len(banned)
 
-        search_result = lib.run_main_search(
+        search_result = lib.run_search(
             num_teams,
             num_e_teams,
             team_size,
