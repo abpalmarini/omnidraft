@@ -422,6 +422,44 @@ int flex_negamax(
                     return value;
             }
 
+        case BAN:
+            for (int h = 0; h < num_heroes; h++) {
+                // if hero is legal for at least one enemy lineup then
+                // the response values of all enemy lineups must be
+                // considered (not only those where it is legal) as its
+                // possible the enemy could do better using a lineup
+                // where the hero is illegal
+                if (!legal_for_any_lineup(h, num_e_teams, e_legals))
+                    continue;
+
+                // get updated legals for both teams after the ban
+                u64 legals_b[num_teams];
+                hero_out_of_team_update(h, num_teams, legals, legals_b);
+                u64 e_legals_b[num_e_teams];
+                hero_out_of_team_update(h, num_e_teams, e_legals, e_legals_b);
+
+                int child_value = -flex_negamax(
+                    num_e_teams,
+                    num_teams,
+                    e_teams,
+                    teams,
+                    e_legals_b,
+                    legals_b,
+                    stage + 1,
+                    -beta,
+                    -alpha
+                );
+
+                if (child_value >= value)
+                    value = child_value;
+
+                if (value >= alpha)
+                    alpha = value;
+
+                if (alpha >= beta)
+                    return value;
+            }
+
         default:
             return 0;
     }
