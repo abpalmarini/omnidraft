@@ -732,10 +732,10 @@ class TestDraftAI(unittest.TestCase):
             (draft_az.A, draft_az.BAN),
             (draft_az.B, draft_az.BAN),  # starting from here
             (draft_az.B, draft_az.BAN),
-            (draft_az.B, draft_az.PICK),
-            (draft_az.A, draft_az.PICK),
             (draft_az.A, draft_az.PICK),
             (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
             (draft_az.A, draft_az.PICK),
             (draft_az.B, draft_az.PICK),
         )
@@ -749,23 +749,25 @@ class TestDraftAI(unittest.TestCase):
         old_draft.apply(2)   # roles: 0
         old_draft.apply(10)
 
-        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        # old_draft.apply(6)
+        # old_draft.apply(48) # target action here is 16 with value 1016
+        # old_draft.apply(16)  # roles: 0
+
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
         # target_value = -target_value
-        target_value, target_action = 30000, 16  # I believe this means it is possible
-                                                 # for B to force A into situation with
-                                                 # no legal actions
+        target_value, target_action = 1016, 6
 
         # get second action as well
         # old_draft_c = old_draft.clone()
         # old_draft_c.apply(target_action)
-        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
-        target_action_2 = 31
+        # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
+        target_action_2 = 48
+        target_actions = (target_action, target_action_2)
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
 
     def test_flex_pick_in_history_B_last_pick(self):
         random.seed(9)
