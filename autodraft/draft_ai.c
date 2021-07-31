@@ -303,10 +303,25 @@ int terminal_value(u64 team_A, u64 team_B)
 
 
 //
-// Traverses global tree in multiple locations to deal with
-// histories that contain heroes who can play multiple roles. 
-// This ensures the true optimal value is returned no matter
-// what the enemies select or which lineup they choose to use.
+// To eliminate searching redundant states that contain teams
+// with more than one hero per role, all heroes who play a filled
+// role are treated as illegal. To generate these legal actions
+// fast a hero who plays more than one role is treated as two
+// different heroes. This works fine when the starting state does
+// not contain any flex heroes. If, however, the enemy selected
+// hero X in the real draft and X plays two roles then we must
+// consider the enemy playing X in either role. It is therefore
+// possible for teams to have multiple starting lineups. It is
+// not okay to just run search for each lineup combination as
+// the optimal action vs one enemy lineup may not be optimal for
+// another.
+//
+// This function considers the same action being taken across
+// all applicable lineups (multiple locations of the global tree)
+// until it can hand over to normal negamax. This ensures the
+// optimal value is returned no matter what teams select or what
+// roles they choose to play their heroes in throughout the rest
+// of the draft.
 //
 int flex_negamax(
     int num_teams,
