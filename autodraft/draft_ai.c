@@ -633,8 +633,50 @@ int flex_negamax(
             }
             break;
 
-        default:
-            return 9;
+        case BAN_BAN:
+            for (int h = 0; h < num_heroes; h++) {
+                if (!legal_for_any_lineup(h, num_e_teams, e_legals))
+                    continue;
+
+                // update lineups for first ban
+                u64 legals_b[num_teams];
+                hero_out_of_team_update(h, num_teams, legals, legals_b);
+                u64 e_legals_b[num_e_teams];
+                hero_out_of_team_update(h, num_e_teams, e_legals, e_legals_b);
+
+                for (int h2 = h + 1; h2 < num_heroes; h2++) {
+                    if (!legal_for_any_lineup(h2, num_e_teams, e_legals_b))
+                        continue;
+
+                    // update lineups for second ban
+                    u64 legals_bb[num_teams];
+                    hero_out_of_team_update(h2, num_teams, legals_b, legals_bb);
+                    u64 e_legals_bb[num_e_teams];
+                    hero_out_of_team_update(h2, num_e_teams, e_legals_b, e_legals_bb);
+
+                    int child_value = -flex_negamax(
+                        num_e_teams,
+                        num_teams,
+                        e_teams,
+                        teams,
+                        e_legals_bb,
+                        legals_bb,
+                        stage + 2,
+                        -beta,
+                        -alpha
+                    );
+
+                    if (child_value >= value)
+                        value = child_value;
+
+                    if (value >= alpha)
+                        alpha = value;
+
+                    if (alpha >= beta)
+                        return value;
+                }
+            }
+            break;
     }
 
     return value;

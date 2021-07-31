@@ -200,10 +200,6 @@ class TestDraftAI(unittest.TestCase):
         # *********************************************************************
 
         selection = draft.format[len(draft.history)][1] 
-        if selection == BAN_BAN:
-            # still to implement double ban
-            self.assertTrue(False, "NOT IMPLEMENTED YET")
-
         team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
 
         # prepare input for C search...I don't know if this is best way
@@ -749,10 +745,6 @@ class TestDraftAI(unittest.TestCase):
         old_draft.apply(2)   # roles: 0
         old_draft.apply(10)
 
-        # old_draft.apply(6)
-        # old_draft.apply(48) # target action here is 16 with value 1016
-        # old_draft.apply(16)  # roles: 0
-
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         # target_value = -target_value
         target_value, target_action = 1016, 6
@@ -768,6 +760,9 @@ class TestDraftAI(unittest.TestCase):
         value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
+        # order of actions does not matter for two bans
+        self.assertTrue((action, action_2) == target_actions 
+                        or (action_2, action) == target_actions)
 
     def test_flex_pick_in_history_B_last_pick(self):
         random.seed(9)
