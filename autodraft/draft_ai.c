@@ -303,6 +303,306 @@ int terminal_value(u64 team_A, u64 team_B)
 
 
 //
+// Traverses global tree in multiple locations to deal with
+// histories that contain heroes who can play multiple roles. 
+// This ensures the true optimal value is returned no matter
+// what the enemies select or which lineup they choose to use.
+//
+int flex_negamax(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage,
+    int alpha,
+    int beta
+)
+{
+    if (num_e_teams == 1) {
+        // if enemy can't swtich lineups then value is highest the
+        // selecting team can achieve with one of its lineups vs it
+        int value = -INF;
+
+        for (int i = 0; i < num_teams; i++) {
+            int team_value = negamax(    // swtich to normal negamax
+                teams[i],
+                e_teams[0],
+                legals[i],
+                e_legals[0],
+                stage,
+                alpha,
+                beta
+            );
+
+            if (team_value >= value)
+                value = team_value;
+
+            if (value >= alpha)
+                alpha = value;
+
+            // can skip other lineups if enemy has better options
+            if (alpha >= beta)
+                break;
+        }
+
+        return value;
+    } else if (stage == draft_len) {
+        // for each A lineup find best (min) value B can get
+        // then take best (max) value A can get as final value
+        // (each team gets their best lineup if terminal state)
+        int value_max = -INF;
+
+        for (int i = 0; i < num_teams; i++) {
+            int value_min = INF;
+
+            for (int j = 0; j < num_e_teams; j++) {
+                int value = terminal_value(teams[i], e_teams[j]);
+
+                if (value < value_min)
+                    value_min = value;
+
+                if (value_min <= value_max)
+                    // team A won't use this lineup
+                    break;
+            }
+
+            if (value_min > value_max)
+                value_max = value_min;
+        }
+
+        return value_max;
+    }
+
+    // if there are multiple enemy lineups and its not a terminal 
+    // state, then each legal hero is searched to get state value
+    int value = -INF;
+    switch (draft[stage].selection) {
+        case PICK:
+            for (int h = 0; h < num_heroes; h++) {
+                u64 teams_p[num_teams];
+                u64 legals_p[num_teams];
+                int num_teams_p = hero_in_team_update(
+                    h,
+                    num_teams,
+                    teams,
+                    legals,
+                    teams_p,
+                    legals_p
+                );
+
+                // skip hero if not legal for any team lineup
+                if (num_teams_p == 0)
+                    continue;
+
+                // must update all enemy legals as well if continuing
+                u64 e_legals_p[num_e_teams];
+                hero_out_of_team_update(h, num_e_teams, e_legals, e_legals_p);
+
+                int child_value = -flex_negamax(
+                    num_e_teams,
+                    num_teams_p,
+                    e_teams,
+                    teams_p,
+                    e_legals_p,
+                    legals_p,
+                    stage + 1,
+                    -beta,
+                    -alpha
+                );
+
+                if (child_value >= value)
+                    value = child_value;
+
+                if (value >= alpha)
+                    alpha = value;
+
+                if (alpha >= beta)
+                    return value;
+            }
+
+        default:
+            return 0;
+    }
+}
+
+
+// 
+// Updates all team lineups and legal actions where it is possible to
+// select the given hero, returning how many new lineups there are.
+//
+int hero_in_team_update(
+    int hero_num,
+    int num_teams,
+    u64 teams[],
+    u64 legals[],
+    u64 new_teams[],
+    u64 new_legals[]
+)
+{
+    int new_num_teams = 0;
+    u64 hero = 1ULL << hero_num;
+
+    for (int i = 0; i < num_teams; i++) {
+        if (legals[i] & hero) {
+            // only update state for a lineup where hero is legal
+            new_teams[new_num_teams] = teams[i] | hero;
+            new_legals[new_num_teams] = legals[i] & h_infos[hero_num].diff_role_and_h;
+            new_num_teams += 1;
+        }
+    }
+
+    return new_num_teams;
+}
+
+
+// 
+// Updates the legal actions for all lineups of a team when a hero is
+// either banned or selected by the enemy.
+//
+void hero_out_of_team_update(int hero_num, int num_teams, u64 legals[], u64 new_legals[])
+{
+    for (int i = 0; i < num_teams; i++) {
+        new_legals[i] = legals[i] & h_infos[hero_num].diff_h;
+    }
+}
+
+
+//
+// Checks if a given hero is legal in any of a team's
+// starting lineup legal actions.
+//
+int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[])
+{
+    u64 hero = 1ULL << hero_num;
+
+    for (int i = 0; i < num_teams; i++) {
+        if (legals[i] & hero)
+            return 1;
+    }
+
+    return 0;
+}
+
+
+// 
+// Outer search function. Eventually will be able to take in any 
+// history of hero num lineups for both teams and bans, initialise
+// bit format variables, then find the value of selecting each
+// legal hero to return optimal value and action(s).
+//
+struct search_result run_main_search(
+    int num_teams,
+    int num_e_teams,
+    int team_size,
+    int e_team_size,
+    int banned_size,
+    int** start_teams,
+    int** start_e_teams,
+    int* banned
+)
+{
+    // starting state variables for all hero role assignments
+    u64 teams[num_teams];
+    u64 e_teams[num_e_teams];
+    u64 legals[num_teams];
+    u64 e_legals[num_e_teams];
+
+    // init starting team variables
+    for (int i = 0; i < num_teams; i++) {
+        teams[i] = team_bit_repr(team_size, start_teams[i]);
+        legals[i] = legal_bit_repr(
+            team_size,
+            e_team_size,
+            banned_size,
+            start_teams[i],
+            start_e_teams[0],  // any enemy team can be used as all hero variations are removed
+            banned
+        );
+    }
+
+    // init starting enemy variables
+    for (int i = 0; i < num_e_teams; i++) {
+        e_teams[i] = team_bit_repr(e_team_size, start_e_teams[i]);
+        e_legals[i] = legal_bit_repr(
+            e_team_size,
+            team_size,
+            banned_size,
+            start_e_teams[i],
+            start_teams[0],
+            banned
+        );
+    }
+
+    // eventually this function will need to track optimal action at root
+    // (for now just returning value from flex search)
+    int value = flex_negamax(
+        num_teams,
+        num_e_teams,
+        teams,
+        e_teams,
+        legals,
+        e_legals,
+        team_size + e_team_size + banned_size,
+        -INF,
+        INF
+    );
+
+    return (struct search_result) {.value = value};
+}
+
+
+// 
+// Turn array of hero nums into their bit representation.
+//
+u64 team_bit_repr(int team_size, int team_nums[])
+{
+    u64 team = 0;  // start with empty team
+
+    for (int i = 0; i < team_size; i++) {
+        team |= (1ULL << team_nums[i]);
+    }
+
+    return team;
+}
+
+
+// 
+// Get the legal actions for a team in bit representation given 
+// arrays of hero nums for team, enemy and bans.
+//
+u64 legal_bit_repr(
+    int team_size,
+    int e_team_size,
+    int banned_size,
+    int team_nums[],
+    int e_team_nums[],
+    int banned_nums[]
+)
+{
+    u64 legal = 0xFFFFFFFFFFFFFFFF;  // init all heroes as legal
+
+    // remove team heroes (and their shared roles and flex nums)
+    for (int i = 0; i < team_size; i++) {
+        legal &= h_infos[team_nums[i]].diff_role_and_h;
+    }
+
+    // remove selected enemy heroes (including flex nums)
+    for (int i = 0; i < e_team_size; i++) {
+        legal &= h_infos[e_team_nums[i]].diff_h;
+    }
+
+    // remove banned heroes (including flex nums)
+    for (int i = 0; i < banned_size; i++) {
+        legal &= h_infos[banned_nums[i]].diff_h;
+    }
+
+    return legal;
+}
+
+
+//
 // ** Will be deleted when run_main_search is complete. **
 //
 // Outer search function that takes in any combination of 
@@ -387,216 +687,6 @@ int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[])
     // after implementing the TT I would retrieve the best action(s)
     // from it at this point using the zobrist hash created at start
     return value;
-}
-
-
-// 
-// Outer search function. Eventually will be able to take in any 
-// history of hero num lineups for both teams and bans, initialise
-// bit format variables, then find the value of selecting each
-// legal hero to return optimal value and action(s).
-//
-struct search_result run_main_search(
-    int num_teams,
-    int num_e_teams,
-    int team_size,
-    int e_team_size,
-    int banned_size,
-    int** start_teams,
-    int** start_e_teams,
-    int* banned
-)
-{
-    // starting state variables for all hero role assignments
-    u64 teams[num_teams];
-    u64 e_teams[num_e_teams];
-    u64 legals[num_teams];
-    u64 e_legals[num_e_teams];
-
-    // init starting team variables
-    for (int i = 0; i < num_teams; i++) {
-        teams[i] = team_bit_repr(team_size, start_teams[i]);
-        legals[i] = legal_bit_repr(
-            team_size,
-            e_team_size,
-            banned_size,
-            start_teams[i],
-            start_e_teams[0],  // any enemy team can be used as all hero variations are removed
-            banned
-        );
-    }
-
-    // init starting enemy variables
-    for (int i = 0; i < num_e_teams; i++) {
-        e_teams[i] = team_bit_repr(e_team_size, start_e_teams[i]);
-        e_legals[i] = legal_bit_repr(
-            e_team_size,
-            team_size,
-            banned_size,
-            start_e_teams[i],
-            start_teams[0],
-            banned
-        );
-    }
-
-    // eventually this function will need to track optimal action at root
-    // (for now just returning value from flex search)
-    int value = flex_search(
-        num_teams,
-        num_e_teams,
-        teams,
-        e_teams,
-        legals,
-        e_legals,
-        team_size + e_team_size + banned_size,
-        -INF,
-        INF
-    );
-
-    return (struct search_result) {.value = value};
-}
-
-
-//
-// Traverses global tree in multiple locations to deal with
-// histories that contain heroes who can play multiple roles. 
-// This ensures the true optimal value is returned no matter
-// what the enemies select or which lineup they choose to use.
-//
-int flex_search(
-    int num_teams,
-    int num_e_teams,
-    u64 teams[],
-    u64 e_teams[],
-    u64 legals[],
-    u64 e_legals[],
-    int stage,
-    int alpha,
-    int beta
-)
-{
-    if (num_e_teams == 1) {
-        // if enemy can't swtich lineups then value is highest the
-        // selecting team can achieve with one of its lineups vs it
-        int value = -INF;
-
-        for (int i = 0; i < num_teams; i++) {
-            int team_value = negamax(
-                teams[i],
-                e_teams[0],
-                legals[i],
-                e_legals[0],
-                stage,
-                alpha,
-                beta
-            );
-
-            if (team_value >= value)
-                value = team_value;
-
-            if (value >= alpha)
-                alpha = value;
-
-            // can skip other lineups if enemy has better options
-            if (alpha >= beta)
-                break;
-        }
-
-        return value;
-    } else if (stage == draft_len) {
-        // for each A lineup find best (min) value B can get
-        // then take best (max) value A can get as final value
-        // (each team gets their best lineup if terminal state)
-        int value_max = -INF;
-
-        for (int i = 0; i < num_teams; i++) {
-            int value_min = INF;
-
-            for (int j = 0; j < num_e_teams; j++) {
-                int value = terminal_value(teams[i], e_teams[j]);
-
-                if (value < value_min)
-                    value_min = value;
-
-                if (value_min <= value_max)
-                    // team A won't use this lineup
-                    break;
-            }
-
-            if (value_min > value_max)
-                value_max = value_min;
-        }
-
-        return value_max;
-    }
-
-    return 0;
-}
-
-
-//
-// Checks if a given hero is legal in any of a team's
-// starting lineup legal actions.
-//
-int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[])
-{
-    u64 hero = 1ULL << hero_num;
-
-    for (int i = 0; i < num_teams; i++) {
-        if (legals[i] & hero)
-            return 1;
-    }
-
-    return 0;
-}
-
-
-// 
-// Turn array of hero nums into their bit representation.
-//
-u64 team_bit_repr(int team_size, int team_nums[])
-{
-    u64 team = 0;  // start with empty team
-
-    for (int i = 0; i < team_size; i++) {
-        team |= (1ULL << team_nums[i]);
-    }
-
-    return team;
-}
-
-
-// 
-// Get the legal actions for a team in bit representation given 
-// arrays of hero nums for team, enemy and bans.
-//
-u64 legal_bit_repr(
-    int team_size,
-    int e_team_size,
-    int banned_size,
-    int team_nums[],
-    int e_team_nums[],
-    int banned_nums[]
-)
-{
-    u64 legal = 0xFFFFFFFFFFFFFFFF;  // init all heroes as legal
-
-    // remove team heroes (and their shared roles and flex nums)
-    for (int i = 0; i < team_size; i++) {
-        legal &= h_infos[team_nums[i]].diff_role_and_h;
-    }
-
-    // remove selected enemy heroes (including flex nums)
-    for (int i = 0; i < e_team_size; i++) {
-        legal &= h_infos[e_team_nums[i]].diff_h;
-    }
-
-    // remove banned heroes (including flex nums)
-    for (int i = 0; i < banned_size; i++) {
-        legal &= h_infos[banned_nums[i]].diff_h;
-    }
-
-    return legal;
 }
 
 

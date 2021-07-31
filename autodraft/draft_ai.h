@@ -79,18 +79,7 @@ struct search_result
 // search
 int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta);
 int terminal_value(u64 team_A, u64 team_B);
-int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[]);
-struct search_result run_main_search(
-    int num_teams,
-    int num_e_teams,
-    int team_size,
-    int e_team_size,
-    int banned_size,
-    int** start_teams,
-    int** start_e_teams,
-    int* banned
-);
-int flex_search(
+int flex_negamax(
     int num_teams,
     int num_e_teams,
     u64 teams[],
@@ -101,6 +90,26 @@ int flex_search(
     int alpha,
     int beta
 );
+int hero_in_team_update(
+    int hero_num,
+    int num_teams,
+    u64 teams[],
+    u64 legals[],
+    u64 new_teams[],
+    u64 new_legals[]
+);
+void hero_out_of_team_update(int hero_num, int num_teams, u64 legals[], u64 new_legals[]);
+struct search_result run_main_search(
+    int num_teams,
+    int num_e_teams,
+    int team_size,
+    int e_team_size,
+    int banned_size,
+    int** start_teams,
+    int** start_e_teams,
+    int* banned
+);
+int run_search(int team_A_nums[], int team_B_nums[], int banned_nums[]);
 
 // helpers
 int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[]);
