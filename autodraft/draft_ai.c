@@ -814,8 +814,13 @@ struct search_result root_negamax(
                     ret.value = child_value;
                     ret.best_hero = h;
                 }
+
+                // only the case if its possible to force enemy into situation
+                // where they can't select any heroes for their open roles
+                if (ret.value >= INF)
+                    return ret;
             }
-            break;
+            return ret;
 
         case BAN:
             for (int h = 0; h < num_heroes; h++) {
@@ -849,8 +854,11 @@ struct search_result root_negamax(
                     ret.value = child_value;
                     ret.best_hero = h;
                 }
+
+                if (ret.value >= INF)
+                    return ret;
             }
-            break;
+            return ret;
 
         case PICK_PICK:
             for (int h = 0; h < num_heroes; h++) {
@@ -908,15 +916,16 @@ struct search_result root_negamax(
                         ret.best_hero = h;
                         ret.best_hero_2 = h2;
                     }
+
+                    if (ret.value >= INF)
+                        return ret;
                 }
             }
-            break;
+            return ret;
 
         default:
             return ret;
     }
-
-    return ret;
 }
 
 
