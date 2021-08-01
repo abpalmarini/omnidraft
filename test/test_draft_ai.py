@@ -799,6 +799,32 @@ class TestDraftAI(unittest.TestCase):
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
 
+    def test_empty_history_pick(self):
+        random.seed(10)
+        old_draft = draft_az.Draft()
+        scale_rewards(old_draft)
+        old_draft.format = (
+            (draft_az.A, draft_az.PICK),  # starting from here
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+        )
+
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        target_value, target_action = 53, 38  # hard coding after running once
+
+        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
+        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+
+        self.assertEqual(value, target_value)
+        self.assertEqual(action, target_action)
+
 
 if __name__ == '__main__':
     unittest.main()
