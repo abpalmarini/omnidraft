@@ -923,6 +923,60 @@ struct search_result root_negamax(
             }
             return ret;
 
+        case PICK_BAN:
+            for (int h = 0; h < num_heroes; h++) {
+                // update lineups for pick
+                u64 teams_p[num_teams];
+                u64 legals_p[num_teams];
+                int num_teams_p = hero_in_team_update(
+                    h,
+                    num_teams,
+                    teams,
+                    legals,
+                    teams_p,
+                    legals_p
+                );
+
+                if (num_teams_p == 0)
+                    continue;
+
+                u64 e_legals_p[num_e_teams];
+                hero_out_of_team_update(h, num_e_teams, e_legals, e_legals_p);
+
+                for (int h2 = 0; h2 < num_heroes; h2++) {
+                    if (!legal_for_any_lineup(h2, num_e_teams, e_legals_p))
+                        continue;
+
+                    // update lineups for ban
+                    u64 legals_pb[num_teams_p];
+                    hero_out_of_team_update(h2, num_teams_p, legals_p, legals_pb);
+                    u64 e_legals_pb[num_e_teams];
+                    hero_out_of_team_update(h2, num_e_teams, e_legals_p, e_legals_pb);
+
+                    int child_value = -flex_negamax(
+                        num_e_teams,
+                        num_teams_p,
+                        e_teams,
+                        teams_p,
+                        e_legals_pb,
+                        legals_pb,
+                        stage + 2,
+                        -INF,
+                        -ret.value
+                    );
+
+                    if (child_value > ret.value) {
+                        ret.value = child_value;
+                        ret.best_hero = h;
+                        ret.best_hero_2 = h2;
+                    }
+
+                    if (ret.value >= INF)
+                        return ret;
+                }
+            }
+            return ret;
+
         default:
             return ret;
     }

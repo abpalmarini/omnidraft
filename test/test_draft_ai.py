@@ -199,7 +199,7 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
-        implemented = {PICK, BAN, PICK_PICK}
+        implemented = {PICK, BAN, PICK_PICK, PICK_BAN}
         selection = draft.format[len(draft.history)][1] 
         if selection not in implemented:
             self.skipTest("selection type not implemented")
@@ -475,8 +475,8 @@ class TestDraftAI(unittest.TestCase):
 
         self.assertEqual(value, target_value)
         # order of selections matter for pick then ban
-        # self.assertEqual(action, target_action)
-        # self.assertEqual(action_2, target_action_2)
+        self.assertEqual(action, target_action)
+        self.assertEqual(action_2, target_action_2)
 
     def test_ban_then_pick(self):
         random.seed(4)
@@ -667,8 +667,8 @@ class TestDraftAI(unittest.TestCase):
 
         self.assertEqual(value, target_value)
         # order of selection matters for pick then ban
-        # self.assertEqual(action, target_action)
-        # self.assertEqual(action_2, target_action_2)
+        self.assertEqual(action, target_action)
+        self.assertEqual(action_2, target_action_2)
 
     def test_flex_pick_in_history_B_ban_pick(self):
         random.seed(6)
