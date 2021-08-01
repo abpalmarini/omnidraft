@@ -199,11 +199,6 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
-        implemented = {PICK, BAN, PICK_PICK, PICK_BAN, BAN_PICK}
-        selection = draft.format[len(draft.history)][1] 
-        if selection not in implemented:
-            self.skipTest("selection type not implemented")
-
         teams_A, teams_B, banned = get_picks_n_bans(draft, hero_nums)
 
         # prepare input for C search...I don't know if this is best way
@@ -227,6 +222,7 @@ class TestDraftAI(unittest.TestCase):
         )
         value = search_result.value
         action = ordered_heroes[search_result.best_hero].name
+        selection = draft.format[len(draft.history)][1] 
         if selection == PICK or selection == BAN:
             return value, action
         else:
@@ -429,14 +425,15 @@ class TestDraftAI(unittest.TestCase):
         # old_draft_c.apply(target_action)
         # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
         target_action_2 = 11
+        target_actions = (target_action, target_action_2)
 
         draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
         value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
         # order of actions does not matter for two bans
-        # self.assertTrue((action, action_2) == target_actions 
-                        # or (action_2, action) == target_actions)
+        self.assertTrue((action, action_2) == target_actions 
+                        or (action_2, action) == target_actions)
 
     def test_pick_then_ban(self):
         random.seed(3)
@@ -761,8 +758,8 @@ class TestDraftAI(unittest.TestCase):
 
         self.assertEqual(value, target_value)
         # order of actions does not matter for two bans
-        # self.assertTrue((action, action_2) == target_actions 
-                        # or (action_2, action) == target_actions)
+        self.assertTrue((action, action_2) == target_actions 
+                        or (action_2, action) == target_actions)
 
     def test_flex_pick_in_history_B_last_pick(self):
         random.seed(9)

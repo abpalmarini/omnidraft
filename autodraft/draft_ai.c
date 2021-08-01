@@ -1031,7 +1031,49 @@ struct search_result root_negamax(
             }
             return ret;
 
-        default:
+        case BAN_BAN:
+            for (int h = 0; h < num_heroes; h++) {
+                if (!legal_for_any_lineup(h, num_e_teams, e_legals))
+                    continue;
+
+                // update lineups for first ban
+                u64 legals_b[num_teams];
+                hero_out_of_team_update(h, num_teams, legals, legals_b);
+                u64 e_legals_b[num_e_teams];
+                hero_out_of_team_update(h, num_e_teams, e_legals, e_legals_b);
+
+                for (int h2 = h + 1; h2 < num_heroes; h2++) {
+                    if (!legal_for_any_lineup(h2, num_e_teams, e_legals_b))
+                        continue;
+
+                    // update lineups for second ban
+                    u64 legals_bb[num_teams];
+                    hero_out_of_team_update(h2, num_teams, legals_b, legals_bb);
+                    u64 e_legals_bb[num_e_teams];
+                    hero_out_of_team_update(h2, num_e_teams, e_legals_b, e_legals_bb);
+
+                    int child_value = -flex_negamax(
+                        num_e_teams,
+                        num_teams,
+                        e_teams,
+                        teams,
+                        e_legals_bb,
+                        legals_bb,
+                        stage + 2,
+                        -INF,
+                        -ret.value
+                    );
+
+                    if (child_value > ret.value) {
+                        ret.value = child_value;
+                        ret.best_hero = h;
+                        ret.best_hero_2 = h2;
+                    }
+
+                    if (ret.value >= INF)
+                        return ret;
+                }
+            }
             return ret;
     }
 }
