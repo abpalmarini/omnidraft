@@ -201,7 +201,15 @@ class TestDraftAI(unittest.TestCase):
 
         teams_A, teams_B, banned = get_picks_n_bans(draft, hero_nums)
 
-        # prepare input for C search...I don't know if this is best way
+        def total_team_potential(team):
+            return sum(ordered_heroes[h].potential for h in team)
+
+        # sort teams from most likely to do well to least (achieves
+        # maximum chance of cut offs during search)
+        teams_A.sort(key=total_team_potential, reverse=True)
+        teams_B.sort(key=total_team_potential, reverse=True)
+
+        # prepare input for C search
         num_teams_A = len(teams_A)
         num_teams_B = len(teams_B)
         team_A_size = len(teams_A[0])
