@@ -155,19 +155,21 @@ class TestDraftAI(unittest.TestCase):
             lib.set_role_r(hero_num, hero.A_role_value, hero.B_role_value)
 
         # set the synergy rewards
-        new_synergy_rs = translate_synergy_rs(synergy_rs, hero_nums)
-        for i, synergy_r in enumerate(new_synergy_rs):
+        ai_synergy_rs = translate_synergy_rs(synergy_rs, hero_nums)
+        for i, synergy_r in enumerate(ai_synergy_rs):
             heroes, A_value, B_value = synergy_r
-            lib.set_synergy_r(i, bit_format(heroes), A_value, B_value)
+            lib.set_synergy_r(i, len(heroes), heroes, A_value, B_value)
 
         # set the counter rewards
-        new_counter_rs = translate_counter_rs(counter_rs, hero_nums)
-        for i, counter_r in enumerate(new_counter_rs):
+        ai_counter_rs = translate_counter_rs(counter_rs, hero_nums)
+        for i, counter_r in enumerate(ai_counter_rs):
             heroes, foes, A_value, B_value = counter_r
             lib.set_counter_r(
                 i,
-                bit_format(heroes),
-                bit_format(foes),
+                len(heroes),
+                heroes,
+                len(foes),
+                foes,
                 A_value,
                 B_value,
             )
@@ -183,18 +185,21 @@ class TestDraftAI(unittest.TestCase):
         same_hero_refs = get_same_hero_refs(ordered_heroes, hero_nums)
         for hero_num, hero in enumerate(ordered_heroes):
             same_hero = same_hero_refs[hero_num]
-            same_role_and_hero = role_heroes[hero.role] | same_hero
+            same_role_and_hero = list(role_heroes[hero.role] | same_hero)
+            same_hero = list(same_hero)
             lib.set_h_info(
                 hero_num,
-                bit_format(same_role_and_hero),  # passing in same, but search requires diff
-                bit_format(same_hero),           # C code will take negation
+                len(same_role_and_hero),
+                same_role_and_hero,
+                len(same_hero),
+                same_hero,
             )
 
         # set all sizes
         lib.set_sizes(
             len(ordered_heroes),
-            len(new_synergy_rs),
-            len(new_counter_rs),
+            len(ai_synergy_rs),
+            len(ai_counter_rs),
             len(draft.format),
         )
         # *********************************************************************

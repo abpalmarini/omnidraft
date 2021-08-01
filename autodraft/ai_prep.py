@@ -80,7 +80,7 @@ def get_ordered_heroes(role_rs, synergy_rs, counter_rs):
 # Multiple versions are created to accommodate for the fact that heroes
 # playing more than one role are treated as being unique.
 def translate_synergy_rs(synergy_rs, hero_nums):
-    new_synergy_rs = []
+    ai_synergy_rs = []
 
     def valid_synergy_nums(heroes):
         valid = []
@@ -97,13 +97,13 @@ def translate_synergy_rs(synergy_rs, hero_nums):
 
     for r in synergy_rs:
         for heroes in valid_synergy_nums(r.heroes):
-            new_synergy_rs.append((heroes, r.A_value, r.B_value))
-    return new_synergy_rs
+            ai_synergy_rs.append((heroes, r.A_value, r.B_value))
+    return ai_synergy_rs
 
 
 # Same as for synergies, but also taking into account the foes.
 def translate_counter_rs(counter_rs, hero_nums):
-    new_counter_rs = []
+    ai_counter_rs = []
 
     def valid_counter_nums(heroes, foes):
         valid = []
@@ -126,8 +126,8 @@ def translate_counter_rs(counter_rs, hero_nums):
 
     for r in counter_rs:
         for heroes, foes in valid_counter_nums(r.heroes, r.foes):
-            new_counter_rs.append((heroes, foes, r.A_value, r.B_value))
-    return new_counter_rs
+            ai_counter_rs.append((heroes, foes, r.A_value, r.B_value))
+    return ai_counter_rs
 
 
 def get_heroes_per_role(ordered_heroes):

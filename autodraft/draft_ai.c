@@ -1215,18 +1215,19 @@ void set_role_r(int hero_num, int A_value, int B_value)
 }
 
 
-void set_synergy_r(int i, u64 heroes, int A_value, int B_value)
+void set_synergy_r(int i, int heroes_size, int hero_nums[], int A_value, int B_value)
 {
-    synergy_rs[i].heroes = heroes;
+    synergy_rs[i].heroes = team_bit_repr(heroes_size, hero_nums);
     synergy_rs[i].A_value = A_value;
     synergy_rs[i].B_value = B_value;
 }
 
 
-void set_counter_r(int i, u64 heroes, u64 foes, int A_value, int B_value)
+void set_counter_r(int i, int heroes_size, int hero_nums[], int foes_size, 
+                   int foe_nums[], int A_value, int B_value)
 {
-    counter_rs[i].heroes = heroes;
-    counter_rs[i].foes = foes;
+    counter_rs[i].heroes = team_bit_repr(heroes_size, hero_nums);
+    counter_rs[i].foes = team_bit_repr(foes_size, foe_nums);
     counter_rs[i].A_value = A_value;
     counter_rs[i].B_value = B_value;
 }
@@ -1239,10 +1240,12 @@ void set_draft_stage(int stage, int team, int selection)
 }
 
 
-void set_h_info(int hero_num, u64 same_role_and_h, u64 same_h)
+void set_h_info(int hero_num, int same_role_and_h_size, int same_role_and_h_nums[],
+                int same_h_size, int same_h_nums[])
 {
-    h_infos[hero_num].diff_role_and_h = ~same_role_and_h;
-    h_infos[hero_num].diff_h = ~same_h;
+    h_infos[hero_num].diff_role_and_h = ~team_bit_repr(same_role_and_h_size,
+                                                       same_role_and_h_nums);
+    h_infos[hero_num].diff_h = ~team_bit_repr(same_h_size, same_h_nums);
 }
 
 
