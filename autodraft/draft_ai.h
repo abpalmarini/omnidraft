@@ -99,6 +99,15 @@ int hero_in_team_update(
     u64 new_legals[]
 );
 void hero_out_of_team_update(int hero_num, int num_teams, u64 legals[], u64 new_legals[]);
+struct search_result root_negamax(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+);
 struct search_result run_search(
     int num_teams_A,
     int num_teams_B,

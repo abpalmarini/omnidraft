@@ -756,6 +756,75 @@ int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[])
 }
 
 
+//
+// This is mainly a @CopyPaste of flex_negamax, modified to track and
+// return the optimal action(s) alongside the value. This is only needed
+// at the root and would be wasteful to both track and return at every
+// depth. I'm creating a separate function, rather than add a flag to
+// flex_negamax, because @Later I'd like to have this one run in parallel.
+// This will allow for subsets of the legal root actions to be evaluated
+// at the same time.
+//
+struct search_result root_negamax(
+    int num_teams,
+    int num_e_teams,
+    u64 teams[],
+    u64 e_teams[],
+    u64 legals[],
+    u64 e_legals[],
+    int stage
+)
+{
+    struct search_result ret = {.value = -INF};
+    switch (draft[stage].selection) {
+        case PICK:
+            for (int h = 0; h < num_heroes; h++) {
+                u64 teams_p[num_teams];
+                u64 legals_p[num_teams];
+                int num_teams_p = hero_in_team_update(
+                    h,
+                    num_teams,
+                    teams,
+                    legals,
+                    teams_p,
+                    legals_p
+                );
+
+                // skip hero if not legal for any team lineup
+                if (num_teams_p == 0)
+                    continue;
+
+                // must update all enemy legals as well if continuing
+                u64 e_legals_p[num_e_teams];
+                hero_out_of_team_update(h, num_e_teams, e_legals, e_legals_p);
+
+                int child_value = -flex_negamax(
+                    num_e_teams,
+                    num_teams_p,
+                    e_teams,
+                    teams_p,
+                    e_legals_p,
+                    legals_p,
+                    stage + 1,
+                    -INF,
+                    -ret.value    // use current best value
+                );
+
+                if (child_value > ret.value) {
+                    ret.value = child_value;
+                    ret.best_hero = h;
+                }
+            }
+            break;
+
+        default:
+            return ret;
+    }
+
+    return ret;
+}
+
+
 // 
 // Outer search function. Takes in any starting state of selected
 // hero nums (that includes all role variations), sets up initial
@@ -803,36 +872,28 @@ struct search_result run_search(
         );
     }
 
-    // will switch to calling root_negamax once created to get 
-    // optimal action(s) as well as value
+    // call search for selecting team
     int stage = team_A_size + team_B_size + banned_size;
-    int value;
     if (draft[stage].team == A)
-        value = flex_negamax(
+        return root_negamax(
             num_teams_A,
             num_teams_B,
             teams_A,
             teams_B,
             legals_A,
             legals_B,
-            stage,
-            -INF,
-            INF
+            stage
         );
      else
-        value = flex_negamax(
+        return root_negamax(
             num_teams_B,
             num_teams_A,
             teams_B,
             teams_A,
             legals_B,
             legals_A,
-            stage,
-            -INF,
-            INF
+            stage
         );
-
-    return (struct search_result) {.value = value};
 }
 
 

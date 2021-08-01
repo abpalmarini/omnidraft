@@ -199,6 +199,11 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
+        implemented = {PICK}
+        selection = draft.format[len(draft.history)][1] 
+        if selection not in implemented:
+            self.skipTest("selection type not implemented")
+
         teams_A, teams_B, banned = get_picks_n_bans(draft, hero_nums)
 
         # prepare input for C search...I don't know if this is best way
@@ -222,7 +227,6 @@ class TestDraftAI(unittest.TestCase):
         )
         value = search_result.value
         action = ordered_heroes[search_result.best_hero].name
-        selection = draft.format[len(draft.history)][1] 
         if selection == PICK or selection == BAN:
             return value, action
         else:
@@ -261,7 +265,7 @@ class TestDraftAI(unittest.TestCase):
         draft = Draft(SIMPLE_FORMAT, history)
         value, action = self.run_c_search(draft, role_rs, [], counter_rs)
         self.assertEqual(value, 1)
-        # self.assertEqual(action, 'Vox')
+        self.assertEqual(action, 'Vox')
  
     def test_A_last_pick_synergy(self):
         role_rs = [
@@ -294,7 +298,7 @@ class TestDraftAI(unittest.TestCase):
         draft = Draft(SIMPLE_FORMAT, history)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, [])
         self.assertEqual(value, -1)
-        # self.assertEqual(action, 'Ozo')
+        self.assertEqual(action, 'Ozo')
 
     def test_B_last_pick(self):
         role_rs = [
@@ -332,7 +336,7 @@ class TestDraftAI(unittest.TestCase):
         draft = Draft(SIMPLE_FORMAT, history)
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
         self.assertEqual(value, 2)
-        # self.assertEqual(action, 'Vox')
+        self.assertEqual(action, 'Vox')
 
     def test_double_picks(self):
         random.seed(0)
@@ -537,7 +541,7 @@ class TestDraftAI(unittest.TestCase):
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        self.assertEqual(action, target_action)
 
     def test_flex_pick_in_history_A_ban(self):
         random.seed(6)
@@ -796,7 +800,7 @@ class TestDraftAI(unittest.TestCase):
         value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
 
         self.assertEqual(value, target_value)
-        # self.assertEqual(action, target_action)
+        self.assertEqual(action, target_action)
 
 
 if __name__ == '__main__':
