@@ -852,6 +852,66 @@ struct search_result root_negamax(
             }
             break;
 
+        case PICK_PICK:
+            for (int h = 0; h < num_heroes; h++) {
+                // update lineups for first pick
+                u64 teams_p[num_teams];
+                u64 legals_p[num_teams];
+                int num_teams_p = hero_in_team_update(
+                    h,
+                    num_teams,
+                    teams,
+                    legals,
+                    teams_p,
+                    legals_p
+                );
+
+                if (num_teams_p == 0)
+                    continue;
+
+                u64 e_legals_p[num_e_teams];
+                hero_out_of_team_update(h, num_e_teams, e_legals, e_legals_p);
+
+                for (int h2 = h + 1; h2 < num_heroes; h2++) {
+                    // update lineups for second pick
+                    u64 teams_pp[num_teams_p];
+                    u64 legals_pp[num_teams_p];
+                    int num_teams_pp = hero_in_team_update(
+                        h2,
+                        num_teams_p,
+                        teams_p,
+                        legals_p,
+                        teams_pp,
+                        legals_pp
+                    );
+
+                    if (num_teams_pp == 0)
+                        continue;
+
+                    u64 e_legals_pp[num_e_teams];
+                    hero_out_of_team_update(h2, num_e_teams, e_legals_p, e_legals_pp);
+
+                    int child_value = -flex_negamax(
+                        num_e_teams,
+                        num_teams_pp,
+                        e_teams,
+                        teams_pp,
+                        e_legals_pp,
+                        legals_pp,
+                        stage + 2,
+                        -INF,
+                        -ret.value
+                    );
+
+                    if (child_value > ret.value) {
+                        ret.value = child_value;
+                        ret.best_hero = h;
+                        ret.best_hero_2 = h2;
+                    }
+                }
+            }
+            break;
+
         default:
             return ret;
     }
