@@ -757,67 +757,80 @@ int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[])
 
 
 // 
-// Outer search function. Eventually will be able to take in any 
-// history of hero num lineups for both teams and bans, initialise
-// bit format variables, then find the value of selecting each
-// legal hero to return optimal value and action(s).
+// Outer search function. Takes in any starting state of selected
+// hero nums (that includes all role variations), sets up initial
+// bit format variables, then calls root_negamax for the selecting
+// team to return optimal value and action(s).
 //
 struct search_result run_search(
-    int num_teams,
-    int num_e_teams,
-    int team_size,
-    int e_team_size,
+    int num_teams_A,
+    int num_teams_B,
+    int team_A_size,
+    int team_B_size,
     int banned_size,
-    int** start_teams,
-    int** start_e_teams,
+    int** start_teams_A,
+    int** start_teams_B,
     int* banned
 )
 {
-    // starting state variables for all hero role assignments
-    u64 teams[num_teams];
-    u64 e_teams[num_e_teams];
-    u64 legals[num_teams];
-    u64 e_legals[num_e_teams];
-
-    // init starting team variables
-    for (int i = 0; i < num_teams; i++) {
-        teams[i] = team_bit_repr(team_size, start_teams[i]);
-        legals[i] = legal_bit_repr(
-            team_size,
-            e_team_size,
+    // init team A teams and legals for all lineups
+    u64 teams_A[num_teams_A];
+    u64 legals_A[num_teams_A];
+    for (int i = 0; i < num_teams_A; i++) {
+        teams_A[i] = team_bit_repr(team_A_size, start_teams_A[i]);
+        legals_A[i] = legal_bit_repr(
+            team_A_size,
+            team_B_size,
             banned_size,
-            start_teams[i],
-            start_e_teams[0],  // any enemy team can be used as all hero variations are removed
+            start_teams_A[i],
+            start_teams_B[0],  // any enemy team can be used as all hero variations are removed
             banned
         );
     }
 
-    // init starting enemy variables
-    for (int i = 0; i < num_e_teams; i++) {
-        e_teams[i] = team_bit_repr(e_team_size, start_e_teams[i]);
-        e_legals[i] = legal_bit_repr(
-            e_team_size,
-            team_size,
+    // init team B teams and legals for all lineups
+    u64 teams_B[num_teams_B];
+    u64 legals_B[num_teams_B];
+    for (int i = 0; i < num_teams_B; i++) {
+        teams_B[i] = team_bit_repr(team_B_size, start_teams_B[i]);
+        legals_B[i] = legal_bit_repr(
+            team_B_size,
+            team_A_size,
             banned_size,
-            start_e_teams[i],
-            start_teams[0],
+            start_teams_B[i],
+            start_teams_A[0],
             banned
         );
     }
 
-    // eventually this function will need to track optimal action at root
-    // (for now just returning value from flex search)
-    int value = flex_negamax(
-        num_teams,
-        num_e_teams,
-        teams,
-        e_teams,
-        legals,
-        e_legals,
-        team_size + e_team_size + banned_size,
-        -INF,
-        INF
-    );
+    // will switch to calling root_negamax once created to get 
+    // optimal action(s) as well as value
+    int stage = team_A_size + team_B_size + banned_size;
+    int value;
+    if (draft[stage].team == A)
+        value = flex_negamax(
+            num_teams_A,
+            num_teams_B,
+            teams_A,
+            teams_B,
+            legals_A,
+            legals_B,
+            stage,
+            -INF,
+            INF
+        );
+     else
+        value = flex_negamax(
+            num_teams_B,
+            num_teams_A,
+            teams_B,
+            teams_A,
+            legals_B,
+            legals_A,
+            stage,
+            -INF,
+            INF
+        );
 
     return (struct search_result) {.value = value};
 }

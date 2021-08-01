@@ -199,36 +199,30 @@ class TestDraftAI(unittest.TestCase):
         )
         # *********************************************************************
 
-        selection = draft.format[len(draft.history)][1] 
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        teams_A, teams_B, banned = get_picks_n_bans(draft, hero_nums)
 
         # prepare input for C search...I don't know if this is best way
-        if draft.format[len(draft.history)][0] == A:
-            team_size = len(team_As[0])
-            e_team_size = len(team_Bs[0])
-            start_teams = [ffi.new('int[]', team) for team in team_As]
-            start_e_teams = [ffi.new('int[]', team) for team in team_Bs]
-        else:
-            team_size = len(team_Bs[0])
-            e_team_size = len(team_As[0])
-            start_teams = [ffi.new('int[]', team) for team in team_Bs]
-            start_e_teams = [ffi.new('int[]', team) for team in team_As]
-        num_teams = len(start_teams)
-        num_e_teams = len(start_e_teams)
+        num_teams_A = len(teams_A)
+        num_teams_B = len(teams_B)
+        team_A_size = len(teams_A[0])
+        team_B_size = len(teams_B[0])
         banned_size = len(banned)
+        start_teams_A = [ffi.new('int[]', team) for team in teams_A]
+        start_teams_B = [ffi.new('int[]', team) for team in teams_B]
 
         search_result = lib.run_search(
-            num_teams,
-            num_e_teams,
-            team_size,
-            e_team_size,
+            num_teams_A,
+            num_teams_B,
+            team_A_size,
+            team_B_size,
             banned_size,
-            start_teams,
-            start_e_teams,
+            start_teams_A,
+            start_teams_B,
             banned,
         )
         value = search_result.value
         action = ordered_heroes[search_result.best_hero].name
+        selection = draft.format[len(draft.history)][1] 
         if selection == PICK or selection == BAN:
             return value, action
         else:

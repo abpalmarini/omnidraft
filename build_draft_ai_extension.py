@@ -24,13 +24,13 @@ ffibuilder.cdef(
         int best_hero_2;  // only applies for stages with a double selection
     };
     struct search_result run_search(
-        int num_teams,
-        int num_e_teams,
-        int team_size,
-        int e_team_size,
+        int num_teams_A,
+        int num_teams_B,
+        int team_A_size,
+        int team_B_size,
         int banned_size,
-        int** start_teams,
-        int** start_e_teams,
+        int** start_teams_A,
+        int** start_teams_B,
         int* banned
     );
     """
