@@ -131,6 +131,8 @@ u64 legal_bit_repr(
     int banned_nums[]
 );
 
+void switch_reward_team_values();
+
 // set up functions used to init all global variables required for search
 void set_role_r(int hero_num, int A_value, int B_value);
 void set_synergy_r(int i, int heroes_size, int hero_nums[], int A_value, int B_value);

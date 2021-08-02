@@ -35,6 +35,9 @@ ffibuilder.cdef(
         int** start_teams_B,
         int* banned
     );
+
+    // utils
+    void switch_reward_team_values();
     """
 )
 

@@ -1200,13 +1200,42 @@ u64 legal_bit_repr(
 }
 
 
+//
+// Switches the team A and B values for all role, synergy and
+// counter rewards.
+//
+void switch_reward_team_values()
+{
+    // roles
+    for (int i = 0; i < num_heroes; i++) {
+        int prev_A_value = role_rs[i].A_value;
+        role_rs[i].A_value = role_rs[i].B_value;
+        role_rs[i].B_value = prev_A_value;
+    }
+
+    // synergies
+    for (int i = 0; i < num_synergy_rs; i++) {
+        int prev_A_value = synergy_rs[i].A_value;
+        synergy_rs[i].A_value = synergy_rs[i].B_value;
+        synergy_rs[i].B_value = prev_A_value;
+    }
+
+    // counters
+    for (int i = 0; i < num_counter_rs; i++) {
+        int prev_A_value = counter_rs[i].A_value;
+        counter_rs[i].A_value = counter_rs[i].B_value;
+        counter_rs[i].B_value = prev_A_value;
+    }
+}
+
+
 // ======================================================================
 // I need a way to go from receiving a draft format and set of rewards in
 // python to initialising the global variables required for calling
 // searches. For now having python do most of the processing and 
 // initialising individual elements seems easiest. However, I may want to 
-// change this @Later. The following are used as part of the python 
-// init_draft_ai function.
+// change this @Later. The following are used in the __init__ of the
+// python DraftAI wrapper class.
 
 void set_role_r(int hero_num, int A_value, int B_value)
 {

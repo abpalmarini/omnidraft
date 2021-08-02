@@ -75,6 +75,12 @@ class DraftAI:
             best_hero_2 = self.ordered_heroes[search_result.best_hero_2].name
             return value, best_hero, best_hero_2
 
+    def switch_reward_team_values(self):
+        """ Switches team A and B values across all rewards. """
+
+        lib.switch_reward_team_values()
+        # once TT is built this must also clear it
+
     def _set_C_role_rs(self):
         for hero_num, hero in enumerate(self.ordered_heroes):
             lib.set_role_r(hero_num, hero.A_role_value, hero.B_role_value)

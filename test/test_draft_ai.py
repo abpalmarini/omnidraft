@@ -736,6 +736,53 @@ class TestDraftAI(unittest.TestCase):
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
 
+    def test_switch_reward_team_values(self):
+        random.seed(12)
+        old_draft = draft_az.Draft()
+        scale_rewards(old_draft)
+        old_draft.format = (
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),  # starting from here
+            (draft_az.B, draft_az.PICK),
+        )
+        for _ in range(8):
+            old_draft.apply(random.choice(old_draft.legal_actions()))
+
+        history, *draft_details = translate_old_draft(old_draft.clone())
+        ai = DraftAI(*draft_details)
+
+        target_value, target_action = alphabeta(old_draft.clone(), -INF, INF)
+        value, action = ai.run_search(history)
+        self.assertEqual(value, target_value, "before switch")
+        self.assertEqual(action, target_action, "before switch")
+
+        # switch reward values of old_draft
+        for r in old_draft.rewards['role']:
+            r.A_value, r.B_value = r.B_value, r.A_value
+        for r in old_draft.rewards['combo']:
+            r.A_value, r.B_value = r.B_value, r.A_value
+
+        # switch reward values of DraftAI object
+        ai.switch_reward_team_values()
+
+        target_value_s, target_action_s = alphabeta(old_draft, -INF, INF)
+        value_s, action_s = ai.run_search(history)
+        self.assertEqual(value_s, target_value_s, "after initial switch")
+        self.assertEqual(action_s, target_action_s, "after initial switch")
+
+        # sanity check that switching for ai again gives us original
+        ai.switch_reward_team_values()
+        value, action = ai.run_search(history)
+        self.assertEqual(value, target_value, "second switch back to original")
+        self.assertEqual(action, target_action, "second switch back to original")
+
 
 if __name__ == '__main__':
     unittest.main()
