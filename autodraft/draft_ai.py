@@ -1,9 +1,12 @@
-""" Abstracted interface for using the C draft AI code. """
-
 from _draft_ai import ffi, lib
 from autodraft.ai_prep import *
 
 class DraftAI:
+    """
+    Abstracted interface for using the C draft AI code. Once initialised
+    with a draft format and rewards, search can be run repeatedly for
+    for any state to find the optimal value and action(s).
+    """
 
     def __init__(self, draft_format, role_rs, synergy_rs, counter_rs):
         """
