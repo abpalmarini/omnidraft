@@ -4,7 +4,7 @@ import random
 
 from test.draft_az import draft_az
 from autodraft.ai_prep import *
-from _draft_ai import ffi, lib
+from autodraft.draft_ai import DraftAI
 
 INF = 30000
 
@@ -134,111 +134,9 @@ SIMPLE_FORMAT = [
 
 class TestDraftAI(unittest.TestCase):
 
-    # @Later everything inside the stars can be executed once and then 
-    # have multiple draft histories/states run on the search algorithm.
-    # I will probably want to turn this into a standalone function if
-    # it becomes clear that this is indeed the best way to go about
-    # initialising details needed for search. Also, given that format
-    # is only required once it would probably be best if I decoupled the
-    # draft format and history.
     def run_c_search(self, history, draft_format, role_rs, synergy_rs, counter_rs):
-        ordered_heroes, hero_nums = get_ordered_heroes(
-            role_rs,
-            synergy_rs,
-            counter_rs,
-        )
-        # *********************************************************************
-        # set the role rewards
-        for hero_num, hero in enumerate(ordered_heroes):
-            lib.set_role_r(hero_num, hero.A_role_value, hero.B_role_value)
-
-        # set the synergy rewards
-        ai_synergy_rs = translate_synergy_rs(synergy_rs, hero_nums)
-        for i, synergy_r in enumerate(ai_synergy_rs):
-            heroes, A_value, B_value = synergy_r
-            lib.set_synergy_r(i, len(heroes), heroes, A_value, B_value)
-
-        # set the counter rewards
-        ai_counter_rs = translate_counter_rs(counter_rs, hero_nums)
-        for i, counter_r in enumerate(ai_counter_rs):
-            heroes, foes, A_value, B_value = counter_r
-            lib.set_counter_r(
-                i,
-                len(heroes),
-                heroes,
-                len(foes),
-                foes,
-                A_value,
-                B_value,
-            )
-
-        # set draft format
-        # @Later I will want to just load up a fixed draft based on
-        # a given tag.
-        for stage, (team, selection_type) in enumerate(draft_format):
-            lib.set_draft_stage(stage, team, selection_type)
-
-        # set hero info for updating legal actions
-        role_heroes = get_heroes_per_role(ordered_heroes)
-        same_hero_refs = get_same_hero_refs(ordered_heroes, hero_nums)
-        for hero_num, hero in enumerate(ordered_heroes):
-            same_hero = same_hero_refs[hero_num]
-            same_role_and_hero = list(role_heroes[hero.role] | same_hero)
-            same_hero = list(same_hero)
-            lib.set_h_info(
-                hero_num,
-                len(same_role_and_hero),
-                same_role_and_hero,
-                len(same_hero),
-                same_hero,
-            )
-
-        # set all sizes
-        lib.set_sizes(
-            len(ordered_heroes),
-            len(ai_synergy_rs),
-            len(ai_counter_rs),
-            len(draft_format),
-        )
-        # *********************************************************************
-
-        teams_A, teams_B, banned = get_picks_n_bans(history, draft_format, hero_nums)
-
-        def total_team_potential(team):
-            return sum(ordered_heroes[h].potential for h in team)
-
-        # sort teams from most likely to do well to least (achieves
-        # maximum chance of cut offs during search)
-        teams_A.sort(key=total_team_potential, reverse=True)
-        teams_B.sort(key=total_team_potential, reverse=True)
-
-        # prepare input for C search
-        num_teams_A = len(teams_A)
-        num_teams_B = len(teams_B)
-        team_A_size = len(teams_A[0])
-        team_B_size = len(teams_B[0])
-        banned_size = len(banned)
-        start_teams_A = [ffi.new('int[]', team) for team in teams_A]
-        start_teams_B = [ffi.new('int[]', team) for team in teams_B]
-
-        search_result = lib.run_search(
-            num_teams_A,
-            num_teams_B,
-            team_A_size,
-            team_B_size,
-            banned_size,
-            start_teams_A,
-            start_teams_B,
-            banned,
-        )
-        value = search_result.value
-        action = ordered_heroes[search_result.best_hero].name
-        selection = draft_format[len(history)][1] 
-        if selection == PICK or selection == BAN:
-            return value, action
-        else:
-            action_2 = ordered_heroes[search_result.best_hero_2].name
-            return value, action, action_2
+        ai = DraftAI(draft_format, role_rs, synergy_rs, counter_rs)
+        return ai.run_search(history)
     
     def test_A_last_pick_counter(self):
         role_rs = [

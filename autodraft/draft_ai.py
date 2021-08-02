@@ -31,6 +31,50 @@ class DraftAI:
             len(self.draft_format),
         )
 
+    def run_search(self, history):
+        """
+        Wrapper for the C run_search function. Prepares all inputs and
+        returns the optimal value and action(s) for a given history.
+
+        @Important: This function will only work if called on the most
+                    recently instantiated DraftAI object. This is 
+                    because they all share the same underlying C global
+                    memory that is set up in __init__.
+        """
+
+        teams_A, teams_B, banned = get_picks_n_bans(
+            history,
+            self.draft_format,
+            self.hero_nums,
+        )
+
+        def total_team_potential(team):
+            return sum(self.ordered_heroes[h].potential for h in team)
+
+        # sort teams from most likely to do well to least (achieves
+        # maximum likelihood of cut offs during search)
+        teams_A.sort(key=total_team_potential, reverse=True)
+        teams_B.sort(key=total_team_potential, reverse=True)
+
+        search_result = lib.run_search(
+            len(teams_A),
+            len(teams_B),
+            len(teams_A[0]),  # all team variations will be same size
+            len(teams_B[0]),
+            len(banned),
+            [ffi.new('int[]', team) for team in teams_A],
+            [ffi.new('int[]', team) for team in teams_B],
+            banned,
+        )
+        value = search_result.value
+        best_hero = self.ordered_heroes[search_result.best_hero].name
+        _, selection = self.draft_format[len(history)]
+        if selection == PICK or selection == BAN:
+            return value, best_hero
+        else:
+            best_hero_2 = self.ordered_heroes[search_result.best_hero_2].name
+            return value, best_hero, best_hero_2
+
     def _set_C_role_rs(self):
         for hero_num, hero in enumerate(self.ordered_heroes):
             lib.set_role_r(hero_num, hero.A_role_value, hero.B_role_value)
