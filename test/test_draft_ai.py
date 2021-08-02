@@ -43,8 +43,6 @@ def translate_old_draft(draft):
             else:
                 assert False
 
-    new_draft = Draft(new_format, draft.history)
-
     role_rs = []
     for r in draft.rewards['role']:
         role_rs.append(RoleR(r.champ, r.role, r.A_value, r.B_value))
@@ -73,7 +71,7 @@ def translate_old_draft(draft):
             counter_r = CounterR(heroes, foes, r.A_value, r.B_value)
             counter_rs.append(counter_r)
 
-    return new_draft, role_rs, synergy_rs, counter_rs
+    return draft.history, new_format, role_rs, synergy_rs, counter_rs
 
 
 # Basic alpha-beta search function to work on the old draft simulator.
@@ -143,7 +141,7 @@ class TestDraftAI(unittest.TestCase):
     # initialising details needed for search. Also, given that format
     # is only required once it would probably be best if I decoupled the
     # draft format and history.
-    def run_c_search(self, draft, role_rs, synergy_rs, counter_rs):
+    def run_c_search(self, history, draft_format, role_rs, synergy_rs, counter_rs):
         ordered_heroes, hero_nums = get_ordered_heroes(
             role_rs,
             synergy_rs,
@@ -177,7 +175,7 @@ class TestDraftAI(unittest.TestCase):
         # set draft format
         # @Later I will want to just load up a fixed draft based on
         # a given tag.
-        for stage, (team, selection_type) in enumerate(draft.format):
+        for stage, (team, selection_type) in enumerate(draft_format):
             lib.set_draft_stage(stage, team, selection_type)
 
         # set hero info for updating legal actions
@@ -200,11 +198,11 @@ class TestDraftAI(unittest.TestCase):
             len(ordered_heroes),
             len(ai_synergy_rs),
             len(ai_counter_rs),
-            len(draft.format),
+            len(draft_format),
         )
         # *********************************************************************
 
-        teams_A, teams_B, banned = get_picks_n_bans(draft, hero_nums)
+        teams_A, teams_B, banned = get_picks_n_bans(history, draft_format, hero_nums)
 
         def total_team_potential(team):
             return sum(ordered_heroes[h].potential for h in team)
@@ -235,7 +233,7 @@ class TestDraftAI(unittest.TestCase):
         )
         value = search_result.value
         action = ordered_heroes[search_result.best_hero].name
-        selection = draft.format[len(draft.history)][1] 
+        selection = draft_format[len(history)][1] 
         if selection == PICK or selection == BAN:
             return value, action
         else:
@@ -271,8 +269,13 @@ class TestDraftAI(unittest.TestCase):
         # for B to pick Ozo if playing optimally. Additionally A should
         # not pick Ozo in the hopes that B picks SAW as it should be 
         # expecting B to play optimally.
-        draft = Draft(SIMPLE_FORMAT, history)
-        value, action = self.run_c_search(draft, role_rs, [], counter_rs)
+        value, action = self.run_c_search(
+            history,
+            SIMPLE_FORMAT,
+            role_rs,
+            [],
+            counter_rs,
+        )
         self.assertEqual(value, 1)
         self.assertEqual(action, 'Vox')
  
@@ -304,8 +307,13 @@ class TestDraftAI(unittest.TestCase):
         # Optimal pick is for A to pick Ozo to prevent B from being able
         # to select it and gain big synergy reward. Value should then be
         # -1 if B is correctly assumed to select SAW.
-        draft = Draft(SIMPLE_FORMAT, history)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, [])
+        value, action = self.run_c_search(
+            history,
+            SIMPLE_FORMAT,
+            role_rs,
+            synergy_rs,
+            [],
+        )
         self.assertEqual(value, -1)
         self.assertEqual(action, 'Ozo')
 
@@ -342,8 +350,13 @@ class TestDraftAI(unittest.TestCase):
         # Vox as it will get 1 for role, 3 for synergy and minus 1 for
         # getting countered which results in a total value of 2 (A is up by
         # 1 beforehand) vs 1 total for SAW.
-        draft = Draft(SIMPLE_FORMAT, history)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action = self.run_c_search(
+            history,
+            SIMPLE_FORMAT,
+            role_rs,
+            synergy_rs,
+            counter_rs,
+        )
         self.assertEqual(value, 2)
         self.assertEqual(action, 'Vox')
 
@@ -365,8 +378,7 @@ class TestDraftAI(unittest.TestCase):
         target_action_2 = 9
         target_actions = (target_action, target_action_2)
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         # order of actions does not matter for two picks
@@ -398,8 +410,7 @@ class TestDraftAI(unittest.TestCase):
         # target_value = -target_value  # get value in terms of team B's perspective
         target_value, target_action = -1055, 23  # hard coded after running once
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
@@ -440,8 +451,7 @@ class TestDraftAI(unittest.TestCase):
         target_action_2 = 11
         target_actions = (target_action, target_action_2)
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         # order of actions does not matter for two bans
@@ -480,8 +490,7 @@ class TestDraftAI(unittest.TestCase):
         # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
         target_action_2 = 1
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         # order of selections matter for pick then ban
@@ -512,8 +521,7 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = 1422, 26  # hard coded after running once
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
@@ -547,8 +555,7 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = -1085, 10  # hard coding after running once
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
@@ -585,8 +592,7 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = -586, 45  # hard coding after running once
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
@@ -627,8 +633,7 @@ class TestDraftAI(unittest.TestCase):
         target_action_2 = 38
         target_actions = (target_action, target_action_2)
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         # order of actions does not matter for two picks
@@ -672,8 +677,7 @@ class TestDraftAI(unittest.TestCase):
         # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
         target_action_2 = 40
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         # order of selection matters for pick then ban
@@ -717,8 +721,7 @@ class TestDraftAI(unittest.TestCase):
         # _, target_action_2 = alphabeta(old_draft_c, -INF, INF)
         target_action_2 = 10
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         # order of selection matters for ban then pick
@@ -766,8 +769,7 @@ class TestDraftAI(unittest.TestCase):
         target_action_2 = 48
         target_actions = (target_action, target_action_2)
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action, action_2 = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action, action_2 = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         # order of actions does not matter for two bans
@@ -806,8 +808,7 @@ class TestDraftAI(unittest.TestCase):
         # target_value = -target_value  # get value in terms of team B's perspective
         target_value, target_action = 1671, 14  # hard coding after running once
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
@@ -832,8 +833,7 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         target_value, target_action = 53, 38  # hard coding after running once
 
-        draft, role_rs, synergy_rs, counter_rs = translate_old_draft(old_draft)
-        value, action = self.run_c_search(draft, role_rs, synergy_rs, counter_rs)
+        value, action = self.run_c_search(*translate_old_draft(old_draft))
 
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)

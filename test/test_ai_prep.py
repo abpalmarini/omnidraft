@@ -230,8 +230,7 @@ class TestAIPrep(unittest.TestCase):
 
         # banned flex heroes don't cause multiple teams to be created
         history = ['Taka', 'Krul', 'Skye', 'Gwen', 'Reza']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [5, 6])
@@ -240,8 +239,7 @@ class TestAIPrep(unittest.TestCase):
 
         # a flex with one available role doesn't cause multiple teams
         history = ['Taka', 'Krul', 'Rona', 'Skye']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(team_As[0], [3, 5])
         self.assertEqual(team_Bs[0], [])
@@ -249,8 +247,7 @@ class TestAIPrep(unittest.TestCase):
 
         # multiple sets of teams created for a flex pick
         history = ['Taka', 'Krul', 'Lyra', 'Reza', 'Gwen']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [8, 7])
@@ -260,8 +257,7 @@ class TestAIPrep(unittest.TestCase):
 
         # multiple sets of teams created for a flex pick (team B)
         history = ['Taka', 'Krul', 'Gwen', 'Reza', 'Lyra']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(len(team_Bs), 2)
         self.assertEqual(team_As[0], [6, 7])
@@ -271,8 +267,7 @@ class TestAIPrep(unittest.TestCase):
 
         # double flex pick clashing roles
         history = ['Taka', 'Reza', 'Lyra', 'Krul', 'Skye']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [8, 2])
@@ -282,8 +277,7 @@ class TestAIPrep(unittest.TestCase):
 
         # double flex pick with no clashing roles
         history = ['Gwen', 'Skye', 'Taka', 'Reza', 'Krul', 'Rona']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(len(team_Bs), 4)
         self.assertEqual(team_As[0], [0, 7])
@@ -295,8 +289,7 @@ class TestAIPrep(unittest.TestCase):
 
         # double flex pick with no clashing roles + flex pick on enemy team
         history = ['Gwen', 'Skye', 'Taka', 'Lyra', 'Krul', 'Rona']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 4)
         self.assertEqual(team_As[0], [0, 8])
@@ -332,8 +325,7 @@ class TestAIPrep(unittest.TestCase):
 
         # banned flex heroes don't cause multiple teams to be created
         history = ['Taka', 'Rona', 'Skye', 'Gwen', 'Reza', 'Lyra']
-        draft = Draft(small_format, history)
-        team_As, team_Bs, banned = get_picks_n_bans(draft, hero_nums)
+        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [0, 8])

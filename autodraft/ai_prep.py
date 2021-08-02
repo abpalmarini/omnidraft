@@ -17,10 +17,6 @@ PICK_BAN  = 3
 BAN_PICK  = 4
 BAN_BAN   = 5
 
-
-# Format assumed to contain a list of tuples of team and selection type.
-Draft = namedtuple('Draft', ['format', 'history'])
-
 # For synergies and counters the heroes (and foes) are expected
 # to be a list of tuples with each tuple containing the hero name and a
 # list of applicable roles.
@@ -162,12 +158,12 @@ def get_same_hero_refs(ordered_heroes, hero_nums):
 # @Later an outer function can handle cases where selections made based
 # on the AI's suggestion can eliminate the other flex possibilities as
 # we know the intended role for maximum value.
-def get_picks_n_bans(draft, hero_nums):
+def get_picks_n_bans(history, draft_format, hero_nums):
     banned_names = []
     team_A_names = []
     team_B_names = []
-    for (team, selection), hero_name in zip(draft.format, draft.history):
-        if selection == BAN or selection == BAN_BAN or selection == BAN_PICK:
+    for hero_name, (team, selection) in zip(history, draft_format):
+        if selection == BAN or selection == BAN_PICK or selection == BAN_BAN:
             banned_names.append(hero_name)
         elif team == A:
             team_A_names.append(hero_name)
@@ -187,8 +183,8 @@ def get_picks_n_bans(draft, hero_nums):
     team_A_roles = [all_roles(hero_name) for hero_name in team_A_names]
     team_B_roles = [all_roles(hero_name) for hero_name in team_B_names]
 
-    team_As = []
-    team_Bs = []
+    teams_A = []
+    teams_B = []
 
     for roles_A in itertools.product(*team_A_roles):
         if len(set(roles_A)) != len(team_A_names):
@@ -196,7 +192,7 @@ def get_picks_n_bans(draft, hero_nums):
         team_A = []
         for hero_name, role in zip(team_A_names, roles_A):
             team_A.append(hero_nums[(hero_name, role)])
-        team_As.append(team_A)
+        teams_A.append(team_A)
 
     for roles_B in itertools.product(*team_B_roles):
         if len(set(roles_B)) != len(team_B_names):
@@ -204,9 +200,9 @@ def get_picks_n_bans(draft, hero_nums):
         team_B = []
         for hero_name, role in zip(team_B_names, roles_B):
             team_B.append(hero_nums[(hero_name, role)])
-        team_Bs.append(team_B)
+        teams_B.append(team_B)
 
-    return team_As, team_Bs, banned
+    return teams_A, teams_B, banned
 
 
 # Heroes in the search algorithm are represented by the bit
