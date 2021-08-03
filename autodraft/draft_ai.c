@@ -62,10 +62,10 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     -alpha
                 );
 
-                if (child_value >= value)
+                if (child_value > value)
                     value = child_value;
 
-                if (value >= alpha)
+                if (value > alpha)
                     alpha = value;
 
                 if (alpha >= beta)
@@ -90,10 +90,10 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     -alpha
                 );
 
-                if (child_value >= value)
+                if (child_value > value)
                     value = child_value;
 
-                if (value >= alpha)
+                if (value > alpha)
                     alpha = value;
 
                 if (alpha >= beta)
@@ -126,10 +126,10 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
@@ -163,10 +163,10 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
@@ -199,10 +199,10 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
@@ -234,10 +234,10 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
@@ -351,10 +351,10 @@ int flex_negamax(
                 beta
             );
 
-            if (team_value >= value)
+            if (team_value > value)
                 value = team_value;
 
-            if (value >= alpha)
+            if (value > alpha)
                 alpha = value;
 
             // can skip other lineups if enemy has better options
@@ -427,10 +427,10 @@ int flex_negamax(
                     -alpha
                 );
 
-                if (child_value >= value)
+                if (child_value > value)
                     value = child_value;
 
-                if (value >= alpha)
+                if (value > alpha)
                     alpha = value;
 
                 if (alpha >= beta)
@@ -466,10 +466,10 @@ int flex_negamax(
                     -alpha
                 );
 
-                if (child_value >= value)
+                if (child_value > value)
                     value = child_value;
 
-                if (value >= alpha)
+                if (value > alpha)
                     alpha = value;
 
                 if (alpha >= beta)
@@ -528,10 +528,10 @@ int flex_negamax(
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
@@ -582,10 +582,10 @@ int flex_negamax(
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
@@ -636,10 +636,10 @@ int flex_negamax(
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
@@ -681,10 +681,10 @@ int flex_negamax(
                         -alpha
                     );
 
-                    if (child_value >= value)
+                    if (child_value > value)
                         value = child_value;
 
-                    if (value >= alpha)
+                    if (value > alpha)
                         alpha = value;
 
                     if (alpha >= beta)
