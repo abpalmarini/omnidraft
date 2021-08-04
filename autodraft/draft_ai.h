@@ -144,3 +144,4 @@ void set_draft_stage(int stage, int team, int selection);
 void set_h_info(int hero_num, int same_role_and_h_size, int same_role_and_h_nums[],
                 int same_h_size, int same_h_nums[]);
 void set_sizes(int heroes, int synergy_rs, int counter_rs, int draft);
+void set_zobrist_key(int team_or_ban, int hero_num, u64 key);

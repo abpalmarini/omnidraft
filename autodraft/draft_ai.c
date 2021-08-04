@@ -20,7 +20,7 @@ struct draft_stage draft[MAX_DRAFT_LEN];
 // random bitstrings for each hero being picked by team A, picked
 // by team B, or being banned by either team (used to track and
 // identify unique states--see wikipedia.org/wiki/Zobrist_hashing)
-u64 zobrist_table[3][MAX_NUM_HEROES];
+u64 zobrist_keys[3][MAX_NUM_HEROES];
 
 
 //
@@ -1289,6 +1289,11 @@ void set_sizes(int heroes, int synergy_rs, int counter_rs, int draft)
     num_synergy_rs = synergy_rs;
     num_counter_rs = counter_rs;
     draft_len = draft;
+}
+
+void set_zobrist_key(int team_or_ban, int hero_num, u64 key)
+{
+    zobrist_keys[team_or_ban][hero_num] = key;
 }
 
 // ======================================================================
