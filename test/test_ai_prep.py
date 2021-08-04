@@ -337,6 +337,26 @@ class TestAIPrep(unittest.TestCase):
         heroes = {1, 4, 5}
         self.assertEqual(bit_format(heroes), int('110010', 2))
 
+    def test_generate_zobrist_keys(self):
+        role_rs = [
+            RoleR('Taka', 0, 0, 9),
+            RoleR('Krul', 1, 0, 8),
+            RoleR('Rona', 2, 0, 7),
+            RoleR('Krul', 3, 0, 6),
+            RoleR('Rona', 4, 0, 5),
+        ]
+        ordered_heroes, hero_nums = get_ordered_heroes(role_rs, [], [])
+        pick_keys_A, pick_keys_B, ban_keys = generate_zobrist_keys(ordered_heroes)
+
+        # test all keys are differnet for picks
+        self.assertTrue(len(set(pick_keys_A)) == 5)
+        self.assertTrue(len(set(pick_keys_B)) == 5)
+
+        # test that duplicates in banned share same key
+        self.assertTrue(len(set(ban_keys)) == 3)
+        self.assertEqual(ban_keys[1], ban_keys[3])
+        self.assertEqual(ban_keys[2], ban_keys[4])
+
 
 if __name__ == '__main__':
     unittest.main()

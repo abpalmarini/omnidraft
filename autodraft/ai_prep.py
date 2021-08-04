@@ -5,6 +5,7 @@ bit level data types needed for search.
 
 from collections import namedtuple
 import itertools
+import random
 
 # Make sure these stay the same as defined in ai_draft.h:
 # teams / zobrist table indices
@@ -19,6 +20,8 @@ PICK_PICK = 2
 PICK_BAN  = 3
 BAN_PICK  = 4
 BAN_BAN   = 5
+
+ZOBRIST_BITS = 64
 
 # For synergies and counters the heroes (and foes) are expected
 # to be a list of tuples with each tuple containing the hero name and a
@@ -213,3 +216,39 @@ def get_picks_n_bans(history, draft_format, hero_nums):
 # power of hero num.
 def bit_format(heroes):
     return sum(2**hero_num for hero_num in heroes)
+
+
+# Generates the random zobrist bitstrings for a hero being picked by
+# team A, picked by team B or being banned by either team. States can
+# then be uniquely identified with a single hash by taking the XOR of
+# the keys matching the combination of picked and banned heroes (see
+# wikipedia.org/wiki/Zobrist_hashing for more details).
+#
+# All hero nums that are role variations of the same underlying hero
+# are given the same key for bans because a ban of any is equivalent
+# (unlike picks, bans don't effect the open roles a team then has).
+def generate_zobrist_keys(ordered_heroes):
+    used = set()
+
+    def unique_key():
+        key = random.getrandbits(ZOBRIST_BITS)
+        while key in used:                          # single chance of getting duplicate is less
+            key = random.getrandbits(ZOBRIST_BITS)  # than 1e-15%, but better safe than sorry
+        return key
+
+    # every hero num gets a unique key for picks
+    pick_keys_A = [unique_key() for _ in range(len(ordered_heroes))]
+    pick_keys_B = [unique_key() for _ in range(len(ordered_heroes))]
+
+    # all hero role variations share same key for a ban
+    name_key = {}
+    ban_keys = []
+    for hero in ordered_heroes:
+        if hero.name in name_key:
+            ban_keys.append(name_key[hero.name])
+        else:
+            key = unique_key()
+            name_key[hero.name] = key
+            ban_keys.append(key)
+
+    return pick_keys_A, pick_keys_B, ban_keys
