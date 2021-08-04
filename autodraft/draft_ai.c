@@ -17,6 +17,11 @@ struct h_info h_infos[MAX_NUM_HEROES];
 // team selecting and selection type for each stage in draft
 struct draft_stage draft[MAX_DRAFT_LEN]; 
 
+// random bitstrings for each hero being picked by team A, picked
+// by team B, or being banned by either team (used to track and
+// identify unique states--see wikipedia.org/wiki/Zobrist_hashing)
+u64 zobrist_table[3][MAX_NUM_HEROES];
+
 
 //
 // Fast Negamax search algorithm for drafting.

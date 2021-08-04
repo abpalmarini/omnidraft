@@ -46,9 +46,11 @@ struct h_info
 // don't change without changing there as well
 enum team 
 {
-    A = 0, 
-    B = 1,
+    A = 0,  // these double as indices for an A/B pick in the
+    B = 1,  // zobrist table so they MUST be kept as 0 and 1
 };
+
+#define BAN_IDX 2  // index into zobrist table for a banned hero
 
 enum selection 
 {

@@ -6,10 +6,13 @@ bit level data types needed for search.
 from collections import namedtuple
 import itertools
 
-# Make sure these stay the same as defined in ai_draft.h
+# Make sure these stay the same as defined in ai_draft.h:
+# teams / zobrist table indices
 A         = 0
 B         = 1
+BAN_IDX   = 2
 
+# selection types
 PICK      = 0
 BAN       = 1
 PICK_PICK = 2
