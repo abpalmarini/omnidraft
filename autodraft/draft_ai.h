@@ -79,7 +79,17 @@ struct search_result
 
 
 // search
-int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta);
+int negamax(
+    u64 team,
+    u64 e_team,
+    int *team_ptr,
+    int *e_team_ptr,
+    u64 legal,
+    u64 e_legal,
+    int stage,
+    int alpha,
+    int beta
+);
 int terminal_value(u64 team_A, u64 team_B);
 int flex_negamax(
     int num_teams,
@@ -92,6 +102,7 @@ int flex_negamax(
     int alpha,
     int beta
 );
+int *init_team_heroes(u64 team, int *team_ptr);
 int hero_in_team_update(
     int hero_num,
     int num_teams,

@@ -17,6 +17,11 @@ struct h_info h_infos[MAX_NUM_HEROES];
 // team selecting and selection type for each stage in draft
 struct draft_stage draft[MAX_DRAFT_LEN]; 
 
+// team arrays for fast evaluation of role rewards (team bit strings
+// are used for fast evaluation of synergy and counter rewards)
+int team_A_heroes[5];
+int team_B_heroes[5];
+
 // random bitstrings for each hero being picked by team A, picked
 // by team B, or being banned by either team (used to track and
 // identify unique states--see wikipedia.org/wiki/Zobrist_hashing)
@@ -40,7 +45,17 @@ u64 zobrist_keys[3][MAX_NUM_HEROES];
 // comparing the reward heroes to the bitwise AND between themselves
 // and some team.
 //
-int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, int beta)
+int negamax(
+    u64 team,         // selecting team bit string
+    u64 e_team,
+    int *team_ptr,    // ptr to next position in selecting team array
+    int *e_team_ptr,
+    u64 legal,
+    u64 e_legal,
+    int stage,
+    int alpha,
+    int beta
+)
 {
     if (stage == draft_len)
         // since B has last pick in draft it is always
@@ -55,11 +70,16 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                 if (!(legal & (1ULL << h)))
                     continue;
 
+                // add hero to global team array
+                *team_ptr = h;
+
                 // switch teams and legal actions around
                 // after updating them for next stage
                 int child_value = -negamax(
                     e_team,
                     team | (1ULL << h),
+                    e_team_ptr,
+                    team_ptr + 1,
                     e_legal & h_infos[h].diff_h,
                     legal & h_infos[h].diff_role_and_h,
                     stage + 1,
@@ -88,6 +108,8 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                 int child_value = -negamax(
                     e_team,
                     team,
+                    e_team_ptr,
+                    team_ptr,
                     e_legal & h_infos[h].diff_h,
                     legal & h_infos[h].diff_h,
                     stage + 1,
@@ -115,15 +137,21 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                 u64 new_legal = legal & h_infos[h].diff_role_and_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
 
+                *team_ptr = h;
+
                 // order in double pick is irrelevant
                 // so earlier pairs can be skipped
                 for (int h2 = h + 1; h2 < num_heroes; h2++) {
                     if (!(new_legal & (1ULL << h2)))
                         continue;
 
+                    *(team_ptr + 1) = h2;
+
                     int child_value = -negamax(
                         e_team,
                         new_team | (1ULL << h2),
+                        e_team_ptr,
+                        team_ptr + 2,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_role_and_h,
                         stage + 2,
@@ -152,6 +180,8 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                 u64 new_legal = legal & h_infos[h].diff_role_and_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
 
+                *team_ptr = h;
+
                 // order of selections matter here
                 for (int h2 = 0; h2 < num_heroes; h2++) {
                     // also switch to enemy legals for ban
@@ -161,6 +191,8 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     int child_value = -negamax(
                         e_team,
                         new_team,
+                        e_team_ptr,
+                        team_ptr + 1,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_h,
                         stage + 2,
@@ -194,9 +226,13 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     if (!(new_legal & (1ULL << h2)))
                         continue;
 
+                    *team_ptr = h2;
+
                     int child_value = -negamax(
                         e_team,
                         team | (1ULL << h2),
+                        e_team_ptr,
+                        team_ptr + 1,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_role_and_h,
                         stage + 2,
@@ -232,6 +268,8 @@ int negamax(u64 team, u64 e_team, u64 legal, u64 e_legal, int stage, int alpha, 
                     int child_value = -negamax(
                         e_team,
                         team,
+                        e_team_ptr,
+                        team_ptr,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_h,
                         stage + 2,
@@ -268,6 +306,12 @@ int terminal_value(u64 team_A, u64 team_B)
 {
     int value = 0;
 
+    // role rewards
+    for (int i = 0; i < 5; i++) {
+        value += role_rs[team_A_heroes[i]].A_value;    // uses global team arrays
+        value -= role_rs[team_B_heroes[i]].B_value;
+    }
+
     // synergies
     for (int i = 0; i < num_synergy_rs; i++) {
         u64 s_heroes = synergy_rs[i].heroes;
@@ -291,16 +335,6 @@ int terminal_value(u64 team_A, u64 team_B)
             value += counter_rs[i].A_value;
         else if ((team_B & c_heroes) == c_heroes && (team_A & c_foes) == c_foes)
             value -= counter_rs[i].B_value;
-    }
-
-    // role rewards 
-    u64 hero = 1ULL;  // represents hero 0 (first bit)
-    for (int i = 0; i < num_heroes; i++) {
-        if (team_A & hero)
-            value += role_rs[i].A_value;
-        else if (team_B & hero)
-            value -= role_rs[i].B_value;
-        hero <<= 1;
     }
 
     return value;
@@ -345,10 +379,26 @@ int flex_negamax(
         // selecting team can achieve with one of its lineups vs it
         int value = -INF;
 
+        // get base pointers for the selecting and enemy team arrays
+        // so they can be initialised before calling normal negamax
+        int *team_arr;
+        int *e_team_arr;
+        if (draft[stage].team == A) {
+            team_arr = team_A_heroes;
+            e_team_arr = team_B_heroes;
+        } else {
+            team_arr = team_B_heroes;
+            e_team_arr = team_A_heroes;
+        }
+
+        int *e_team_ptr = init_team_heroes(e_teams[0], e_team_arr);
+
         for (int i = 0; i < num_teams; i++) {
             int team_value = negamax(    // swtich to normal negamax
                 teams[i],
                 e_teams[0],
+                init_team_heroes(teams[i], team_arr),
+                e_team_ptr,
                 legals[i],
                 e_legals[0],
                 stage,
@@ -375,9 +425,13 @@ int flex_negamax(
         int value_max = -INF;
 
         for (int i = 0; i < num_teams; i++) {
+            init_team_heroes(teams[i], team_A_heroes);    // team guaranteed to be A if terminal
+
             int value_min = INF;
 
             for (int j = 0; j < num_e_teams; j++) {
+                init_team_heroes(e_teams[j], team_B_heroes);
+
                 int value = terminal_value(teams[i], e_teams[j]);
 
                 if (value < value_min)
@@ -700,6 +754,23 @@ int flex_negamax(
     }
 
     return value;
+}
+
+
+//
+// Initialise a team's global team array from a bit string
+// team. Returns pointer to the next position needing filled.
+//
+int *init_team_heroes(u64 team, int *team_ptr)
+{
+    for (int h = 0; h < num_heroes; h++) {
+        if (team & (1ULL << h)) {
+            *team_ptr = h;
+            team_ptr += 1;
+        }
+    }
+
+    return team_ptr;
 }
 
 
