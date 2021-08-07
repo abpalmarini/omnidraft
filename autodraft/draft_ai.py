@@ -139,4 +139,4 @@ class DraftAI:
         for h in range(len(self.ordered_heroes)):
             lib.set_zobrist_key(A, h, pick_keys_A[h])
             lib.set_zobrist_key(B, h, pick_keys_B[h])
-            lib.set_zobrist_key(BAN_IDX, h, ban_keys[h])
+            lib.set_zobrist_key(BAN_KEYS, h, ban_keys[h])

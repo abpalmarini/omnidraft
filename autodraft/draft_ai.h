@@ -50,7 +50,7 @@ enum team
     B = 1,  // zobrist table so they MUST be kept as 0 and 1
 };
 
-#define BAN_IDX 2  // index into zobrist table for a banned hero
+#define BAN_KEYS 2  // index into zobrist table for a banned hero
 
 enum selection 
 {
@@ -143,6 +143,7 @@ u64 legal_bit_repr(
     int e_team_nums[],
     int banned_nums[]
 );
+u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[]);
 
 void switch_reward_team_values();
 

@@ -1172,9 +1172,10 @@ struct search_result run_search(
     int* banned
 )
 {
-    // init team A teams and legals for all lineups
+    // init team A teams, legals and starting hashes for all lineups
     u64 teams_A[num_teams_A];
     u64 legals_A[num_teams_A];
+    u64 hashes_A[num_teams_A];
     for (int i = 0; i < num_teams_A; i++) {
         teams_A[i] = team_bit_repr(team_A_size, start_teams_A[i]);
         legals_A[i] = legal_bit_repr(
@@ -1185,11 +1186,13 @@ struct search_result run_search(
             start_teams_B[0],  // any enemy team can be used as all hero variations are removed
             banned
         );
+        hashes_A[i] = init_hash(A, team_A_size, start_teams_A[i]);
     }
 
-    // init team B teams and legals for all lineups
+    // init team B teams, legals and starting hashes for all lineups
     u64 teams_B[num_teams_B];
     u64 legals_B[num_teams_B];
+    u64 hashes_B[num_teams_B];
     for (int i = 0; i < num_teams_B; i++) {
         teams_B[i] = team_bit_repr(team_B_size, start_teams_B[i]);
         legals_B[i] = legal_bit_repr(
@@ -1200,7 +1203,11 @@ struct search_result run_search(
             start_teams_A[0],
             banned
         );
+        hashes_B[i] = init_hash(B, team_B_size, start_teams_B[i]);
     }
+
+    // init hash of all bans
+    u64 bans_hash = init_hash(BAN_KEYS, banned_size, banned);
 
     // call search for selecting team
     int stage = team_A_size + team_B_size + banned_size;
@@ -1273,6 +1280,22 @@ u64 legal_bit_repr(
     }
 
     return legal;
+}
+
+
+//
+// XOR the zobrist keys for each hero in a set of team picks
+// or all bans.
+//
+u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[])
+{
+    u64 hash = 0ULL;
+
+    for (int i = 0; i < hero_nums_size; i++) {
+        hash ^= zobrist_keys[team_or_ban][hero_nums[i]];
+    }
+
+    return hash;
 }
 
 

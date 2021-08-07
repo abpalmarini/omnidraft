@@ -11,7 +11,7 @@ import random
 # teams / zobrist table indices
 A         = 0
 B         = 1
-BAN_IDX   = 2
+BAN_KEYS  = 2
 
 # selection types
 PICK      = 0
