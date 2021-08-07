@@ -98,6 +98,9 @@ int flex_negamax(
     u64 e_teams[],
     u64 legals[],
     u64 e_legals[],
+    u64 hashes[],
+    u64 e_hashes[],
+    u64 bans_hash,
     int stage,
     int alpha,
     int beta
@@ -105,11 +108,14 @@ int flex_negamax(
 int *init_team_heroes(u64 team, int *team_ptr);
 int hero_in_team_update(
     int hero_num,
+    enum team selecting_team,
     int num_teams,
     u64 teams[],
     u64 legals[],
+    u64 hashes[],
     u64 new_teams[],
-    u64 new_legals[]
+    u64 new_legals[],
+    u64 new_hashes[]
 );
 void hero_out_of_team_update(int hero_num, int num_teams, u64 legals[], u64 new_legals[]);
 struct search_result root_negamax(
@@ -119,6 +125,9 @@ struct search_result root_negamax(
     u64 e_teams[],
     u64 legals[],
     u64 e_legals[],
+    u64 hashes[],
+    u64 e_hashes[],
+    u64 bans_hash,
     int stage
 );
 struct search_result run_search(
