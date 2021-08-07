@@ -86,6 +86,7 @@ int negamax(
     int *e_team_ptr,
     u64 legal,
     u64 e_legal,
+    u64 hash,
     int stage,
     int alpha,
     int beta

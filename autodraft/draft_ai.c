@@ -52,6 +52,7 @@ int negamax(
     int *e_team_ptr,
     u64 legal,
     u64 e_legal,
+    u64 hash,
     int stage,
     int alpha,
     int beta
@@ -82,6 +83,7 @@ int negamax(
                     team_ptr + 1,
                     e_legal & h_infos[h].diff_h,
                     legal & h_infos[h].diff_role_and_h,
+                    hash ^ zobrist_keys[draft[stage].team][h],
                     stage + 1,
                     -beta,
                     -alpha
@@ -112,6 +114,7 @@ int negamax(
                     team_ptr,
                     e_legal & h_infos[h].diff_h,
                     legal & h_infos[h].diff_h,
+                    hash ^ zobrist_keys[BAN_KEYS][h],
                     stage + 1,
                     -beta,
                     -alpha
@@ -136,6 +139,7 @@ int negamax(
                 u64 new_team = team | (1ULL << h);
                 u64 new_legal = legal & h_infos[h].diff_role_and_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
+                u64 new_hash = hash ^ zobrist_keys[draft[stage].team][h];
 
                 *team_ptr = h;
 
@@ -154,6 +158,7 @@ int negamax(
                         team_ptr + 2,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_role_and_h,
+                        new_hash ^ zobrist_keys[draft[stage].team][h2],
                         stage + 2,
                         -beta,
                         -alpha
@@ -179,6 +184,7 @@ int negamax(
                 u64 new_team = team | (1ULL << h);
                 u64 new_legal = legal & h_infos[h].diff_role_and_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
+                u64 new_hash = hash ^ zobrist_keys[draft[stage].team][h];
 
                 *team_ptr = h;
 
@@ -195,6 +201,7 @@ int negamax(
                         team_ptr + 1,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_h,
+                        new_hash ^ zobrist_keys[BAN_KEYS][h2],
                         stage + 2,
                         -beta,
                         -alpha
@@ -219,6 +226,7 @@ int negamax(
 
                 u64 new_legal = legal & h_infos[h].diff_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
+                u64 new_hash = hash ^ zobrist_keys[BAN_KEYS][h];
 
                 // again: order of selection matters
                 for (int h2 = 0; h2 < num_heroes; h2++) {
@@ -235,6 +243,7 @@ int negamax(
                         team_ptr + 1,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_role_and_h,
+                        new_hash ^ zobrist_keys[draft[stage].team][h2],
                         stage + 2,
                         -beta,
                         -alpha
@@ -259,6 +268,7 @@ int negamax(
 
                 u64 new_legal = legal & h_infos[h].diff_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
+                u64 new_hash = hash ^ zobrist_keys[BAN_KEYS][h];
 
                 // order for double bans is irrelevant
                 for (int h2 = h + 1; h2 < num_heroes; h2++) {
@@ -272,6 +282,7 @@ int negamax(
                         team_ptr,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_h,
+                        new_hash ^ zobrist_keys[BAN_KEYS][h2],
                         stage + 2,
                         -beta,
                         -alpha
@@ -397,13 +408,14 @@ int flex_negamax(
         int *e_team_ptr = init_team_heroes(e_teams[0], e_team_arr);
 
         for (int i = 0; i < num_teams; i++) {
-            int team_value = negamax(    // swtich to normal negamax
+            int team_value = negamax(    // switch to normal negamax
                 teams[i],
                 e_teams[0],
                 init_team_heroes(teams[i], team_arr),
                 e_team_ptr,
                 legals[i],
                 e_legals[0],
+                bans_hash ^ hashes[i] ^ e_hashes[0],    // final hash is XOR of all selections
                 stage,
                 alpha,
                 beta
