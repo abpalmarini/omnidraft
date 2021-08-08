@@ -27,6 +27,9 @@ int team_B_heroes[5];
 // identify unique states--see wikipedia.org/wiki/Zobrist_hashing)
 u64 zobrist_keys[3][MAX_NUM_HEROES];
 
+// transposition table
+u64 tt[TT_IDX_BITS + 1];
+
 
 //
 // Fast Negamax search algorithm for drafting.
@@ -62,6 +65,32 @@ int negamax(
         // since B has last pick in draft it is always
         // guaranteed that team is A and e_team is B
         return terminal_value(team, e_team);
+
+    int original_alpha = alpha;
+
+    // check if state has been previously evaluated
+    // and stored in the transposition table
+    u64 tt_entry = tt[hash & TT_IDX_BITS];
+    if ((tt_entry & TAG_MASK) == (hash & TAG_MASK)) {
+        int value = (short) (tt_entry & VALUE_MASK);  // signed representation of lower 16 bits
+        switch (tt_entry & FLAG_MASK) {
+            case EXACT:
+                return value;
+
+            case LOWERBOUND:
+                if (value > alpha)
+                    alpha = value;
+                break;
+
+            case UPPERBOUND:
+                if (value < beta)
+                    beta = value;
+                break;
+        }
+
+        if (alpha >= beta)
+            return value;
+    }
 
     int value = -INF;
     switch (draft[stage].selection) {
@@ -303,6 +332,22 @@ int negamax(
     }
 
 cutoff:
+    // store state value, flag and tag in the transposition table
+    tt_entry = 0ULL;
+
+    tt_entry |= (unsigned short) value;  // shorten value to 16 bits
+
+    if (value <= original_alpha)
+        tt_entry |= UPPERBOUND;
+    else if (value >= beta)
+        tt_entry |= LOWERBOUND;
+    else
+        tt_entry |= EXACT;
+
+    tt_entry |= (hash & TAG_MASK);
+
+    tt[hash & TT_IDX_BITS] = tt_entry;
+
     return value;
 }
 

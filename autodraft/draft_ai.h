@@ -5,13 +5,32 @@
 
 #define INF 30000
 
+// lower 16 bits of a TT entry store the value
+#define VALUE_MASK 0xFFFFULL
+
+// bits 17 and 18 of a TT entry store the flag for type of value
+#define FLAG_MASK  0x30000ULL
+#define EXACT      0x00000ULL
+#define LOWERBOUND 0x10000ULL
+#define UPPERBOUND 0x20000ULL
+
+// remaining 46 bits of a TT entry store the upper 46 bits of
+// the state hash to resolve collisions
+#define TAG_MASK 0xFFFFFFFFFFFC0000ULL
+
+// the least significant bits of a hash to be used for indexing
+// into the transposition table (the number of table entries will
+// therefore be 2^(bits used) and the size with be num entries
+// * 8 as each entry is 64 bits) **MUST use at least 18 bits**
+#define TT_IDX_BITS 0xFFFFFULL
+
 // heroes represented by position in bit field
 typedef unsigned long long u64;
 
 // reward structs
 struct role_r
 {
-    // hero will tracked by index in all role rewards
+    // hero will be tracked by index in all role rewards
     int A_value;
     int B_value;
 };
