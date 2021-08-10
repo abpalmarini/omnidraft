@@ -20,9 +20,16 @@
 
 // the least significant bits of a hash to be used for indexing
 // into the transposition table (the number of table entries will
-// therefore be 2^(bits used) and the size with be num entries
-// * 8 as each entry is 64 bits) **MUST use at least 18 bits**
+// therefore be 2^(bits used) and size will be num entries * 8
+// bytes as each entry is 64 bits) **MUST use at least 18 bits**
 #define TT_IDX_BITS 0xFFFFFULL
+
+// there are exponentially more states visited in later stages,
+// all of which can be evaluated faster than the time it would
+// take to access memory, so only the upper stages are saved
+// (also ensures the impactful states are less likely to be
+// overwritten for future searches)
+#define MAX_TT_STAGE 7
 
 // heroes represented by position in bit field
 typedef unsigned long long u64;

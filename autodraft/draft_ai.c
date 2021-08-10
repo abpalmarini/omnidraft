@@ -68,28 +68,32 @@ int negamax(
 
     int original_alpha = alpha;
 
-    // check if state has been previously evaluated
-    // and stored in the transposition table
-    u64 tt_entry = tt[hash & TT_IDX_BITS];
-    if ((tt_entry & TAG_MASK) == (hash & TAG_MASK)) {
-        int value = (short) (tt_entry & VALUE_MASK);  // signed representation of lower 16 bits
-        switch (tt_entry & FLAG_MASK) {
-            case EXACT:
+    if (stage < MAX_TT_STAGE) {
+        u64 tt_entry = tt[hash & TT_IDX_BITS];
+
+        // check if state has already been evaluated
+        // and stored in the transposition table
+        if ((tt_entry & TAG_MASK) == (hash & TAG_MASK)) {
+            int value = (short) (tt_entry & VALUE_MASK);  // signed representation of the lower
+                                                          // 16 bits where the value is kept
+            switch (tt_entry & FLAG_MASK) {
+                case EXACT:
+                    return value;
+
+                case LOWERBOUND:
+                    if (value > alpha)
+                        alpha = value;
+                    break;
+
+                case UPPERBOUND:
+                    if (value < beta)
+                        beta = value;
+                    break;
+            }
+
+            if (alpha >= beta)
                 return value;
-
-            case LOWERBOUND:
-                if (value > alpha)
-                    alpha = value;
-                break;
-
-            case UPPERBOUND:
-                if (value < beta)
-                    beta = value;
-                break;
         }
-
-        if (alpha >= beta)
-            return value;
     }
 
     int value = -INF;
@@ -332,21 +336,25 @@ int negamax(
     }
 
 cutoff:
-    // store state value, flag and tag in the transposition table
-    tt_entry = 0ULL;
+    
+    if (stage < MAX_TT_STAGE) {
+        // pack state value, flag and tag into 64
+        // bits then store in transposition table
+        u64 tt_entry = 0ULL;
 
-    tt_entry |= (unsigned short) value;  // shorten value to 16 bits
+        tt_entry |= (unsigned short) value;  // shorten value to 16 bits
+                                             // (will always be in range)
+        if (value <= original_alpha)
+            tt_entry |= UPPERBOUND;
+        else if (value >= beta)
+            tt_entry |= LOWERBOUND;
+        else
+            tt_entry |= EXACT;
 
-    if (value <= original_alpha)
-        tt_entry |= UPPERBOUND;
-    else if (value >= beta)
-        tt_entry |= LOWERBOUND;
-    else
-        tt_entry |= EXACT;
+        tt_entry |= (hash & TAG_MASK);
 
-    tt_entry |= (hash & TAG_MASK);
-
-    tt[hash & TT_IDX_BITS] = tt_entry;
+        tt[hash & TT_IDX_BITS] = tt_entry;
+    }
 
     return value;
 }
