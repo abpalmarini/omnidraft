@@ -1,5 +1,6 @@
 #include "draft_ai.h"
 
+
 // sizes
 int num_heroes;
 int num_synergy_rs;
@@ -1478,6 +1479,17 @@ void switch_reward_team_values()
         int prev_A_value = counter_rs[i].A_value;
         counter_rs[i].A_value = counter_rs[i].B_value;
         counter_rs[i].B_value = prev_A_value;
+    }
+}
+
+
+//
+// Clear transposition table to run search with new reward values.
+//
+void clear_tt()
+{
+    for (u64 i = 0; i < TT_IDX_BITS + 1; i++) {
+        tt[i].tag = 0;
     }
 }
 

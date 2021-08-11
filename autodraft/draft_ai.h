@@ -187,6 +187,7 @@ u64 legal_bit_repr(
 u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[]);
 
 void switch_reward_team_values();
+void clear_tt();
 
 // set up functions used to init all global variables required for search
 void set_role_r(int hero_num, int A_value, int B_value);
