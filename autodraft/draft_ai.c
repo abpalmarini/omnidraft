@@ -28,7 +28,7 @@ int team_B_heroes[5];
 u64 zobrist_keys[3][MAX_NUM_HEROES];
 
 // transposition table
-u64 tt[TT_IDX_BITS + 1];
+struct tt_entry tt[TT_IDX_BITS + 1];
 
 
 //
@@ -69,14 +69,13 @@ int negamax(
     int original_alpha = alpha;
 
     if (stage < MAX_TT_STAGE) {
-        u64 tt_entry = tt[hash & TT_IDX_BITS];
+        struct tt_entry tt_entry = tt[hash & TT_IDX_BITS];
 
         // check if state has already been evaluated
         // and stored in the transposition table
-        if ((tt_entry & TAG_MASK) == (hash & TAG_MASK)) {
-            int value = (short) (tt_entry & VALUE_MASK);  // signed representation of the lower
-                                                          // 16 bits where the value is kept
-            switch (tt_entry & FLAG_MASK) {
+        if (tt_entry.tag == (hash >> 18)) {     // tag equal to upper 46 bits of hash
+            int value = tt_entry.value;
+            switch (tt_entry.flag)  {
                 case EXACT:
                     return value;
 
@@ -338,22 +337,14 @@ int negamax(
 cutoff:
     
     if (stage < MAX_TT_STAGE) {
-        // pack state value, flag and tag into 64
-        // bits then store in transposition table
-        u64 tt_entry = 0ULL;
-
-        tt_entry |= (unsigned short) value;  // shorten value to 16 bits
-                                             // (will always be in range)
+        // pack state value, flag and tag into 64 bits (upper 46 bits of hash for tag,
+        // 2 bits for flag and 16 bits for value) then store in transposition table
         if (value <= original_alpha)
-            tt_entry |= UPPERBOUND;
+            tt[hash & TT_IDX_BITS] = (struct tt_entry) {(hash >> 18), UPPERBOUND, value};
         else if (value >= beta)
-            tt_entry |= LOWERBOUND;
+            tt[hash & TT_IDX_BITS] = (struct tt_entry) {(hash >> 18), LOWERBOUND, value};
         else
-            tt_entry |= EXACT;
-
-        tt_entry |= (hash & TAG_MASK);
-
-        tt[hash & TT_IDX_BITS] = tt_entry;
+            tt[hash & TT_IDX_BITS] = (struct tt_entry) {(hash >> 18), EXACT, value};
     }
 
     return value;
