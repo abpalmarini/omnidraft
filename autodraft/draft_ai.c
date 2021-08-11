@@ -1,3 +1,5 @@
+#include <omp.h>
+
 #include "draft_ai.h"
 
 
@@ -22,6 +24,7 @@ struct draft_stage draft[MAX_DRAFT_LEN];
 // are used for fast evaluation of synergy and counter rewards)
 int team_A_heroes[5];
 int team_B_heroes[5];
+#pragma omp threadprivate(team_A_heroes, team_B_heroes)
 
 // random bitstrings for each hero being picked by team A, picked
 // by team B, or being banned by either team (used to track and
@@ -938,13 +941,19 @@ int legal_for_any_lineup(int hero_num, int num_teams, u64 legals[])
 
 
 //
-// This is mainly a @CopyPaste of flex_negamax, modified to track and
-// return the optimal action(s) alongside the value. This is only needed
-// at the root and would be wasteful to both track and return at every
-// depth. I'm creating a separate function, rather than add a flag to
-// flex_negamax, because @Later I'd like to have this one run in parallel.
-// This will allow for subsets of the legal root actions to be evaluated
-// at the same time.
+// Similar to flex_negamax, modified to track and return the optimal
+// action(s) alongside the value. This is only needed at the root and
+// would be wasteful to both track and return at every depth.
+//
+// Additionally, multiple branches are evaluated in parallel with each
+// thread taking the next unevaluated hero when they are done. This
+// simple approach has many benefits. Firstly, the ordering of heroes is
+// fixed based off of potential which may not be perfect in all states,
+// so having the first group of heroes initially run together provides a
+// higher chance of finding the best value for later cutoffs. Secondly,
+// sequentially evaluating all heroes can be done faster. Thirdly, in
+// combination with the transposition table, all threads can share
+// state evaluations which can reduce the time to evaluate a single hero.
 //
 struct search_result root_negamax(
     int num_teams,
@@ -962,6 +971,7 @@ struct search_result root_negamax(
     struct search_result ret = {.value = -INF};
     switch (draft[stage].selection) {
         case PICK:
+            #pragma omp parallel for schedule(dynamic, 1)
             for (int h = 0; h < num_heroes; h++) {
                 u64 teams_p[num_teams];
                 u64 legals_p[num_teams];
@@ -1001,19 +1011,18 @@ struct search_result root_negamax(
                     -ret.value    // use current best value
                 );
 
-                if (child_value > ret.value) {
-                    ret.value = child_value;
-                    ret.best_hero = h;
+                #pragma omp critical
+                {
+                    if (child_value > ret.value) {
+                        ret.value = child_value;
+                        ret.best_hero = h;
+                    }
                 }
-
-                // only the case if its possible to force enemy into situation
-                // where they can't select any heroes for their open roles
-                if (ret.value >= INF)
-                    return ret;
             }
             return ret;
 
         case BAN:
+            #pragma omp parallel for schedule(dynamic, 1)
             for (int h = 0; h < num_heroes; h++) {
                 // if hero is legal for at least one enemy lineup then
                 // the response values of all enemy lineups must be
@@ -1044,17 +1053,18 @@ struct search_result root_negamax(
                     -ret.value
                 );
 
-                if (child_value > ret.value) {
-                    ret.value = child_value;
-                    ret.best_hero = h;
+                #pragma omp critical
+                {
+                    if (child_value > ret.value) {
+                        ret.value = child_value;
+                        ret.best_hero = h;
+                    }
                 }
-
-                if (ret.value >= INF)
-                    return ret;
             }
             return ret;
 
         case PICK_PICK:
+            #pragma omp parallel for schedule(dynamic, 1)
             for (int h = 0; h < num_heroes; h++) {
                 // update lineups for first pick
                 u64 teams_p[num_teams];
@@ -1116,19 +1126,20 @@ struct search_result root_negamax(
                         -ret.value
                     );
 
-                    if (child_value > ret.value) {
-                        ret.value = child_value;
-                        ret.best_hero = h;
-                        ret.best_hero_2 = h2;
+                    #pragma omp critical
+                    {
+                        if (child_value > ret.value) {
+                            ret.value = child_value;
+                            ret.best_hero = h;
+                            ret.best_hero_2 = h2;
+                        }
                     }
-
-                    if (ret.value >= INF)
-                        return ret;
                 }
             }
             return ret;
 
         case PICK_BAN:
+            #pragma omp parallel for schedule(dynamic, 1)
             for (int h = 0; h < num_heroes; h++) {
                 // update lineups for pick
                 u64 teams_p[num_teams];
@@ -1177,19 +1188,20 @@ struct search_result root_negamax(
                         -ret.value
                     );
 
-                    if (child_value > ret.value) {
-                        ret.value = child_value;
-                        ret.best_hero = h;
-                        ret.best_hero_2 = h2;
+                    #pragma omp critical
+                    {
+                        if (child_value > ret.value) {
+                            ret.value = child_value;
+                            ret.best_hero = h;
+                            ret.best_hero_2 = h2;
+                        }
                     }
-
-                    if (ret.value >= INF)
-                        return ret;
                 }
             }
             return ret;
 
         case BAN_PICK:
+            #pragma omp parallel for schedule(dynamic, 1)
             for (int h = 0; h < num_heroes; h++) {
                 if (!legal_for_any_lineup(h, num_e_teams, e_legals))
                     continue;
@@ -1239,19 +1251,20 @@ struct search_result root_negamax(
                         -ret.value
                     );
 
-                    if (child_value > ret.value) {
-                        ret.value = child_value;
-                        ret.best_hero = h;
-                        ret.best_hero_2 = h2;
+                    #pragma omp critical
+                    {
+                        if (child_value > ret.value) {
+                            ret.value = child_value;
+                            ret.best_hero = h;
+                            ret.best_hero_2 = h2;
+                        }
                     }
-
-                    if (ret.value >= INF)
-                        return ret;
                 }
             }
             return ret;
 
         case BAN_BAN:
+            #pragma omp parallel for schedule(dynamic, 1)
             for (int h = 0; h < num_heroes; h++) {
                 if (!legal_for_any_lineup(h, num_e_teams, e_legals))
                     continue;
@@ -1288,14 +1301,14 @@ struct search_result root_negamax(
                         -ret.value
                     );
 
-                    if (child_value > ret.value) {
-                        ret.value = child_value;
-                        ret.best_hero = h;
-                        ret.best_hero_2 = h2;
+                    #pragma omp critical
+                    {
+                        if (child_value > ret.value) {
+                            ret.value = child_value;
+                            ret.best_hero = h;
+                            ret.best_hero_2 = h2;
+                        }
                     }
-
-                    if (ret.value >= INF)
-                        return ret;
                 }
             }
             return ret;
