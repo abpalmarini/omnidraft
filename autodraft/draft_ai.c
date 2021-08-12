@@ -20,12 +20,6 @@ struct h_info h_infos[MAX_NUM_HEROES];
 // team selecting and selection type for each stage in draft
 struct draft_stage draft[MAX_DRAFT_LEN]; 
 
-// team arrays for fast evaluation of role rewards (team bit strings
-// are used for fast evaluation of synergy and counter rewards)
-int team_A_heroes[5];
-int team_B_heroes[5];
-#pragma omp threadprivate(team_A_heroes, team_B_heroes)
-
 // random bitstrings for each hero being picked by team A, picked
 // by team B, or being banned by either team (used to track and
 // identify unique states--see wikipedia.org/wiki/Zobrist_hashing)
@@ -55,7 +49,7 @@ struct tt_entry tt[TT_IDX_BITS + 1];
 int negamax(
     u64 team,         // selecting team bit string
     u64 e_team,
-    int *team_ptr,    // ptr to next position in selecting team array
+    int *team_ptr,    // ptr to next position in selecting team hero num array
     int *e_team_ptr,
     u64 legal,
     u64 e_legal,
@@ -68,7 +62,7 @@ int negamax(
     if (stage == draft_len)
         // since B has last pick in draft it is always
         // guaranteed that team is A and e_team is B
-        return terminal_value(team, e_team);
+        return terminal_value(team, e_team, team_ptr, e_team_ptr);
 
     int original_alpha = alpha;
 
@@ -356,18 +350,18 @@ cutoff:
 
 
 // 
-// Evaluate rewards from team A's perspective. 
+// Evaluate rewards from team A's perspective. Team bit strings are
+// used for fast evaluation of synergy and counter rewards, whereas
+// an array of the 5 hero nums are used for fast evaluation of role
+// rewards.
 //
-// @Later I may want to try tracking hero nums for each team
-// in array of 5 for quicker evaluation of role rewards.
-//
-int terminal_value(u64 team_A, u64 team_B)
+int terminal_value(u64 team_A, u64 team_B, int *team_A_heroes, int *team_B_heroes)
 {
     int value = 0;
 
     // role rewards
-    for (int i = 0; i < 5; i++) {
-        value += role_rs[team_A_heroes[i]].A_value;    // uses global team arrays
+    for (int i = -1; i > -6; i--) {  // pointers point to 1 location beyond array
+        value += role_rs[team_A_heroes[i]].A_value;
         value -= role_rs[team_B_heroes[i]].B_value;
     }
 
@@ -441,17 +435,9 @@ int flex_negamax(
         // selecting team can achieve with one of its lineups vs it
         int value = -INF;
 
-        // get base pointers for the selecting and enemy team arrays
-        // so they can be initialised before calling normal negamax
-        int *team_arr;
-        int *e_team_arr;
-        if (draft[stage].team == A) {
-            team_arr = team_A_heroes;
-            e_team_arr = team_B_heroes;
-        } else {
-            team_arr = team_B_heroes;
-            e_team_arr = team_A_heroes;
-        }
+        // arrays to track the picked hero nums for each team
+        int team_arr[5];
+        int e_team_arr[5];
 
         int *e_team_ptr = init_team_heroes(e_teams[0], e_team_arr);
 
@@ -487,15 +473,18 @@ int flex_negamax(
         // (each team gets their best lineup if terminal state)
         int value_max = -INF;
 
+        int team_arr[5];
+        int e_team_arr[5];
+
         for (int i = 0; i < num_teams; i++) {
-            init_team_heroes(teams[i], team_A_heroes);    // team guaranteed to be A if terminal
+            int *team_ptr = init_team_heroes(teams[i], team_arr);  // team guaranteed to be A if terminal
 
             int value_min = INF;
 
             for (int j = 0; j < num_e_teams; j++) {
-                init_team_heroes(e_teams[j], team_B_heroes);
+                int *e_team_ptr = init_team_heroes(e_teams[j], e_team_arr);
 
-                int value = terminal_value(teams[i], e_teams[j]);
+                int value = terminal_value(teams[i], e_teams[j], team_ptr, e_team_ptr);
 
                 if (value < value_min)
                     value_min = value;
@@ -861,8 +850,8 @@ int flex_negamax(
 
 
 //
-// Initialise a team's global team array from a bit string
-// team. Returns pointer to the next position needing filled.
+// Initialise an array of hero nums from a team bit string.
+// Returns pointer to the next position needing filled.
 //
 int *init_team_heroes(u64 team, int *team_ptr)
 {

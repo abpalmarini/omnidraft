@@ -122,7 +122,7 @@ int negamax(
     int alpha,
     int beta
 );
-int terminal_value(u64 team_A, u64 team_B);
+int terminal_value(u64 team_A, u64 team_B, int *team_A_heroes, int *team_B_heroes);
 int flex_negamax(
     int num_teams,
     int num_e_teams,
