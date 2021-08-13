@@ -101,7 +101,7 @@ int negamax(
                 if (!(legal & (1ULL << h)))
                     continue;
 
-                // add hero to global team array
+                // add hero num to team array
                 *team_ptr = h;
 
                 // switch teams and legal actions around
