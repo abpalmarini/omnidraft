@@ -73,7 +73,7 @@ struct h_info
 
 
 // Draft format.
-// set to match constants defined in ai_prep.py
+// set to match constants defined in draft_ai.py
 // don't change without changing there as well
 enum team 
 {
