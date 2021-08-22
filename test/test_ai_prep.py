@@ -12,7 +12,8 @@ class TestAIPrep(unittest.TestCase):
             RoleR('Krul', 0, 2, 2), RoleR('Krul', 1, 0, 2),
             RoleR('Taka', 0, 3, 0), RoleR('Rona', 3, 0, 1),
         ]
-        heroes, hero_nums = get_ordered_heroes(role_rs, [], [])
+        draft_ai = DraftAI([], role_rs, [], [])
+        heroes, hero_nums = draft_ai.ordered_heroes, draft_ai.hero_nums
         self.assertEqual(hero_nums[('Krul', 0)], 0) 
         self.assertEqual(hero_nums[('Taka', 0)], 1) 
         self.assertEqual(hero_nums[('Krul', 1)], 2) 
@@ -20,7 +21,8 @@ class TestAIPrep(unittest.TestCase):
 
         # add synergy only applicable to krul in role 1
         synergy_rs = [SynergyR([('Krul', [1]), ('Taka', [0])], 5, 0)]
-        heroes, hero_nums = get_ordered_heroes(role_rs, synergy_rs, [])
+        draft_ai = DraftAI([], role_rs, synergy_rs, [])
+        heroes, hero_nums = draft_ai.ordered_heroes, draft_ai.hero_nums
         self.assertEqual(heroes[0].name, 'Taka')
         self.assertEqual(heroes[1].name, 'Krul')
         self.assertEqual(heroes[1].role, 1)
@@ -28,9 +30,21 @@ class TestAIPrep(unittest.TestCase):
 
         # finally check counters work
         counter_rs = [CounterR([('Rona', [3])], [('Krul', [0, 1])], 10, 10)]
-        heroes, hero_nums = get_ordered_heroes(role_rs, synergy_rs, counter_rs)
+        draft_ai = DraftAI([], role_rs, synergy_rs, counter_rs)
+        heroes, hero_nums = draft_ai.ordered_heroes, draft_ai.hero_nums
         self.assertEqual(hero_nums[('Rona', 3)], 0)
         self.assertEqual(heroes[0].potential, 21)  # doesn't get duplicate for both kruls
+
+    def test_correct_hero_roles(self):
+        role_rs = [
+            RoleR('Krul', 0, 2, 2), RoleR('Krul', 1, 0, 2),
+            RoleR('Taka', 4, 3, 0), RoleR('Rona', 3, 0, 1),
+            RoleR('Taka', 0, 1, 2),
+        ]
+        draft_ai = DraftAI([], role_rs, [], [])
+        self.assertEqual(draft_ai.hero_roles['Krul'], [0, 1])
+        self.assertEqual(draft_ai.hero_roles['Rona'], [3])
+        self.assertEqual(draft_ai.hero_roles['Taka'], [0, 4])
 
     def test_translate_synergy_rs(self):
         role_rs = [
@@ -46,8 +60,8 @@ class TestAIPrep(unittest.TestCase):
 
         # 4 new synergies should be created
         synergy_1 = SynergyR([('Taka', [0]), ('Krul', [1, 2]), ('Rona', [3, 4])], 2, 1)
-        _, hero_nums = get_ordered_heroes(role_rs, [synergy_1], [])
-        new_synergy_rs = translate_synergy_rs([synergy_1], hero_nums)
+        draft_ai = DraftAI([], role_rs, [synergy_1], [])
+        new_synergy_rs = draft_ai.translate_synergy_rs([synergy_1])
         self.assertEqual(len(new_synergy_rs), 4)
         correct_synergy_rs = [
             ([0, 1, 3], 2, 1),
@@ -60,8 +74,8 @@ class TestAIPrep(unittest.TestCase):
         
         # only 2 synergies between compatible roles should be created
         synergy_2 = SynergyR([('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])], 0, 1)
-        _, hero_nums = get_ordered_heroes(role_rs, [synergy_2], [])
-        new_synergy_rs = translate_synergy_rs([synergy_2], hero_nums)
+        draft_ai = DraftAI([], role_rs, [synergy_2], [])
+        new_synergy_rs = draft_ai.translate_synergy_rs([synergy_2])
         self.assertEqual(len(new_synergy_rs), 2)
         correct_synergy_rs = [
             ([0, 1, 6], 0, 1),
@@ -71,8 +85,8 @@ class TestAIPrep(unittest.TestCase):
         all_correct += correct_synergy_rs
 
         # test both combined
-        _, hero_nums = get_ordered_heroes(role_rs, [synergy_1, synergy_2], [])
-        new_synergy_rs = translate_synergy_rs([synergy_1, synergy_2], hero_nums)
+        draft_ai = DraftAI([], role_rs, [synergy_1, synergy_2], [])
+        new_synergy_rs = draft_ai.translate_synergy_rs([synergy_1, synergy_2])
         self.assertEqual(new_synergy_rs, all_correct)
 
     def test_translate_counter_rs(self):
@@ -91,8 +105,8 @@ class TestAIPrep(unittest.TestCase):
 
         # doesn't matter about clashes in roles across teams
         counter_1 = CounterR([('Krul', [2])], [('Gwen', [2])], 1, 0)
-        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_1])
-        new_counter_rs = translate_counter_rs([counter_1], hero_nums)
+        draft_ai = DraftAI([], role_rs, [], [counter_1])
+        new_counter_rs = draft_ai.translate_counter_rs([counter_1])
         correct_counter_rs = [([2], [6], 1, 0)]
         self.assertEqual(new_counter_rs, correct_counter_rs)
         all_correct += new_counter_rs
@@ -104,8 +118,8 @@ class TestAIPrep(unittest.TestCase):
             0,
             1,
         )
-        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_2])
-        new_counter_rs = translate_counter_rs([counter_2], hero_nums)
+        draft_ai = DraftAI([], role_rs, [], [counter_2])
+        new_counter_rs = draft_ai.translate_counter_rs([counter_2])
         correct_counter_rs = [
             ([0, 1, 6], [3], 0, 1),
             ([0, 2, 5], [3], 0, 1),
@@ -120,8 +134,8 @@ class TestAIPrep(unittest.TestCase):
             0,
             1,
         )
-        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_3])
-        new_counter_rs = translate_counter_rs([counter_3], hero_nums)
+        draft_ai = DraftAI([], role_rs, [], [counter_3])
+        new_counter_rs = draft_ai.translate_counter_rs([counter_3])
         correct_counter_rs = [
             ([0, 1, 6], [3], 0, 1),
             ([0, 1, 6], [4], 0, 1),
@@ -138,8 +152,8 @@ class TestAIPrep(unittest.TestCase):
             1,
             0,
         )
-        _, hero_nums = get_ordered_heroes(role_rs, [], [counter_4])
-        new_counter_rs = translate_counter_rs([counter_4], hero_nums)
+        draft_ai = DraftAI([], role_rs, [], [counter_4])
+        new_counter_rs = draft_ai.translate_counter_rs([counter_4])
         correct_counter_rs = [
             ([0, 1, 6], [3, 8], 1, 0),
             ([0, 1, 6], [4, 7], 1, 0),
@@ -150,12 +164,9 @@ class TestAIPrep(unittest.TestCase):
         all_correct += new_counter_rs
 
         # test all combined
-        _, hero_nums = get_ordered_heroes(
-            role_rs, [], [counter_1, counter_2, counter_3, counter_4],
-        )
-        new_counter_rs = translate_counter_rs(
-            [counter_1, counter_2, counter_3, counter_4], hero_nums,
-        )
+        all_counters = [counter_1, counter_2, counter_3, counter_4]
+        draft_ai = DraftAI([], role_rs, [], all_counters)
+        new_counter_rs = draft_ai.translate_counter_rs(all_counters)
         self.assertEqual(new_counter_rs, all_correct)
 
     def test_get_heroes_per_role(self):
@@ -169,8 +180,8 @@ class TestAIPrep(unittest.TestCase):
             RoleR('Gwen', 2, 0, 2),
             RoleR('Lyra', 0, 0, 1),
         ]
-        ordered_heroes, _ = get_ordered_heroes(role_rs, [], [])
-        hero_nums_per_role = get_heroes_per_role(ordered_heroes)
+        draft_ai = DraftAI([], role_rs, [], [])
+        hero_nums_per_role = draft_ai.get_heroes_per_role()
         correct = [
             {0, 7},
             {1, 5},
@@ -191,8 +202,8 @@ class TestAIPrep(unittest.TestCase):
             RoleR('Gwen', 2, 0, 2),
             RoleR('Lyra', 0, 0, 1),
         ]
-        ordered_heroes, hero_nums = get_ordered_heroes(role_rs, [], [])
-        same_hero_refs = get_same_hero_refs(ordered_heroes, hero_nums)
+        draft_ai = DraftAI([], role_rs, [], [])
+        same_hero_refs = draft_ai.get_same_hero_refs()
         correct = [
             {0},
             {1, 2},
@@ -226,11 +237,11 @@ class TestAIPrep(unittest.TestCase):
             RoleR('Lyra', 1, 0, 2),
             RoleR('Lyra', 2, 0, 1),
         ]
-        _, hero_nums = get_ordered_heroes(role_rs, [], [])
+        draft_ai = DraftAI(small_format, role_rs, [], [])
 
         # banned flex heroes don't cause multiple teams to be created
         history = ['Taka', 'Krul', 'Skye', 'Gwen', 'Reza']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [5, 6])
@@ -239,7 +250,7 @@ class TestAIPrep(unittest.TestCase):
 
         # a flex with one available role doesn't cause multiple teams
         history = ['Taka', 'Krul', 'Rona', 'Skye']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(team_As[0], [3, 5])
         self.assertEqual(team_Bs[0], [])
@@ -247,7 +258,7 @@ class TestAIPrep(unittest.TestCase):
 
         # multiple sets of teams created for a flex pick
         history = ['Taka', 'Krul', 'Lyra', 'Reza', 'Gwen']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [8, 7])
@@ -257,7 +268,7 @@ class TestAIPrep(unittest.TestCase):
 
         # multiple sets of teams created for a flex pick (team B)
         history = ['Taka', 'Krul', 'Gwen', 'Reza', 'Lyra']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(len(team_Bs), 2)
         self.assertEqual(team_As[0], [6, 7])
@@ -267,7 +278,7 @@ class TestAIPrep(unittest.TestCase):
 
         # double flex pick clashing roles
         history = ['Taka', 'Reza', 'Lyra', 'Krul', 'Skye']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [8, 2])
@@ -277,7 +288,7 @@ class TestAIPrep(unittest.TestCase):
 
         # double flex pick with no clashing roles
         history = ['Gwen', 'Skye', 'Taka', 'Reza', 'Krul', 'Rona']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 1)
         self.assertEqual(len(team_Bs), 4)
         self.assertEqual(team_As[0], [0, 7])
@@ -289,7 +300,7 @@ class TestAIPrep(unittest.TestCase):
 
         # double flex pick with no clashing roles + flex pick on enemy team
         history = ['Gwen', 'Skye', 'Taka', 'Lyra', 'Krul', 'Rona']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 4)
         self.assertEqual(team_As[0], [0, 8])
@@ -321,11 +332,11 @@ class TestAIPrep(unittest.TestCase):
             RoleR('Lyra', 1, 0, 2),
             RoleR('Lyra', 2, 0, 1),
         ]
-        _, hero_nums = get_ordered_heroes(role_rs, [], [])
+        draft_ai = DraftAI(small_format, role_rs, [], [])
 
         # banned flex heroes don't cause multiple teams to be created
         history = ['Taka', 'Rona', 'Skye', 'Gwen', 'Reza', 'Lyra']
-        team_As, team_Bs, banned = get_picks_n_bans(history, small_format, hero_nums)
+        team_As, team_Bs, banned = draft_ai.get_picks_n_bans(history)
         self.assertEqual(len(team_As), 2)
         self.assertEqual(len(team_Bs), 1)
         self.assertEqual(team_As[0], [0, 8])
@@ -341,8 +352,8 @@ class TestAIPrep(unittest.TestCase):
             RoleR('Krul', 3, 0, 6),
             RoleR('Rona', 4, 0, 5),
         ]
-        ordered_heroes, hero_nums = get_ordered_heroes(role_rs, [], [])
-        pick_keys_A, pick_keys_B, ban_keys = generate_zobrist_keys(ordered_heroes)
+        draft_ai = DraftAI([], role_rs, [], [])
+        pick_keys_A, pick_keys_B, ban_keys = draft_ai.generate_zobrist_keys()
 
         # test all keys are differnet for picks
         self.assertTrue(len(set(pick_keys_A)) == 5)
