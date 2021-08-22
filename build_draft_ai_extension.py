@@ -38,7 +38,6 @@ ffibuilder.cdef(
     );
 
     // utils
-    void switch_reward_team_values();
     void clear_tt();
     """
 )

@@ -1457,35 +1457,6 @@ u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[])
 
 
 //
-// Switches the team A and B values for all role, synergy and
-// counter rewards.
-//
-void switch_reward_team_values()
-{
-    // roles
-    for (int i = 0; i < num_heroes; i++) {
-        int prev_A_value = role_rs[i].A_value;
-        role_rs[i].A_value = role_rs[i].B_value;
-        role_rs[i].B_value = prev_A_value;
-    }
-
-    // synergies
-    for (int i = 0; i < num_synergy_rs; i++) {
-        int prev_A_value = synergy_rs[i].A_value;
-        synergy_rs[i].A_value = synergy_rs[i].B_value;
-        synergy_rs[i].B_value = prev_A_value;
-    }
-
-    // counters
-    for (int i = 0; i < num_counter_rs; i++) {
-        int prev_A_value = counter_rs[i].A_value;
-        counter_rs[i].A_value = counter_rs[i].B_value;
-        counter_rs[i].B_value = prev_A_value;
-    }
-}
-
-
-//
 // Clear transposition table to run search with new reward values.
 //
 void clear_tt()

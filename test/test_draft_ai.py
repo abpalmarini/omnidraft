@@ -735,6 +735,9 @@ class TestDraftAI(unittest.TestCase):
         self.assertEqual(value, target_value)
         self.assertEqual(action, target_action)
 
+    # This test is redundant as it is no longer the AI's job to handle
+    # switching of reward team values. Instead, a new DraftAI object
+    # should be instantiated with the switched rewards.
     def test_switch_reward_team_values(self):
         random.seed(12)
         old_draft = draft_az.Draft()
@@ -768,20 +771,13 @@ class TestDraftAI(unittest.TestCase):
         for r in old_draft.rewards['combo']:
             r.A_value, r.B_value = r.B_value, r.A_value
 
-        # switch reward values of DraftAI object
-        ai.switch_reward_team_values()
+        history, *draft_details = translate_old_draft(old_draft)
+        switched_ai = DraftAI(*draft_details)
 
         target_value_s, target_action_s = alphabeta(old_draft, -INF, INF)
-        value_s, action_s = ai.run_search(history)
+        value_s, action_s = switched_ai.run_search(history)
         self.assertEqual(value_s, target_value_s, "after initial switch")
         self.assertEqual(action_s, target_action_s, "after initial switch")
-
-        # sanity check that switching for ai again gives us original
-        ai.switch_reward_team_values()
-        value, action = ai.run_search(history)
-        self.assertEqual(value, target_value, "second switch back to original")
-        self.assertEqual(action, target_action, "second switch back to original")
-
 
 if __name__ == '__main__':
     unittest.main()

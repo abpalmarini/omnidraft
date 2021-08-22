@@ -281,6 +281,8 @@ class DraftAI:
         )
         self._set_C_zobrist_keys()
 
+        # @Later it will be possible to optionally pass in a file to
+        # load a TT. If not provided the TT should always be wiped.
         lib.clear_tt()
 
     def run_search(self, history):
@@ -326,16 +328,6 @@ class DraftAI:
         else:
             best_hero_2 = self.ordered_heroes[search_result.best_hero_2].name
             return value, best_hero, best_hero_2
-
-    def switch_reward_team_values(self):
-        """ Switches team A and B values across all rewards. """
-
-        lib.switch_reward_team_values()
-
-        # tt values are inapplicable when rewards switch so clearing
-        # for now, but @Later it would be better to save and load for
-        # each side so users can switch back and forth
-        lib.clear_tt()
 
     def _set_C_role_rs(self):
         for hero_num, hero in enumerate(self.ordered_heroes):
