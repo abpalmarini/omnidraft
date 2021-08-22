@@ -23,16 +23,16 @@ BAN_BAN   = 5
 ZOBRIST_BITS = 64
 
 
-# For synergies and counters the heroes (and foes) are expected
-# to be a list of tuples with each tuple containing the hero name and a
-# list of applicable roles.
+# For synergies and counters the heroes (and foes) are expected to be
+# a list of tuples with each tuple containing the hero name and a list
+# of applicable roles.
 RoleR = namedtuple('RoleR', ['hero_name', 'role', 'A_value', 'B_value'])
 SynergyR = namedtuple('SynergyR', ['heroes', 'A_value', 'B_value'])
 CounterR = namedtuple('CounterR', ['heroes', 'foes', 'A_value', 'B_value'])
 
 
-# Represents a *unique* hero-role combination.
 class Hero:
+    """ Represents a unique hero-role combination. """
 
     def __init__(self, role_r, all_synergy_rs, all_counter_rs):
         self.name = role_r.hero_name
@@ -267,23 +267,7 @@ class DraftAI:
             counter_rs,
         )
 
-        # set all C globals
-        self._set_C_role_rs()
-        num_ai_synergy_rs = self._set_C_synergy_rs(synergy_rs)
-        num_ai_counter_rs = self._set_C_counter_rs(counter_rs)
-        self._set_C_draft_format()
-        self._set_C_h_infos()
-        self._set_C_sizes(
-            len(self.ordered_heroes),
-            num_ai_synergy_rs,
-            num_ai_counter_rs,
-            len(self.draft_format),
-        )
-        self._set_C_zobrist_keys()
-
-        # @Later it will be possible to optionally pass in a file to
-        # load a TT. If not provided the TT should always be wiped.
-        lib.clear_tt()
+        self._set_C_globals(synergy_rs, counter_rs)
 
     def run_search(self, history):
         """
@@ -329,18 +313,21 @@ class DraftAI:
             best_hero_2 = self.ordered_heroes[search_result.best_hero_2].name
             return value, best_hero, best_hero_2
 
-    def _set_C_role_rs(self):
+    # Instantiate the C global memory with all information the engine
+    # requires for running searches on new set of rewards/draft format.
+    def _set_C_globals(self, synergy_rs, counter_rs):
+
+        # role rewards
         for hero_num, hero in enumerate(self.ordered_heroes):
             lib.set_role_r(hero_num, hero.A_role_value, hero.B_role_value)
 
-    def _set_C_synergy_rs(self, synergy_rs):
+        # synergy rewards
         ai_synergy_rs = translate_synergy_rs(synergy_rs, self.hero_nums)
         for i, synergy_r in enumerate(ai_synergy_rs):
             heroes, A_value, B_value = synergy_r
             lib.set_synergy_r(i, len(heroes), heroes, A_value, B_value)
-        return len(ai_synergy_rs)
 
-    def _set_C_counter_rs(self, counter_rs):
+        # counter rewards
         ai_counter_rs = translate_counter_rs(counter_rs, self.hero_nums)
         for i, counter_r in enumerate(ai_counter_rs):
             heroes, foes, A_value, B_value = counter_r
@@ -353,13 +340,12 @@ class DraftAI:
                 A_value,
                 B_value,
             )
-        return len(ai_counter_rs)
 
-    def _set_C_draft_format(self):
+        # draft format
         for stage, (team, selection_type) in enumerate(self.draft_format):
             lib.set_draft_stage(stage, team, selection_type)
 
-    def _set_C_h_infos(self):
+        # hero info for updating legal actions
         role_heroes = get_heroes_per_role(self.ordered_heroes)
         same_hero_refs = get_same_hero_refs(self.ordered_heroes, self.hero_nums)
         for hero_num, hero in enumerate(self.ordered_heroes):
@@ -374,13 +360,20 @@ class DraftAI:
                 same_hero,
             )
 
-    def _set_C_sizes(self, num_heroes, num_synergy_rs, num_counter_rs, draft_len):
-        lib.set_sizes(num_heroes, num_synergy_rs, num_counter_rs, draft_len)
+        # sizes
+        lib.set_sizes(
+            len(self.ordered_heroes),
+            len(ai_synergy_rs),
+            len(ai_counter_rs),
+            len(self.draft_format),
+        )
 
-    def _set_C_zobrist_keys(self):
+        # zobrist keys
         keys = generate_zobrist_keys(self.ordered_heroes)
         pick_keys_A, pick_keys_B, ban_keys = keys
         for h in range(len(self.ordered_heroes)):
             lib.set_zobrist_key(A, h, pick_keys_A[h])
             lib.set_zobrist_key(B, h, pick_keys_B[h])
             lib.set_zobrist_key(BAN_KEYS, h, ban_keys[h])
+
+        lib.clear_tt()  # ensure state values for old drafts aren't used
