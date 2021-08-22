@@ -6,7 +6,7 @@ from collections import namedtuple
 import itertools
 import random
 
-# Make sure these stay the same as defined in ai_draft.h:
+# Make sure these stay the same as defined in draft_ai.h:
 # teams / zobrist table indices
 A         = 0
 B         = 1
@@ -21,6 +21,7 @@ BAN_PICK  = 4
 BAN_BAN   = 5
 
 ZOBRIST_BITS = 64
+
 
 # For synergies and counters the heroes (and foes) are expected
 # to be a list of tuples with each tuple containing the hero name and a
@@ -208,13 +209,6 @@ def get_picks_n_bans(history, draft_format, hero_nums):
         teams_B.append(team_B)
 
     return teams_A, teams_B, banned
-
-
-# Heroes in the search algorithm are represented by the bit
-# corresponding to their hero number in a word. I.e. 2 to the 
-# power of hero num.
-def bit_format(heroes):
-    return sum(2**hero_num for hero_num in heroes)
 
 
 # Generates the random zobrist bitstrings for a hero being picked by
