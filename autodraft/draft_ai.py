@@ -96,11 +96,11 @@ class DraftAI:
 
         def check_value(value):
             if not isinstance(value, int):
-                raise TypeError("Team values must be integers")
+                raise TypeError("Invalid team value: must be an int")
             if value < 0 or value > 1000:
                 # 1000 picked as users can than use 0 to 10 with 2 decimal
                 # places. Can also safely assume it will never exceed INF.
-                raise ValueError("Team values must be between 0 and 1000")
+                raise ValueError("Invalid team value: must be in range [0, 1000]")
 
         for r in itertools.chain(role_rs, synergy_rs, counter_rs):
             if isinstance(r, RoleR) and r.role not in ROLES:
@@ -380,6 +380,13 @@ class DraftAI:
                 team_B.append(self.hero_nums[(hero_name, role)])
             teams_B.append(team_B)
 
+        # ensure at least one team role assignment is possible
+        error_msg = "Invalid history: no role assignements possible for team {}"
+        if len(teams_A) == 0:
+            raise ValueError(error_msg.format('A'))
+        elif len(teams_B) == 0:
+            raise ValueError(error_msg.format('B'))
+
         return teams_A, teams_B, banned
 
     def run_search(self, history):
@@ -392,6 +399,10 @@ class DraftAI:
                     because they all share the same underlying C global
                     memory.
         """
+
+        for hero in history:
+            if hero not in self.hero_roles:
+                raise ValueError(f"Invalid history: {hero} has no role reward")
 
         teams_A, teams_B, banned = self.get_picks_n_bans(history)
 
