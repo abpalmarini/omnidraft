@@ -29,6 +29,7 @@ BAN_PICK  = constants.ban_pick
 BAN_BAN   = constants.ban_ban
 
 ZOBRIST_BITS = 64
+ROLES = range(5)
 
 
 # For synergies and counters the heroes (and foes) are expected to be
@@ -40,7 +41,7 @@ CounterR = namedtuple('CounterR', ['heroes', 'foes', 'A_value', 'B_value'])
 
 
 class Hero:
-    """ Represents a unique hero-role combination. """
+    """Represents a unique hero-role combination."""
 
     def __init__(self, role_r, all_synergy_rs, all_counter_rs):
         self.name = role_r.hero_name
@@ -89,6 +90,23 @@ class DraftAI:
         will operate on for all future searches).
         """
 
+        if len(role_rs) > MAX_NUM_HEROES:
+            raise ValueError(f"Max of {MAX_NUM_HEROES} role_rs supported")
+
+        def check_value(value):
+            if not isinstance(value, int):
+                raise TypeError("Team values must be integers")
+            if value < 0 or value > 1000:
+                # 1000 picked as users can than use 0 to 10 with 2 decimal
+                # places. Can also safely assume it will never exceed INF.
+                raise ValueError("Team values must be between 0 and 1000")
+
+        for r in itertools.chain(role_rs, synergy_rs, counter_rs):
+            if isinstance(r, RoleR) and r.role not in ROLES:
+                raise ValueError("Roles must be an integer from 0 to 4")
+            check_value(r.A_value)
+            check_value(r.B_value)
+
         self.draft_format = draft_format
         self.init_ordered_heroes(role_rs, synergy_rs, counter_rs)
         self._set_C_globals(synergy_rs, counter_rs)
@@ -101,16 +119,20 @@ class DraftAI:
         self.ordered_heroes = heroes
 
         # allow for getting specifc hero num for a hero-role combination
-        hero_nums = {(hero.name, hero.role): num for num, hero in enumerate(heroes)}
-        self.hero_nums = hero_nums
+        self.hero_nums = {}
+        for num, hero in enumerate(self.ordered_heroes):
+            name_role = (hero.name, hero.role)
+            if name_role not in self.hero_nums:
+                self.hero_nums[name_role] = num
+            else:
+                raise ValueError(f"Duplicate role reward found for {name_role}")
 
         # allow for getting all roles a hero can play
-        hero_roles = {}
+        self.hero_roles = {}
         for hero in heroes:
-            if hero.name not in hero_roles:
-                roles = [role for role in range(5) if (hero.name, role) in hero_nums]
-                hero_roles[hero.name] = roles
-        self.hero_roles = hero_roles
+            if hero.name not in self.hero_roles:
+                roles = [role for role in ROLES if (hero.name, role) in self.hero_nums]
+                self.hero_roles[hero.name] = roles
 
     # After heroes have been ordered, and additional ones created for
     # flex picks, synergy rewards using these hero nums can be created.
@@ -118,6 +140,7 @@ class DraftAI:
     # who play more than one role as they are now treated different.
     def translate_synergy_rs(self, synergy_rs):
         ai_synergy_rs = []
+        synergies = set()
 
         def valid_synergy_nums(heroes):
             valid = []
@@ -134,12 +157,23 @@ class DraftAI:
 
         for r in synergy_rs:
             for heroes in valid_synergy_nums(r.heroes):
-                ai_synergy_rs.append((heroes, r.A_value, r.B_value))
-        return ai_synergy_rs
+                synergy = tuple(heroes)
+                if synergy not in synergies:
+                    ai_synergy_rs.append((heroes, r.A_value, r.B_value))
+                    synergies.add(synergy)
+                else:
+                    names = [self.ordered_heroes[h].name for h in heroes]
+                    raise ValueError(f"Duplicate synergy reward possible for {names}")
+
+        if len(ai_synergy_rs) <= MAX_SYNERGY_RS:
+            return ai_synergy_rs
+        else:
+            raise ValueError(f"Not enough memory for all AI synergy rs")
 
     # Same as for synergies, but also taking into account the foes.
     def translate_counter_rs(self, counter_rs):
         ai_counter_rs = []
+        counters = set()
 
         def valid_counter_nums(heroes, foes):
             valid = []
@@ -162,11 +196,24 @@ class DraftAI:
 
         for r in counter_rs:
             for heroes, foes in valid_counter_nums(r.heroes, r.foes):
-                ai_counter_rs.append((heroes, foes, r.A_value, r.B_value))
-        return ai_counter_rs
+                counter = (tuple(heroes), tuple(foes))
+                if counter not in counters:
+                    ai_counter_rs.append((heroes, foes, r.A_value, r.B_value))
+                    counters.add(counter)
+                else:
+                    hero_names = [self.ordered_heroes[h].name for h in heroes]
+                    foe_names = [self.ordered_heroes[h].name for h in foes]
+                    raise ValueError(
+                        f"Duplicate counter reward possible for {hero_names} vs {foe_names}"
+                    )
+
+        if len(ai_counter_rs) <= MAX_COUNTER_RS:
+            return ai_counter_rs
+        else:
+            raise ValueError(f"Not enough memory for all AI counter rs")
 
     def get_heroes_per_role(self):
-        heroes_per_role = [set() for _ in range(5)]
+        heroes_per_role = [set() for _ in ROLES]
         for hero_num, hero in enumerate(self.ordered_heroes):
             heroes_per_role[hero.role].add(hero_num)
         return heroes_per_role
@@ -178,7 +225,7 @@ class DraftAI:
         all_refs = []
         for hero in self.ordered_heroes:
             refs = set() 
-            for role in range(5):
+            for role in ROLES:
                 # will be true for at least one (its role)
                 if (hero.name, role) in self.hero_nums:
                     refs.add(self.hero_nums[(hero.name, role)])
@@ -308,7 +355,7 @@ class DraftAI:
 
         banned = []
         for hero_name in banned_names:
-            for role in range(5):
+            for role in ROLES:
                 if (hero_name, role) in self.hero_nums:
                     banned.append(self.hero_nums[(hero_name, role)])
                     break  # only one role variation needed for bans

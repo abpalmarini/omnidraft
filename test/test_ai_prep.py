@@ -125,7 +125,7 @@ class TestAIPrep(unittest.TestCase):
             ([0, 2, 5], [3], 0, 1),
         ]
         self.assertEqual(new_counter_rs, correct_counter_rs)
-        all_correct += new_counter_rs
+        # not including 2 in all because it overlaps with 3
 
         # same 2 as above should be created for each enemy hero-role num
         counter_3 = CounterR(
@@ -163,8 +163,8 @@ class TestAIPrep(unittest.TestCase):
         self.assertEqual(new_counter_rs, correct_counter_rs)
         all_correct += new_counter_rs
 
-        # test all combined
-        all_counters = [counter_1, counter_2, counter_3, counter_4]
+        # test all combined (can't include both 2 and 3 due to overlap)
+        all_counters = [counter_1, counter_3, counter_4]
         draft_ai = DraftAI([], role_rs, [], all_counters)
         new_counter_rs = draft_ai.translate_counter_rs(all_counters)
         self.assertEqual(new_counter_rs, all_correct)
