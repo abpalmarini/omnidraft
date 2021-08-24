@@ -11,8 +11,8 @@ int draft_len;
 
 // rewards
 struct role_r role_rs[MAX_NUM_HEROES];
-struct synergy_r synergy_rs[MAX_SYNERGIES];
-struct counter_r counter_rs[MAX_COUNTERS];
+struct synergy_r synergy_rs[MAX_SYNERGY_RS];
+struct counter_r counter_rs[MAX_COUNTER_RS];
 
 // info needed to update legal actions
 struct h_info h_infos[MAX_NUM_HEROES];
@@ -1456,17 +1456,6 @@ u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[])
 }
 
 
-//
-// Clear transposition table to run search with new reward values.
-//
-void clear_tt()
-{
-    for (u64 i = 0; i < TT_IDX_BITS + 1; i++) {
-        tt[i].tag = 0;
-    }
-}
-
-
 // ======================================================================
 // I need a way to go from receiving a draft format and set of rewards in
 // python to initialising the global variables required for calling
@@ -1530,3 +1519,45 @@ void set_zobrist_key(int team_or_ban, int hero_num, u64 key)
 }
 
 // ======================================================================
+
+
+//
+// Clear transposition table to run search with new reward values.
+//
+void clear_tt()
+{
+    for (u64 i = 0; i < TT_IDX_BITS + 1; i++) {
+        tt[i].tag = 0;
+    }
+}
+
+
+//
+// Gets all constants defined in draft_ai.h to ensure that the python
+// files preparing inputs can stay consistent.
+//
+struct constants_s get_constants()
+{
+    struct constants_s constants;
+
+    // max sizes
+    constants.max_num_heroes = MAX_NUM_HEROES;
+    constants.max_synergy_rs = MAX_SYNERGY_RS;
+    constants.max_counter_rs = MAX_COUNTER_RS;
+    constants.max_draft_len = MAX_DRAFT_LEN;
+
+    // teams / zobrist table indices
+    constants.a = A;
+    constants.b = B;
+    constants.ban_keys = BAN_KEYS;
+
+    // selection types
+    constants.pick = PICK;
+    constants.ban = BAN;
+    constants.pick_pick = PICK_PICK;
+    constants.pick_ban = PICK_BAN;
+    constants.ban_pick = BAN_PICK;
+    constants.ban_ban = BAN_BAN;
+
+    return constants;
+}

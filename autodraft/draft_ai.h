@@ -1,9 +1,9 @@
 #define MAX_NUM_HEROES 64
-#define MAX_SYNERGIES 50
-#define MAX_COUNTERS  50  
+#define MAX_SYNERGY_RS 50
+#define MAX_COUNTER_RS 50  
 #define MAX_DRAFT_LEN 24
 
-#define INF 30000
+#define INF 32000
 
 
 // heroes represented by position in bit field
@@ -73,8 +73,6 @@ struct h_info
 
 
 // Draft format.
-// set to match constants defined in draft_ai.py
-// don't change without changing there as well
 enum team 
 {
     A = 0,  // these double as indices for an A/B pick in the
@@ -106,6 +104,25 @@ struct search_result
     int value;
     int best_hero;
     int best_hero_2;  // only applies for stages with a double selection
+};
+
+
+// Constants. Needed to ensure consistency across the C and python files.
+struct constants_s
+{
+    int max_num_heroes;
+    int max_synergy_rs;
+    int max_counter_rs;
+    int max_draft_len;
+    int a;
+    int b;
+    int ban_keys;
+    int pick;
+    int ban;
+    int pick_pick;
+    int pick_ban;
+    int ban_pick;
+    int ban_ban;
 };
 
 
@@ -186,8 +203,6 @@ u64 legal_bit_repr(
 );
 u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[]);
 
-void switch_reward_team_values();
-void clear_tt();
 
 // set up functions used to init all global variables required for search
 void set_role_r(int hero_num, int A_value, int B_value);
@@ -199,3 +214,7 @@ void set_h_info(int hero_num, int same_role_and_h_size, int same_role_and_h_nums
                 int same_h_size, int same_h_nums[]);
 void set_sizes(int heroes, int synergy_rs, int counter_rs, int draft);
 void set_zobrist_key(int team_or_ban, int hero_num, u64 key);
+
+
+void clear_tt();
+struct constants_s get_constants();

@@ -8,6 +8,26 @@ ffibuilder.cdef(
     """
     typedef unsigned long long u64;
 
+    struct constants_s
+    {
+        int max_num_heroes;
+        int max_synergy_rs;
+        int max_counter_rs;
+        int max_draft_len;
+        int a;
+        int b;
+        int ban_keys;
+        int pick;
+        int ban;
+        int pick_pick;
+        int pick_ban;
+        int ban_pick;
+        int ban_ban;
+    };
+
+    // ensure python stays consistent with constants defined in draft_ai.h
+    struct constants_s get_constants();
+
     // initialiser set up functions
     void set_role_r(int hero_num, int A_value, int B_value);
     void set_synergy_r(int i, int heroes_size, int hero_nums[], int A_value, int B_value);

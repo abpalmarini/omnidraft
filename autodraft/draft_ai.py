@@ -6,19 +6,27 @@ import random
 
 from _draft_ai import ffi, lib
 
-# Make sure these stay the same as defined in draft_ai.h:
+
+constants = lib.get_constants()  # defined in draft_ai.h and returned to ensure consistency
+
+# max sizes
+MAX_NUM_HEROES = constants.max_num_heroes
+MAX_SYNERGY_RS = constants.max_synergy_rs
+MAX_COUNTER_RS = constants.max_counter_rs  
+MAX_DRAFT_LEN  = constants.max_draft_len
+
 # teams / zobrist table indices
-A         = 0
-B         = 1
-BAN_KEYS  = 2
+A         = constants.a
+B         = constants.b
+BAN_KEYS  = constants.ban_keys
 
 # selection types
-PICK      = 0
-BAN       = 1
-PICK_PICK = 2
-PICK_BAN  = 3
-BAN_PICK  = 4
-BAN_BAN   = 5
+PICK      = constants.pick
+BAN       = constants.ban
+PICK_PICK = constants.pick_pick
+PICK_BAN  = constants.pick_ban
+BAN_PICK  = constants.ban_pick
+BAN_BAN   = constants.ban_ban
 
 ZOBRIST_BITS = 64
 
