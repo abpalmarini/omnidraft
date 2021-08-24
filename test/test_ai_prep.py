@@ -29,7 +29,7 @@ class TestAIPrep(unittest.TestCase):
         self.assertEqual(heroes[2].potential, 4)  # value not added to other krul
 
         # finally check counters work
-        counter_rs = [CounterR([('Rona', [3])], [('Krul', [0, 1])], 10, 10)]
+        counter_rs = [CounterR([('Rona', [3])], ['Krul'], 10, 10)]
         draft_ai = DraftAI([], role_rs, synergy_rs, counter_rs)
         heroes, hero_nums = draft_ai.ordered_heroes, draft_ai.hero_nums
         self.assertEqual(hero_nums[('Rona', 3)], 0)
@@ -104,38 +104,24 @@ class TestAIPrep(unittest.TestCase):
         all_correct = []
 
         # doesn't matter about clashes in roles across teams
-        counter_1 = CounterR([('Krul', [2])], [('Gwen', [2])], 1, 0)
+        counter_1 = CounterR([('Krul', [2])], ['Gwen'], 1, 0)
         draft_ai = DraftAI([], role_rs, [], [counter_1])
         new_counter_rs = draft_ai.translate_counter_rs([counter_1])
-        correct_counter_rs = [([2], [6], 1, 0)]
+        correct_counter_rs = [
+            ([2], [5], 1, 0),
+            ([2], [6], 1, 0),
+        ]
         self.assertEqual(new_counter_rs, correct_counter_rs)
         all_correct += new_counter_rs
 
-        # only 2 should be created due to hero team
         counter_2 = CounterR(
             [('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])],
-            [('Rona', [3])],
+            ['Rona'],
             0,
             1,
         )
         draft_ai = DraftAI([], role_rs, [], [counter_2])
         new_counter_rs = draft_ai.translate_counter_rs([counter_2])
-        correct_counter_rs = [
-            ([0, 1, 6], [3], 0, 1),
-            ([0, 2, 5], [3], 0, 1),
-        ]
-        self.assertEqual(new_counter_rs, correct_counter_rs)
-        # not including 2 in all because it overlaps with 3
-
-        # same 2 as above should be created for each enemy hero-role num
-        counter_3 = CounterR(
-            [('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])],
-            [('Rona', [3, 4])],
-            0,
-            1,
-        )
-        draft_ai = DraftAI([], role_rs, [], [counter_3])
-        new_counter_rs = draft_ai.translate_counter_rs([counter_3])
         correct_counter_rs = [
             ([0, 1, 6], [3], 0, 1),
             ([0, 1, 6], [4], 0, 1),
@@ -146,14 +132,14 @@ class TestAIPrep(unittest.TestCase):
         all_correct += new_counter_rs
 
         # clashes in both heroes and adversaries
-        counter_4 = CounterR(
+        counter_3 = CounterR(
             [('Taka', [0]), ('Krul', [1, 2]), ('Gwen', [1, 2])],
-            [('Rona', [3, 4]), ('Lyra', [3, 4])],
+            ['Rona', 'Lyra'],
             1,
             0,
         )
-        draft_ai = DraftAI([], role_rs, [], [counter_4])
-        new_counter_rs = draft_ai.translate_counter_rs([counter_4])
+        draft_ai = DraftAI([], role_rs, [], [counter_3])
+        new_counter_rs = draft_ai.translate_counter_rs([counter_3])
         correct_counter_rs = [
             ([0, 1, 6], [3, 8], 1, 0),
             ([0, 1, 6], [4, 7], 1, 0),
@@ -163,8 +149,8 @@ class TestAIPrep(unittest.TestCase):
         self.assertEqual(new_counter_rs, correct_counter_rs)
         all_correct += new_counter_rs
 
-        # test all combined (can't include both 2 and 3 due to overlap)
-        all_counters = [counter_1, counter_3, counter_4]
+        # test all combined
+        all_counters = [counter_1, counter_2, counter_3]
         draft_ai = DraftAI([], role_rs, [], all_counters)
         new_counter_rs = draft_ai.translate_counter_rs(all_counters)
         self.assertEqual(new_counter_rs, all_correct)

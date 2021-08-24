@@ -66,7 +66,7 @@ def translate_old_draft(draft):
             synergy_r = SynergyR(heroes, r.A_value, r.B_value)
             synergy_rs.append(synergy_r)
         else:
-            foes = [(hero, hero_roles[hero]) for hero in r.enemy_champs]
+            foes = [hero for hero in r.enemy_champs]
             counter_r = CounterR(heroes, foes, r.A_value, r.B_value)
             counter_rs.append(counter_r)
 
@@ -155,7 +155,7 @@ class TestDraftAI(unittest.TestCase):
             RoleR('SAW', 4, 4, 2),
         ]
         counter_rs = [
-            CounterR([('Ozo', [4])], [('SAW', [4])], 5, 5),
+            CounterR([('Ozo', [4])], ['SAW'], 5, 5),
         ]
         history = [
             'Taka', 'Lyra', 'Reim', 'Krul',
@@ -236,7 +236,7 @@ class TestDraftAI(unittest.TestCase):
             SynergyR([('Vox', [4]), ('Skye', [3])], 4, 3),
         ]
         counter_rs = [
-            CounterR([('Ozo', [4])], [('Vox', [4])], 1, 5),
+            CounterR([('Ozo', [4])], ['Vox'], 1, 5),
         ]
         history = [
             'Taka', 'Lyra', 'Reim', 'Krul',

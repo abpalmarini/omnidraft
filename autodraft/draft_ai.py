@@ -32,9 +32,10 @@ ZOBRIST_BITS = 64
 ROLES = range(5)
 
 
-# For synergies and counters the heroes (and foes) are expected to be
-# a list of tuples with each tuple containing the hero name and a list
-# of applicable roles.
+# For synergies and counters the heroes are expected to be a list of
+# tuples with each tuple containing the hero name and a list of
+# applicable roles. Foes should only be a list of names as you can't
+# control what role the enemy team will play their heroes in.
 RoleR = namedtuple('RoleR', ['hero_name', 'role', 'A_value', 'B_value'])
 SynergyR = namedtuple('SynergyR', ['heroes', 'A_value', 'B_value'])
 CounterR = namedtuple('CounterR', ['heroes', 'foes', 'A_value', 'B_value'])
@@ -125,7 +126,7 @@ class DraftAI:
             if name_role not in self.hero_nums:
                 self.hero_nums[name_role] = num
             else:
-                raise ValueError(f"Duplicate role reward found for {name_role}")
+                raise ValueError(f"Duplicate role reward: {name_role}")
 
         # allow for getting all roles a hero can play
         self.hero_roles = {}
@@ -162,8 +163,8 @@ class DraftAI:
                     ai_synergy_rs.append((heroes, r.A_value, r.B_value))
                     synergies.add(synergy)
                 else:
-                    names = [self.ordered_heroes[h].name for h in heroes]
-                    raise ValueError(f"Duplicate synergy reward possible for {names}")
+                    hero_names = [self.ordered_heroes[h].name for h in heroes]
+                    raise ValueError(f"Duplicate synergy reward: {hero_names}")
 
         if len(ai_synergy_rs) <= MAX_SYNERGY_RS:
             return ai_synergy_rs
@@ -175,15 +176,15 @@ class DraftAI:
         ai_counter_rs = []
         counters = set()
 
-        def valid_counter_nums(heroes, foes):
+        def valid_counter_nums(heroes, foe_names):
             valid = []
             hero_names, hero_roles = zip(*heroes)
-            foe_names, foe_roles = zip(*foes)
+            foe_roles = [self.hero_roles[name] for name in foe_names]  # all playable roles used
             for roles_h in itertools.product(*hero_roles):
                 if len(set(roles_h)) != len(heroes):
                     continue
                 for roles_f in itertools.product(*foe_roles):
-                    if len(set(roles_f)) != len(foes):
+                    if len(set(roles_f)) != len(foe_names):
                         continue
                     counter_nums_h = []
                     for hero_name, role in zip(hero_names, roles_h):
@@ -202,10 +203,7 @@ class DraftAI:
                     counters.add(counter)
                 else:
                     hero_names = [self.ordered_heroes[h].name for h in heroes]
-                    foe_names = [self.ordered_heroes[h].name for h in foes]
-                    raise ValueError(
-                        f"Duplicate counter reward possible for {hero_names} vs {foe_names}"
-                    )
+                    raise ValueError(f"Duplicate counter reward: {hero_names} vs {r.foes}")
 
         if len(ai_counter_rs) <= MAX_COUNTER_RS:
             return ai_counter_rs
