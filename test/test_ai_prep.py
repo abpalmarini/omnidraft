@@ -1,7 +1,7 @@
 import unittest 
 from collections import namedtuple
 
-from autodraft.draft_ai import *
+from omnidraft.draft_ai import *
 
 
 class TestAIPrep(unittest.TestCase):

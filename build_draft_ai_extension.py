@@ -65,9 +65,9 @@ ffibuilder.cdef(
 ffibuilder.set_source(
     '_draft_ai',
     """
-    #include "autodraft/draft_ai.h"
+    #include "omnidraft/draft_ai.h"
     """,
-    sources=['autodraft/draft_ai.c'],
+    sources=['omnidraft/draft_ai.c'],
     extra_compile_args=['-fopenmp'],
     extra_link_args=['-fopenmp'],
 )

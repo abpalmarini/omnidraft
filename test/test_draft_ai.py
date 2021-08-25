@@ -3,7 +3,7 @@ import itertools
 import random
 
 from test.draft_az import draft_az
-from autodraft.draft_ai import *
+from omnidraft.draft_ai import *
 
 INF = 30000
 
