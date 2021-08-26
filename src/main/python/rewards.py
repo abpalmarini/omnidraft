@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 class RoleReward:
@@ -30,6 +32,8 @@ class RoleRewardsModel(QAbstractTableModel):
         self.hero_roles = {hero: set() for hero in all_heroes}
         self.rewards = []
         self.display_rewards = []
+        self.current_sort = (None, None)
+        self.current_filter = ""
 
     def headerData(self, section, orientation, role):
         if role != Qt.DisplayRole:
@@ -49,3 +53,33 @@ class RoleRewardsModel(QAbstractTableModel):
         reward = self.display_rewards[index.row()]
         if role == Qt.DisplayRole:
             return reward[index.column()]
+
+    def sort(self, column, order=Qt.AscendingOrder):
+        self.layoutAboutToBeChanged.emit()
+        if order == Qt.AscendingOrder:
+            self.display_rewards.sort(key=itemgetter(column))
+        else:
+            self.display_rewards.sort(key=itemgetter(column), reverse=True)
+        self.layoutChanged.emit()
+        self.current_sort = (column, order)
+
+    def filter_rewards(self, text):
+        text = text.lower()
+
+        def text_in_name(reward):
+            return text in reward.hero_name.lower()
+
+        self.layoutAboutToBeChanged.emit()
+        if text.startswith(self.current_filter):
+            # display list will be subset of current
+            self.display_rewards = list(filter(text_in_name, self.display_rewards))
+            self.layoutChanged.emit()
+        else:
+            # display list could contain additional unsorted rewards
+            if not text:
+                self.display_rewards = self.rewards
+            else:
+                self.display_rewards = list(filter(text_in_name, self.rewards))
+            self.layoutChanged.emit()
+            self.sort(*self.current_sort)
+        self.current_filter = text
