@@ -8,7 +8,7 @@ class RoleReward:
         self.team_1_value = team_1_value
         self.team_2_value = team_2_value
 
-    def get_attr(self, index):
+    def __getitem__(self, index):
         if index == 0:
             return self.hero_name
         elif index == 1:
@@ -48,4 +48,4 @@ class RoleRewardsModel(QAbstractTableModel):
     def data(self, index, role=Qt.DisplayRole):
         reward = self.display_rewards[index.row()]
         if role == Qt.DisplayRole:
-            return reward.get_attr(index.column())
+            return reward[index.column()]
