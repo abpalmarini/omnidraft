@@ -4,15 +4,15 @@ from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 class RoleReward:
 
-    def __init__(self, hero_name, role, team_1_value, team_2_value):
-        self.hero_name = hero_name
+    def __init__(self, name, role, team_1_value, team_2_value):
+        self.name = name
         self.role = role
         self.team_1_value = team_1_value
         self.team_2_value = team_2_value
 
     def __getitem__(self, index):
         if index == 0:
-            return self.hero_name
+            return self.name
         elif index == 1:
             return self.role
         elif index == 2:
@@ -31,7 +31,7 @@ class RoleRewardsModel(QAbstractTableModel):
         self.data_fields = ("Hero", "Role", team_1_tag, team_2_tag)
         self.hero_roles = {hero: set() for hero in all_heroes}
         self.rewards = []
-        self.display_rewards = []
+        self.view_rewards = []
         self.current_sort = (None, None)
         self.current_filter = ""
 
@@ -41,45 +41,46 @@ class RoleRewardsModel(QAbstractTableModel):
         if orientation == Qt.Horizontal:
             return self.data_fields[section]
         else:
-            return str(section)
+            return str(section + 1)
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self.display_rewards) if not parent.isValid() else 0
+        return len(self.view_rewards) if not parent.isValid() else 0
 
     def columnCount(self, parent=QModelIndex()):
         return len(self.data_fields) if not parent.isValid() else 0
 
     def data(self, index, role=Qt.DisplayRole):
-        reward = self.display_rewards[index.row()]
+        reward = self.view_rewards[index.row()]
         if role == Qt.DisplayRole:
             return reward[index.column()]
 
+    # Full set of rewards are sorted (rather than just those in view) so
+    # that applying a new filter does not require a re-sort each time.
     def sort(self, column, order=Qt.AscendingOrder):
-        self.layoutAboutToBeChanged.emit()
-        if order == Qt.AscendingOrder:
-            self.display_rewards.sort(key=itemgetter(column))
-        else:
-            self.display_rewards.sort(key=itemgetter(column), reverse=True)
-        self.layoutChanged.emit()
         self.current_sort = (column, order)
+        if order == Qt.AscendingOrder:
+            self.rewards.sort(key=itemgetter(column))
+        else:
+            self.rewards.sort(key=itemgetter(column), reverse=True)
+        self.layoutAboutToBeChanged.emit()
+        if not self.current_filter:
+            self.view_rewards = list(self.rewards)
+        else:
+            self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
+        self.layoutChanged.emit()
+
+    def contains_filter(self, reward):
+        return self.current_filter in reward.name.lower()
 
     def filter_rewards(self, text):
-        text = text.lower()
-
-        def text_in_name(reward):
-            return text in reward.hero_name.lower()
-
+        prev_filter = self.current_filter
+        self.current_filter = text.lower()
         self.layoutAboutToBeChanged.emit()
-        if text.startswith(self.current_filter):
-            # display list will be subset of current
-            self.display_rewards = list(filter(text_in_name, self.display_rewards))
-            self.layoutChanged.emit()
+        if not self.current_filter:
+            self.view_rewards = list(self.rewards)
+        elif self.current_filter.startswith(prev_filter):
+            # new view rewards will be subset of old
+            self.view_rewards = [r for r in self.view_rewards if self.contains_filter(r)]
         else:
-            # display list could contain additional unsorted rewards
-            if not text:
-                self.display_rewards = self.rewards
-            else:
-                self.display_rewards = list(filter(text_in_name, self.rewards))
-            self.layoutChanged.emit()
-            self.sort(*self.current_sort)
-        self.current_filter = text
+            self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
+        self.layoutChanged.emit()
