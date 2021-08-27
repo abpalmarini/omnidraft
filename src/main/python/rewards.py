@@ -84,3 +84,31 @@ class RoleRewardsModel(QAbstractTableModel):
         else:
             self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
         self.layoutChanged.emit()
+
+    def add_reward(self, name, role, team_1_value, team_2_value):
+        reward = RoleReward(name, role, team_1_value, team_2_value)
+        self.hero_roles[name].add(role)
+
+        # place in correct sorted position
+        sort_column, sort_order = self.current_sort
+        pos = 0
+        if sort_order == Qt.AscendingOrder:
+            while pos < len(self.rewards):
+                if reward[sort_column] < self.rewards[pos][sort_column]:
+                    break
+                pos += 1
+        else:
+            while pos < len(self.rewards):
+                if reward[sort_column] > self.rewards[pos][sort_column]:
+                    break
+                pos += 1
+        self.rewards.insert(pos, reward)
+
+        # update view rewards if necessary
+        if self.contains_filter(reward):
+            self.layoutAboutToBeChanged.emit()
+            self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
+            self.layoutChanged.emit()
+
+    def delete_rewards(self, indexes):
+        pass
