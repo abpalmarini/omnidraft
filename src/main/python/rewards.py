@@ -111,4 +111,16 @@ class RoleRewardsModel(QAbstractTableModel):
             self.layoutChanged.emit()
 
     def delete_rewards(self, indexes):
-        pass
+        # indices correspond to the rewards in view
+        del_rewards = {self.view_rewards[index.row()] for index in indexes}
+        rewards = []
+        for reward in self.rewards:
+            if reward in del_rewards:
+                self.hero_roles[reward.name].remove(reward.role)
+            else:
+                rewards.append(reward)
+        self.rewards = rewards
+
+        self.layoutAboutToBeChanged.emit()
+        self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
+        self.layoutChanged.emit()

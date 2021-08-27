@@ -62,9 +62,8 @@ class TestWindow(QMainWindow):
 
     @Slot()
     def delete(self):
-        indexes = self.role_view.selectedIndexes()
-        #selection_model = self.role_view.selectionModel()
-        #indexes = selection_model.selectedRows()
+        selection_model = self.role_view.selectionModel()
+        indexes = selection_model.selectedRows()
         self.role_model.delete_rewards(indexes)
 
 if __name__ == '__main__':
