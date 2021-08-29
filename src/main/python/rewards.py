@@ -1,5 +1,6 @@
 from operator import itemgetter
 from collections import namedtuple
+import itertools
 
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
@@ -127,22 +128,36 @@ class RoleRewardsModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
 
-# A synergy consists of a group of heroes each with a list of applicable
-# roles they could be in.
-SynergyHero = namedtuple('SynergyHero', ['name', 'roles'])
-
-
 class SynergyReward:
 
+    # heroes expected to be dict of names and their applicable roles
     def __init__(self, heroes, team_1_value, team_2_value):
-        self.heroes = heroes
+        self.heroes = list(heroes.items())
+        self.heroes.sort(key=itemgetter(0))  # ensure same role assignments produced for duplicates
         self.team_1_value = team_1_value
         self.team_2_value = team_2_value
+        self.init_hero_role_asgmts()
+        self.init_used_role_rs()
 
-    # convient way to get data for each column in table
+    def init_hero_role_asgmts(self):
+        self.hero_role_asgmts = set()
+        names, roles = zip(*self.heroes)
+        for role_asgmt in itertools.product(*roles):
+            # find all role assignments with no clashes
+            if len(set(role_asgmt)) == len(self.heroes):
+                asgmt = tuple(zip(names, role_asgmt))
+                self.hero_role_asgmts.add(asgmt)
+
+    # used role rewards tracked to ensure safe deleting
+    def init_used_role_rs(self):
+        self.used_role_rs = set()
+        for hero_role_asgmt in self.hero_role_asgmts:
+            for name_role in hero_role_asgmt:
+                self.used_role_rs.add(name_role)
+
     def __getitem__(self, index):
         if index < len(self.heroes):
-            return self.heroes[index].name
+            return self.heroes[index][0]
         elif index < 5:
             return None
         elif index == 5:
@@ -159,7 +174,7 @@ class SynergyRewardsModel(QAbstractTableModel):
         super().__init__()
 
         self.headers = ("Heroes", team_1_tag, team_2_tag)
-        self.all_combos = set()
+        self.hero_role_synergies = set()
         self.rewards = []
         self.view_rewards = []
         self.current_sort = (None, None)
@@ -209,7 +224,7 @@ class SynergyRewardsModel(QAbstractTableModel):
 
         def filter_in_any_name(text):
             for hero in reward.heroes:
-                if text in hero.name.lower():
+                if text in hero[0].lower():
                     return True
             return False
 
@@ -227,3 +242,8 @@ class SynergyRewardsModel(QAbstractTableModel):
         else:
             self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
         self.layoutChanged.emit()
+
+    # Returns a list of all synergy rewards using a role reward.
+    def uses_role_reward(self, name, role):
+        name_role = (name, role)
+        return [r for r in self.rewards if name_role in r.used_role_rs]
