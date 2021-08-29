@@ -1,6 +1,5 @@
-from operator import itemgetter
-from collections import namedtuple
 import itertools
+from operator import itemgetter
 
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
 
@@ -219,3 +218,88 @@ class SynergyRewardsModel(BaseRewardsModel):
     def uses_role_reward(self, name, role):
         name_role = (name, role)
         return [r for r in self.rewards if name_role in r.used_role_rs]
+
+
+class CounterReward:
+
+    def __init__(self, heroes, foes, team_1_value, team_2_value):
+        self.heroes = list(heroes.items())
+        self.heroes.sort(key=itemgetter(0))
+        self.foes = tuple(sorted(foes))
+        self.team_1_value = team_1_value
+        self.team_2_value = team_2_value
+        self.init_hero_role_asgmts()
+        self.init_used_role_rs()
+
+    def init_hero_role_asgmts(self):
+        self.hero_role_asgmts = set()
+        names, roles = zip(*self.heroes)
+        for role_asgmt in itertools.product(*roles):
+            if len(set(role_asgmt)) == len(self.heroes):
+                asgmt = tuple(zip(names, role_asgmt))
+                self.hero_role_asgmts.add((asgmt, self.foes))  # counters must store foes as well
+
+    def init_used_role_rs(self):
+        self.used_role_rs = set()
+        for hero_role_asgmt, _ in self.hero_role_asgmts:
+            for name_role in hero_role_asgmt:
+                self.used_role_rs.add(name_role)
+
+    def __getitem__(self, index):
+        if index < len(self.heroes):
+            return self.heroes[index][0]
+        elif index < 5:
+            return None
+        elif index < 5 + len(self.foes):
+            return self.foes[index - 5]
+        elif index < 10:
+            return None
+        elif index == 10:
+            return self.team_1_value
+        elif index == 11:
+            return self.team_2_value
+        else:
+            raise IndexError
+
+
+class CounterRewardsModel(BaseRewardsModel):
+
+    def __init__(self, team_1_tag, team_2_tag):
+        super().__init__()
+
+        self.headers = tuple(None for _ in range(10)) + (team_1_tag, team_2_tag)
+        self.hero_role_combos = set()
+
+    def contains_filter(self, reward):
+        filters = self.current_filter.split()
+
+        def filter_in_any_name(text):
+            for hero in reward.heroes:
+                if text in hero[0].lower():
+                    return True
+            for name in reward.foes:
+                if text in name.lower():
+                    return True
+            return False
+
+        return all(map(filter_in_any_name, filters))
+
+    def sort(self, column, order=Qt.AscendingOrder):
+        # only allow sorting of team values
+        if column >= 10:
+            BaseRewardsModel.sort(self, column, order)
+
+    def update_extra_state(self, reward, add=True):
+        if add:
+            self.hero_role_combos |= reward.hero_role_asgmts
+        else:
+            self.hero_role_combos -= reward.hero_role_asgmts
+
+    # Returns both a list of counter rewards using the specific role
+    # reward as part of the team heroes, and a list of counter rewards
+    # where the hero is used as part of foes.
+    def uses_role_reward(self, name, role):
+        name_role = (name, role)
+        used_in_team = [r for r in self.rewards if name_role in r.used_role_rs]
+        used_in_foes = [r for r in self.rewards if name in r.foes]
+        return used_in_team, used_in_foes
