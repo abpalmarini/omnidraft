@@ -85,6 +85,16 @@ class TestWindow(QMainWindow):
         self.main_layout.addWidget(self.delete_button, 3, 0, 1, 3)
         self.delete_button.clicked.connect(self.delete)
 
+        # set team builder
+        self.team_1 = []
+        self.team_2 = []
+        self.set_team_button = QPushButton("set team builder")
+        self.main_layout.addWidget(self.set_team_button, 4, 0, 1, 1)
+        self.set_team_button.clicked.connect(self.set_teams)
+        self.clear_team_button = QPushButton("clear team builder")
+        self.main_layout.addWidget(self.clear_team_button, 4, 1, 1, 1)
+        self.clear_team_button.clicked.connect(self.clear_teams)
+
     @Slot()
     def add_role_reward(self):
         role_reward = RoleReward(
@@ -135,6 +145,37 @@ class TestWindow(QMainWindow):
             if indexes:
                 model.delete_rewards(indexes)
             view.clearSelection()
+
+    @Slot()
+    def set_teams(self):
+        # add relevant rewards
+        rr_1 = RoleReward('Ahri', 'Top', 2.4, 3.9)
+        rr_2 = RoleReward('Ashe', 'Bot', 1.4, 8.9)
+        self.role_model.add_reward(rr_1)
+        self.role_model.add_reward(rr_2)
+
+        sr = SynergyReward({'Ahri': ['Top', 'Jungle'], 'Bard': ['Mid']}, 4.56, 2.34)
+        self.synergy_model.add_reward(sr)
+
+        cr = CounterReward({'Bard': ['Mid']}, ['Ashe'], 9.56, 2.12)
+        self.counter_model.add_reward(cr)
+
+        self.team_1 = [('Ahri', 'Top'), ('Bard', 'Mid')]
+        self.team_2 = [('Ashe', 'Bot')]
+
+        # let models know teams have changed
+        models = (self.role_model, self.synergy_model, self.counter_model)
+        for model in models:
+            model.update_reward_statuses(self.team_1, self.team_2)
+
+    @Slot()
+    def clear_teams(self):
+        self.team_1 = []
+        self.team_2 = []
+        models = (self.role_model, self.synergy_model, self.counter_model)
+        for model in models:
+            model.update_reward_statuses(self.team_1, self.team_2)
+
 
 if __name__ == '__main__':
     appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
