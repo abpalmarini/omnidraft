@@ -153,6 +153,7 @@ class DraftAI:
                 synergy_nums = []
                 for hero_name, role in zip(hero_names, roles):
                     synergy_nums.append(self.hero_nums[(hero_name, role)])
+                synergy_nums.sort()  # sort to catch potential duplicates
                 valid.append(synergy_nums)
             return valid
 
@@ -192,6 +193,8 @@ class DraftAI:
                     counter_nums_f = []
                     for hero_name, role in zip(foe_names, roles_f):
                         counter_nums_f.append(self.hero_nums[(hero_name, role)])
+                    counter_nums_h.sort()
+                    counter_nums_f.sort()
                     valid.append((counter_nums_h, counter_nums_f))
             return valid
 
