@@ -175,10 +175,10 @@ class RoleReward:
 
 class RoleRewardsModel(BaseRewardsModel):
 
-    def __init__(self, all_heroes, team_1_tag, team_2_tag):
+    def __init__(self, all_heroes, team_tags):
         super().__init__()
 
-        self.headers = ("Hero", "Role", team_1_tag, team_2_tag)
+        self.headers = ("Hero", "Role", team_tags[0], team_tags[1])
         self.hero_roles = {hero: set() for hero in all_heroes}
 
     def contains_filter(self, reward):
@@ -247,10 +247,10 @@ class SynergyReward:
 
 class SynergyRewardsModel(BaseRewardsModel):
 
-    def __init__(self, team_1_tag, team_2_tag):
+    def __init__(self, team_tags):
         super().__init__()
 
-        self.headers = tuple(None for _ in range(5)) + (team_1_tag, team_2_tag)
+        self.headers = tuple(None for _ in range(5)) + (team_tags[0], team_tags[1])
         self.hero_role_combos = set()
 
     # Give users ability to enter multiple hero names separated with a
@@ -343,10 +343,10 @@ class CounterReward:
 
 class CounterRewardsModel(BaseRewardsModel):
 
-    def __init__(self, team_1_tag, team_2_tag):
+    def __init__(self, team_tags):
         super().__init__()
 
-        self.headers = tuple(None for _ in range(10)) + (team_1_tag, team_2_tag)
+        self.headers = tuple(None for _ in range(10)) + (team_tags[0], team_tags[1])
         self.hero_role_combos = set()
 
     def contains_filter(self, reward):

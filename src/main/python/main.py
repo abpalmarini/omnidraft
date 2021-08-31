@@ -1,11 +1,13 @@
 from fbs_runtime.application_context.PySide6 import ApplicationContext
 from PySide6.QtWidgets import QMainWindow, QTableView, QWidget, QVBoxLayout, QLineEdit, QPushButton, QAbstractItemView, QGridLayout, QSplitter
 from PySide6.QtCore import Slot, QItemSelectionModel, Qt
+from PySide6.QtGui import QIcon
 
 import sys
 import random
 
-from rewards import *
+from reward_models import *
+from reward_dialogs import RoleRewardDialog
 
 
 # @Temp heroes while I focus on building main structure. Will need a
@@ -17,28 +19,34 @@ all_heroes = [
     'Bard', 'Blitzcrank', 'Brand', 'Braum',
 ]
 all_roles = ('Top', 'Jungle', 'Mid', 'Support', 'Bot')
+team_tags = ('FNC', 'G2')
 
 
 class TestWindow(QMainWindow):
 
-    def __init__(self):
+    def __init__(self, appctxt):
         super().__init__()
+        
+        # set up initial hero icons once for all to use
+        self.hero_icons = {h: QIcon(appctxt.get_resource(h + '.png')) for h in all_heroes}
+
         # role rewards 
-        self.role_model = RoleRewardsModel(all_heroes, 'FNC', 'G2')
+        self.role_model = RoleRewardsModel(all_heroes, team_tags)
         self.role_view = QTableView()
         self.role_view.setModel(self.role_model)
         self.role_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.role_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.role_dialog = RoleRewardDialog(self.role_model, self.hero_icons, team_tags, self)
 
         # synergy rewards
-        self.synergy_model = SynergyRewardsModel('FNC', 'G2')
+        self.synergy_model = SynergyRewardsModel(team_tags)
         self.synergy_view = QTableView()
         self.synergy_view.setModel(self.synergy_model)
         self.synergy_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.synergy_view.setSelectionBehavior(QAbstractItemView.SelectRows)
 
         # counter rewards
-        self.counter_model = CounterRewardsModel('FNC', 'G2')
+        self.counter_model = CounterRewardsModel(team_tags)
         self.counter_view = QTableView()
         self.counter_view.setModel(self.counter_model)
         self.counter_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -97,13 +105,7 @@ class TestWindow(QMainWindow):
 
     @Slot()
     def add_role_reward(self):
-        role_reward = RoleReward(
-            random.choice(all_heroes),
-            random.choice(all_roles),
-            random.randrange(0, 1000) / 100,
-            random.randrange(0, 1000) / 100,
-        )
-        self.role_model.add_reward(role_reward)
+        self.role_dialog.open_add()
 
     @Slot()
     def add_synergy_reward(self):
@@ -179,7 +181,7 @@ class TestWindow(QMainWindow):
 
 if __name__ == '__main__':
     appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
-    window = TestWindow()
+    window = TestWindow(appctxt)
     window.resize(1600, 800)
     window.show()
     exit_code = appctxt.app.exec()      # 2. Invoke appctxt.app.exec()

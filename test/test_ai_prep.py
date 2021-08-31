@@ -1,7 +1,12 @@
+import sys
+import os
+dir_path = os.path.join(os.path.realpath(''), 'src', 'main', 'python')
+sys.path.insert(0, dir_path)
+
 import unittest 
 from collections import namedtuple
 
-from omnidraft.draft_ai import *
+from ai.draft_ai import *
 
 
 class TestAIPrep(unittest.TestCase):

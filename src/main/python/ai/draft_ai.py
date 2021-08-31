@@ -4,7 +4,7 @@ from collections import namedtuple
 import itertools
 import random
 
-from _draft_ai import ffi, lib
+from ai._draft_ai import ffi, lib
 
 
 constants = lib.get_constants()  # defined in draft_ai.h and returned to ensure consistency
