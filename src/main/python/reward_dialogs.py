@@ -1,7 +1,8 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QDialog, QAbstractItemView, QListView, QLineEdit,
-                               QVBoxLayout, QLabel, QComboBox, QGridLayout,
-                               QDoubleSpinBox, QDialogButtonBox, QMessageBox)
+                               QVBoxLayout, QLabel, QComboBox, QGridLayout, QFrame,
+                               QDoubleSpinBox, QDialogButtonBox, QMessageBox,
+                               QSizePolicy)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from ai import draft_ai
@@ -14,8 +15,34 @@ The current engine only supports {} role rewards. Extending it to support double
 
 
 SEARCH_ICON_SIZE = QSize(64, 64)
+HERO_BOX_SIZE = QSize(64, 64)
+
 
 roles = ("Top Laner", "Jungler", "Mid Laner", "Bot Laner", "Support")
+
+
+class HeroBox(QLabel):
+
+    def __init__(self, hero_icons):
+        super().__init__()
+
+        self.name = ""
+        self.hero_icons = hero_icons
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setFrameStyle(QFrame.Box | QFrame.Raised)
+        self.setLineWidth(2)
+
+    def set_hero(self, name):
+        self.name = name
+        self.setPixmap(self.hero_icons[name].pixmap(self.sizeHint()))
+
+    def sizeHint(self):
+        return HERO_BOX_SIZE
+
+    def clear(self):
+        self.name = ""
+        QLabel.clear(self)
 
 
 def init_value_spinbox():
@@ -34,7 +61,7 @@ class RoleRewardDialog(QDialog):
         self.edit_reward = None
 
         self.hero_label = QLabel("Champion:") 
-        self.hero = QLabel()  # default label for now, need to make custom picture after
+        self.hero = HeroBox(hero_icons)
 
         self.role_label = QLabel("Role:")
         self.role_combobox = QComboBox()
@@ -55,7 +82,7 @@ class RoleRewardDialog(QDialog):
 
         self.layout = QGridLayout(self)
         self.layout.addWidget(self.hero_label, 0, 0)
-        self.layout.addWidget(self.hero, 0, 1)
+        self.layout.addWidget(self.hero, 0, 1, Qt.AlignCenter)
         self.layout.addWidget(self.role_label, 1, 0)
         self.layout.addWidget(self.role_combobox, 1, 1)
         self.layout.addWidget(self.v_1_label, 2, 0)
@@ -98,7 +125,7 @@ class RoleRewardDialog(QDialog):
         self.hero_search_layout.addWidget(self.hero_view)
 
     def update_role_combobox(self):
-        hero_name = self.hero.text()
+        hero_name = self.hero.name
         self.role_combobox.setCurrentIndex(-1)
         combobox_model = self.role_combobox.model()
         if not hero_name:
@@ -120,7 +147,7 @@ class RoleRewardDialog(QDialog):
         self.hero_view.clearSelection()
 
     def set_inputs(self, reward):
-        self.hero.setText(reward.name)
+        self.hero.set_hero(reward.name)
         self.update_role_combobox()
         self.role_combobox.setCurrentText(reward.role)
         self.v_1_spinbox.setValue(reward.team_1_value)
@@ -131,7 +158,7 @@ class RoleRewardDialog(QDialog):
     def hero_selected(self, f_index):
         index = self.hero_f_model.mapToSource(f_index)
         hero_name = self.hero_model.itemFromIndex(index).text()
-        self.hero.setText(hero_name)
+        self.hero.set_hero(hero_name)
         self.update_role_combobox()
 
     def open_add(self):
@@ -163,7 +190,7 @@ class RoleRewardDialog(QDialog):
         # and a hero must be selected before you can select a role
         if self.role_combobox.currentIndex() == -1:
             return
-        hero_name = self.hero.text()
+        hero_name = self.hero.name
         role = self.role_combobox.currentText()
         team_1_value = self.v_1_spinbox.value()
         team_2_value = self.v_2_spinbox.value()
