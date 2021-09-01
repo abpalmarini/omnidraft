@@ -1,10 +1,16 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QDialog, QAbstractItemView, QListView, QLineEdit,
                                QVBoxLayout, QLabel, QComboBox, QGridLayout,
-                               QDoubleSpinBox, QDialogButtonBox)
+                               QDoubleSpinBox, QDialogButtonBox, QMessageBox)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
+from ai import draft_ai
 from reward_models import RoleReward
+
+
+MAX_ROLE_RS_ERROR_MSG = """
+The current engine only supports {} role rewards. Extending it to support double has not been a priority, but is on the roadmap.
+"""
 
 
 SEARCH_ICON_SIZE = QSize(64, 64)
@@ -129,10 +135,15 @@ class RoleRewardDialog(QDialog):
         self.update_role_combobox()
 
     def open_add(self):
-        self.edit_reward = None
-        self.clear_inputs()
-        QDialog.open(self)
-        self.search_bar.setFocus(Qt.PopupFocusReason)
+        if len(self.reward_model.rewards) == draft_ai.MAX_NUM_HEROES:
+            msg_box = QMessageBox()
+            msg_box.setText(MAX_ROLE_RS_ERROR_MSG.format(draft_ai.MAX_NUM_HEROES))
+            msg_box.exec()
+        else:
+            self.edit_reward = None
+            self.clear_inputs()
+            QDialog.open(self)
+            self.search_bar.setFocus(Qt.PopupFocusReason)
 
     # For editing the reward is deleted from model first to allow for
     # same logic when creating a new reward. The original reward is
