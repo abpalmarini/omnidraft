@@ -60,6 +60,8 @@ class BaseRewardsModel(QAbstractTableModel):
             if column == team_2_v_column and reward.status == TEAM_2:
                 font.setBold(True)
             return font
+        elif role == Qt.UserRole:
+            return reward
 
     # Full set of rewards are sorted (rather than just those in view) so
     # that applying a new filter does not require a re-sort each time.
@@ -116,6 +118,7 @@ class BaseRewardsModel(QAbstractTableModel):
             self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
             self.layoutChanged.emit()
 
+    # Deletes rewards while maintaining sorted order.
     def delete_rewards(self, indexes):
         # indices correspond to the rewards in view
         del_rewards = {self.view_rewards[index.row()] for index in indexes}
@@ -189,6 +192,9 @@ class RoleRewardsModel(BaseRewardsModel):
             self.hero_roles[reward.name].add(reward.role)
         else:
             self.hero_roles[reward.name].remove(reward.role)
+
+    def get_hero_roles(self, hero_name):
+        return self.hero_roles[hero_name]
 
 
 class SynergyReward:

@@ -18,7 +18,7 @@ all_heroes = [
     'Aphelios', 'Ashe', 'AurelionSol', 'Azir',
     'Bard', 'Blitzcrank', 'Brand', 'Braum',
 ]
-all_roles = ('Top', 'Jungle', 'Mid', 'Support', 'Bot')
+all_roles = ("Top Laner", "Jungler", "Mid Laner", "Bot Laner", "Support")
 team_tags = ('FNC', 'G2')
 
 
@@ -103,6 +103,9 @@ class TestWindow(QMainWindow):
         self.main_layout.addWidget(self.clear_team_button, 4, 1, 1, 1)
         self.clear_team_button.clicked.connect(self.clear_teams)
 
+        # test editing
+        self.role_view.doubleClicked.connect(self.role_dialog.open_edit)
+
     @Slot()
     def add_role_reward(self):
         self.role_dialog.open_add()
@@ -151,19 +154,19 @@ class TestWindow(QMainWindow):
     @Slot()
     def set_teams(self):
         # add relevant rewards
-        rr_1 = RoleReward('Ahri', 'Top', 2.4, 3.9)
-        rr_2 = RoleReward('Ashe', 'Bot', 1.4, 8.9)
+        rr_1 = RoleReward('Ahri', 'Top Laner', 2.4, 3.9)
+        rr_2 = RoleReward('Ashe', 'Bot Laner', 1.4, 8.9)
         self.role_model.add_reward(rr_1)
         self.role_model.add_reward(rr_2)
 
-        sr = SynergyReward({'Ahri': ['Top', 'Jungle'], 'Bard': ['Mid']}, 4.56, 2.34)
+        sr = SynergyReward({'Ahri': ['Top Laner', 'Jungler'], 'Bard': ['Mid Laner']}, 4.56, 2.34)
         self.synergy_model.add_reward(sr)
 
-        cr = CounterReward({'Bard': ['Mid']}, ['Ashe'], 9.56, 2.12)
+        cr = CounterReward({'Bard': ['Mid Laner']}, ['Ashe'], 9.56, 2.12)
         self.counter_model.add_reward(cr)
 
-        self.team_1 = [('Ahri', 'Top'), ('Bard', 'Mid')]
-        self.team_2 = [('Ashe', 'Bot')]
+        self.team_1 = [('Ahri', 'Top Laner'), ('Bard', 'Mid Laner')]
+        self.team_2 = [('Ashe', 'Bot Laner')]
 
         # let models know teams have changed
         models = (self.role_model, self.synergy_model, self.counter_model)
