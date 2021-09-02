@@ -2,7 +2,7 @@ from PySide6.QtCore import QSortFilterProxyModel, Signal, Slot, Qt, QSize
 from PySide6.QtWidgets import (QDialog, QAbstractItemView, QListView, QLineEdit,
                                QVBoxLayout, QLabel, QComboBox, QGridLayout, QFrame,
                                QDoubleSpinBox, QDialogButtonBox, QMessageBox,
-                               QSizePolicy, QPushButton)
+                               QSizePolicy, QPushButton, QCheckBox)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from ai import draft_ai
@@ -234,10 +234,16 @@ class SynergyRewardDialog(QDialog):
 
         self.heroes_label = QLabel("Champions:") 
         self.hero_boxes = []
-        for _ in range(len(roles)):
+        for i in range(len(roles)):
             hero_box = HeroBox(hero_icons)
-            hero_box.clicked.connect(self.hero_box_clicked)
             self.hero_boxes.append(hero_box)
+            hero_box.clicked.connect(self.hero_box_clicked)
+            hero_box.index = i
+
+        self.hero_role_checkboxes = []
+        for _ in range(len(self.hero_boxes)):
+            role_checkboxes = [QCheckBox() for _ in range(len(roles))]
+            self.hero_role_checkboxes.append(role_checkboxes)
 
         self.remove_hero_button = QPushButton("Remove")
         self.remove_hero_button.clicked.connect(self.remove_hero)
@@ -246,12 +252,16 @@ class SynergyRewardDialog(QDialog):
         self.setup_hero_search()
 
         self.layout = QGridLayout(self)
-        self.layout.addWidget(self.heroes_label)
-        for i in range(len(roles)):
+        self.layout.addWidget(self.heroes_label, 0, 0)
+        for i in range(len(self.hero_boxes)):
             self.layout.addWidget(self.hero_boxes[i], 0, i + 1)
-        self.layout.addWidget(self.search_bar, 1, 0, 1, 4)
-        self.layout.addWidget(self.remove_hero_button, 1, 4, 1, 2)
-        self.layout.addWidget(self.search_view, 2, 0, 1, 6)
+            self.layout.addWidget(QLabel(roles[i] + ":"), i + 1, 0)
+            role_checkboxes = self.hero_role_checkboxes[i]
+            for j in range(len(roles)):
+                self.layout.addWidget(role_checkboxes[j], j + 1, i + 1, Qt.AlignCenter)
+        self.layout.addWidget(self.search_bar, 6, 0, 1, 4)
+        self.layout.addWidget(self.remove_hero_button, 6, 4, 1, 2)
+        self.layout.addWidget(self.search_view, 7, 0, 1, 6)
 
     def setup_hero_search(self):
         # source model (only heroes with role reward will be used)
@@ -287,7 +297,11 @@ class SynergyRewardDialog(QDialog):
         # check if some other box is selected
         for hero_box in self.hero_boxes:
             if hero_box.selected and hero_box != clicked_box:
+                selected_box_roles = self.get_checked_roles(hero_box)   # save checked roles before switching
+                clicked_box_roles = self.get_checked_roles(clicked_box) # so they can be restored after
                 self.switch_hero_box_contents(hero_box, clicked_box)
+                self.update_role_checkboxes(hero_box, clicked_box_roles)
+                self.update_role_checkboxes(clicked_box, selected_box_roles)
                 self.remove_hero_button.setEnabled(False)
                 return
 
@@ -310,6 +324,7 @@ class SynergyRewardDialog(QDialog):
             index = self.search_f_model.mapToSource(selected_search_indexes[0])
             search_item = self.search_model.itemFromIndex(index)
             self.set_search_item_to_hero_box(search_item, clicked_box)
+            self.update_role_checkboxes(clicked_box)
             self.remove_hero_button.setEnabled(False)
 
     @Slot()
@@ -323,6 +338,7 @@ class SynergyRewardDialog(QDialog):
         for hero_box in self.hero_boxes:
             if hero_box.selected:
                 self.set_search_item_to_hero_box(search_item, hero_box)
+                self.update_role_checkboxes(hero_box)
                 self.remove_hero_button.setEnabled(False)
                 return
 
@@ -366,7 +382,34 @@ class SynergyRewardDialog(QDialog):
                 hero_box.set_selected(False)
                 hero_box.clear()
                 self.remove_hero_button.setEnabled(False)
+                self.update_role_checkboxes(hero_box)
                 return
+
+    # Hides all checkboxes corresponding to roles that the hero in a
+    # box has no role reward for. Default is to have all non hidden
+    # checkboxes checked or you can proivde optional reduced set.
+    def update_role_checkboxes(self, hero_box, check_if_allowed=roles):
+        role_checkboxes = self.hero_role_checkboxes[hero_box.index]
+        if not hero_box.name:
+            for checkbox in role_checkboxes:
+                checkbox.hide()
+                checkbox.setChecked(False)
+        else:
+            for checkbox, role in zip(role_checkboxes, roles):
+                if role in self.hero_roles[hero_box.name]:
+                    checkbox.show()
+                    checkbox.setChecked(role in check_if_allowed)
+                else:
+                    checkbox.hide()
+                    checkbox.setChecked(False)
+
+    def get_checked_roles(self, hero_box):
+        checked_roles = []
+        role_checkboxes = self.hero_role_checkboxes[hero_box.index]
+        for checkbox, role in zip(role_checkboxes, roles):
+            if checkbox.isChecked():
+                checked_roles.append(role)
+        return checked_roles
 
     def open_add(self):
         self.edit_reward = None
