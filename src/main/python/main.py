@@ -112,6 +112,7 @@ class TestWindow(QMainWindow):
 
         # test editing
         self.role_view.doubleClicked.connect(self.role_dialog.open_edit)
+        self.synergy_view.doubleClicked.connect(self.synergy_dialog.open_edit)
 
     @Slot()
     def add_role_reward(self):
@@ -153,8 +154,10 @@ class TestWindow(QMainWindow):
         # add relevant rewards
         rr_1 = RoleReward('Ahri', 'Top Laner', 2.4, 3.9)
         rr_2 = RoleReward('Ashe', 'Bot Laner', 1.4, 8.9)
+        rr_3 = RoleReward('Bard', 'Mid Laner', 7.5, 2.3)
         self.role_model.add_reward(rr_1)
         self.role_model.add_reward(rr_2)
+        self.role_model.add_reward(rr_3)
 
         sr = SynergyReward({'Ahri': ['Top Laner', 'Jungler'], 'Bard': ['Mid Laner']}, 4.56, 2.34)
         self.synergy_model.add_reward(sr)

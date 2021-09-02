@@ -169,6 +169,7 @@ class RoleRewardDialog(QDialog):
         self.role_combobox.setCurrentText(reward.role)
         self.v_1_spinbox.setValue(reward.team_1_value)
         self.v_2_spinbox.setValue(reward.team_2_value)
+        self.search_bar.clear()
         self.search_view.clearSelection()
 
     @Slot()
@@ -249,8 +250,15 @@ class SynergyRewardDialog(QDialog):
         self.remove_hero_button.clicked.connect(self.remove_hero)
         self.remove_hero_button.setEnabled(False)
 
+        self.v_1_label = QLabel(team_tags[0] + " value:")
+        self.v_2_label = QLabel(team_tags[1] + " value:")
+        self.v_1_spinbox = init_value_spinbox()
+        self.v_2_spinbox = init_value_spinbox()
+
+
         self.setup_hero_search()
 
+        # FIXME: make this much neater
         self.layout = QGridLayout(self)
         self.layout.addWidget(self.heroes_label, 0, 0)
         for i in range(len(self.hero_boxes)):
@@ -259,9 +267,13 @@ class SynergyRewardDialog(QDialog):
             role_checkboxes = self.hero_role_checkboxes[i]
             for j in range(len(roles)):
                 self.layout.addWidget(role_checkboxes[j], j + 1, i + 1, Qt.AlignCenter)
-        self.layout.addWidget(self.search_bar, 6, 0, 1, 4)
-        self.layout.addWidget(self.remove_hero_button, 6, 4, 1, 2)
-        self.layout.addWidget(self.search_view, 7, 0, 1, 6)
+        self.layout.addWidget(self.v_1_label, 6, 0)
+        self.layout.addWidget(self.v_1_spinbox, 6, 1, 1, 5)
+        self.layout.addWidget(self.v_2_label, 7, 0)
+        self.layout.addWidget(self.v_2_spinbox, 7, 1, 1, 5)
+        self.layout.addWidget(self.search_bar, 8, 0, 1, 4)
+        self.layout.addWidget(self.remove_hero_button, 8, 4, 1, 2)
+        self.layout.addWidget(self.search_view, 9, 0, 1, 6)
 
     def setup_hero_search(self):
         # source model (only heroes with role reward will be used)
@@ -411,8 +423,52 @@ class SynergyRewardDialog(QDialog):
                 checked_roles.append(role)
         return checked_roles
 
+    def clear_inputs(self):
+        for hero_box in self.hero_boxes:
+            hero_box.clear()
+            self.update_role_checkboxes(hero_box)
+        self.v_1_spinbox.setValue(0.00)
+        self.v_2_spinbox.setValue(0.00)
+        self.search_bar.clear()
+        self.search_view.clearSelection()
+
+    def set_inputs(self, reward):
+        i = 0
+        for name, used_roles in reward.heroes:
+            self.hero_boxes[i].set_hero(name)
+            self.update_role_checkboxes(self.hero_boxes[i], used_roles)
+            search_item = self.search_model.findItems(name)[0]
+            search_item.setEnabled(False)
+            i += 1
+        # clear any boxes not used for synergy
+        for hero_box in self.hero_boxes[i:]:
+            hero_box.clear()
+            self.update_role_checkboxes(hero_box)
+        self.v_1_spinbox.setValue(reward.team_1_value)
+        self.v_2_spinbox.setValue(reward.team_2_value)
+        self.search_bar.clear()
+        self.search_view.clearSelection()
+
     def open_add(self):
-        self.edit_reward = None
         self.set_search_heroes()
+        self.edit_reward = None
+        self.clear_inputs()
         QDialog.open(self)
         self.search_bar.setFocus(Qt.PopupFocusReason)
+
+    # For editing the reward is deleted from model first to allow for
+    # same logic when creating a new reward. The original reward is
+    # saved so it can be added back if the dialog is rejected.
+    def open_edit(self, reward_index):
+        self.set_search_heroes()
+        self.edit_reward = self.reward_model.data(reward_index, Qt.UserRole)
+        self.reward_model.delete_rewards([reward_index])
+        self.set_inputs(self.edit_reward)
+        QDialog.open(self)
+        self.search_bar.setFocus(Qt.PopupFocusReason)
+
+    @Slot()
+    def reject(self):
+        if self.edit_reward is not None:
+            self.reward_model.add_reward(self.edit_reward)
+        QDialog.reject(self)
