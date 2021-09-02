@@ -7,7 +7,7 @@ import sys
 import random
 
 from reward_models import *
-from reward_dialogs import RoleRewardDialog
+from reward_dialogs import RoleRewardDialog, SynergyRewardDialog
 
 
 # @Temp heroes while I focus on building main structure. Will need a
@@ -44,6 +44,13 @@ class TestWindow(QMainWindow):
         self.synergy_view.setModel(self.synergy_model)
         self.synergy_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.synergy_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.synergy_dialog = SynergyRewardDialog(
+            self.role_model.hero_roles,
+            self.synergy_model, 
+            self.hero_icons,
+            team_tags,
+            self,
+        )
 
         # counter rewards
         self.counter_model = CounterRewardsModel(team_tags)
@@ -112,17 +119,7 @@ class TestWindow(QMainWindow):
 
     @Slot()
     def add_synergy_reward(self):
-        num_heroes = random.randint(2, 5)
-        names = random.sample(all_heroes, num_heroes)
-        # just give each one a single role to avoid clashes for now
-        roles = random.sample(all_roles, num_heroes)
-        heroes = {name: [role] for name, role in zip(names, roles)}
-        synergy_reward = SynergyReward(
-            heroes,
-            random.randrange(0, 1000) / 100,
-            random.randrange(0, 1000) / 100,
-        )
-        self.synergy_model.add_reward(synergy_reward)
+        self.synergy_dialog.open_add()
 
     @Slot()
     def add_counter_reward(self):
