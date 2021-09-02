@@ -51,6 +51,16 @@ def init_value_spinbox():
     return v_spinbox
 
 
+def init_search_list_view():
+    search_view = QListView()
+    search_view.setViewMode(QListView.IconMode)
+    search_view.setIconSize(SEARCH_ICON_SIZE)
+    search_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    search_view.setMovement(QListView.Static)
+    search_view.setUniformItemSizes(True)
+    return search_view
+
+
 class RoleRewardDialog(QDialog):
 
     def __init__(self, reward_model, hero_icons, team_tags, parent):
@@ -89,40 +99,31 @@ class RoleRewardDialog(QDialog):
         self.layout.addWidget(self.v_1_spinbox, 2, 1)
         self.layout.addWidget(self.v_2_label, 3, 0)
         self.layout.addWidget(self.v_2_spinbox, 3, 1)
-        self.layout.addLayout(self.hero_search_layout, 4, 0, 1, 2)
-        self.layout.addWidget(dialog_buttonbox, 5, 0, 1, 2)
+        self.layout.addWidget(self.search_bar, 4, 0, 1, 2)
+        self.layout.addWidget(self.search_view, 5, 0, 1, 2)
+        self.layout.addWidget(dialog_buttonbox, 6, 0, 1, 2)
 
     def setup_hero_search(self):
         # source model
-        self.hero_model = QStandardItemModel(len(self.hero_icons), 1)
+        self.search_model = QStandardItemModel(len(self.hero_icons), 1)
         for i, hero_name in enumerate(self.hero_icons):
             item = QStandardItem(self.hero_icons[hero_name], hero_name)
-            self.hero_model.setItem(i, item)
+            self.search_model.setItem(i, item)
 
         # filter model
-        self.hero_f_model = QSortFilterProxyModel()
-        self.hero_f_model.setSourceModel(self.hero_model)
-        self.hero_f_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.search_f_model = QSortFilterProxyModel()
+        self.search_f_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.search_f_model.setSourceModel(self.search_model)
 
         # list view
-        self.hero_view = QListView()
-        self.hero_view.setModel(self.hero_f_model)
-        self.hero_view.setViewMode(QListView.IconMode)
-        self.hero_view.setIconSize(SEARCH_ICON_SIZE)
-        self.hero_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.hero_view.setMovement(QListView.Static)
-        self.hero_view.setUniformItemSizes(True)
-        self.hero_view.clicked.connect(self.hero_selected)
+        self.search_view = init_search_list_view()
+        self.search_view.setModel(self.search_f_model)
+        self.search_view.clicked.connect(self.search_hero_clicked)
 
         # search bar
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search...")
-        self.search_bar.textChanged.connect(self.hero_f_model.setFilterRegularExpression)
-
-        # hero search layout
-        self.hero_search_layout = QVBoxLayout()
-        self.hero_search_layout.addWidget(self.search_bar)
-        self.hero_search_layout.addWidget(self.hero_view)
+        self.search_bar.textChanged.connect(self.search_f_model.setFilterRegularExpression)
 
     def update_role_combobox(self):
         hero_name = self.hero.name
@@ -144,7 +145,7 @@ class RoleRewardDialog(QDialog):
         self.v_1_spinbox.setValue(0.00)
         self.v_2_spinbox.setValue(0.00)
         self.search_bar.clear()
-        self.hero_view.clearSelection()
+        self.search_view.clearSelection()
 
     def set_inputs(self, reward):
         self.hero.set_hero(reward.name)
@@ -152,12 +153,12 @@ class RoleRewardDialog(QDialog):
         self.role_combobox.setCurrentText(reward.role)
         self.v_1_spinbox.setValue(reward.team_1_value)
         self.v_2_spinbox.setValue(reward.team_2_value)
-        self.hero_view.clearSelection()
+        self.search_view.clearSelection()
 
     @Slot()
-    def hero_selected(self, f_index):
-        index = self.hero_f_model.mapToSource(f_index)
-        hero_name = self.hero_model.itemFromIndex(index).text()
+    def search_hero_clicked(self, f_index):
+        index = self.search_f_model.mapToSource(f_index)
+        hero_name = self.search_model.itemFromIndex(index).text()
         self.hero.set_hero(hero_name)
         self.update_role_combobox()
 
