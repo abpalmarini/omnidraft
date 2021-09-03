@@ -7,7 +7,7 @@ import sys
 import random
 
 from reward_models import *
-from reward_dialogs import RoleRewardDialog, SynergyRewardDialog
+from reward_dialogs import RoleRewardDialog, SynergyRewardDialog, CounterRewardDialog
 
 
 # @Temp heroes while I focus on building main structure. Will need a
@@ -58,6 +58,13 @@ class TestWindow(QMainWindow):
         self.counter_view.setModel(self.counter_model)
         self.counter_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.counter_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.counter_dialog = CounterRewardDialog(
+            self.role_model.hero_roles,
+            self.counter_model, 
+            self.hero_icons,
+            team_tags,
+            self,
+        )
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -113,6 +120,7 @@ class TestWindow(QMainWindow):
         # test editing
         self.role_view.doubleClicked.connect(self.role_dialog.open_edit)
         self.synergy_view.doubleClicked.connect(self.synergy_dialog.open_edit)
+        self.counter_view.doubleClicked.connect(self.counter_dialog.open_edit)
 
     @Slot()
     def add_role_reward(self):
@@ -124,19 +132,7 @@ class TestWindow(QMainWindow):
 
     @Slot()
     def add_counter_reward(self):
-        num_heroes = random.randint(1, 5)
-        num_foes = random.randint(1, 5)
-        names = random.sample(all_heroes, num_heroes + num_foes)
-        team_names = names[:num_heroes]
-        team_roles = random.sample(all_roles, num_heroes)
-        heroes = {name: [role] for name, role in zip(team_names, team_roles)}
-        counter_reward = CounterReward(
-            heroes,
-            names[num_heroes:],
-            random.randrange(0, 1000) / 100,
-            random.randrange(0, 1000) / 100,
-        )
-        self.counter_model.add_reward(counter_reward)
+        self.counter_dialog.open_add()
 
     @Slot()
     def delete(self):

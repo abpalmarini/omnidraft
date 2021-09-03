@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QDialog, QAbstractItemView, QListView, QLineEdit,
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from ai import draft_ai
-from reward_models import RoleReward, SynergyReward
+from reward_models import RoleReward, SynergyReward, CounterReward
 
 
 SEARCH_ICON_SIZE = QSize(64, 64)
@@ -234,6 +234,10 @@ class RoleRewardDialog(QDialog):
         QDialog.reject(self)
 
 
+# @Important: The counter reward dialog subclasses this. I didn't
+# implement it with that in mind, but it happens to work out. If I make
+# changes to this class I must make sure it doesn't break anything in
+# the counter reward dialog.
 class SynergyRewardDialog(QDialog):
 
     def __init__(self, hero_roles, reward_model, hero_icons, team_tags, parent):
@@ -268,28 +272,12 @@ class SynergyRewardDialog(QDialog):
 
         self.setup_hero_search()
 
-        dialog_buttonbox = QDialogButtonBox(QDialogButtonBox.Save |
-                                            QDialogButtonBox.Cancel)
-        dialog_buttonbox.accepted.connect(self.accept)
-        dialog_buttonbox.rejected.connect(self.reject)
+        self.dialog_buttonbox = QDialogButtonBox(QDialogButtonBox.Save |
+                                                 QDialogButtonBox.Cancel)
+        self.dialog_buttonbox.accepted.connect(self.accept)
+        self.dialog_buttonbox.rejected.connect(self.reject)
 
-        # FIXME: make this much neater
-        self.layout = QGridLayout(self)
-        self.layout.addWidget(self.heroes_label, 0, 0)
-        for i in range(len(self.hero_boxes)):
-            self.layout.addWidget(self.hero_boxes[i], 0, i + 1)
-            self.layout.addWidget(QLabel(roles[i] + ":"), i + 1, 0)
-            role_checkboxes = self.hero_role_checkboxes[i]
-            for j in range(len(roles)):
-                self.layout.addWidget(role_checkboxes[j], j + 1, i + 1, Qt.AlignCenter)
-        self.layout.addWidget(self.v_1_label, 6, 0)
-        self.layout.addWidget(self.v_1_spinbox, 6, 1, 1, 5)
-        self.layout.addWidget(self.v_2_label, 7, 0)
-        self.layout.addWidget(self.v_2_spinbox, 7, 1, 1, 5)
-        self.layout.addWidget(self.search_bar, 8, 0, 1, 4)
-        self.layout.addWidget(self.remove_hero_button, 8, 4, 1, 2)
-        self.layout.addWidget(self.search_view, 9, 0, 1, 6)
-        self.layout.addWidget(dialog_buttonbox, 10, 0, 1, 6)
+        self.init_layout()
 
     def setup_hero_search(self):
         # source model (only heroes with role reward will be used)
@@ -309,6 +297,38 @@ class SynergyRewardDialog(QDialog):
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search...")
         self.search_bar.textChanged.connect(self.search_f_model.setFilterRegularExpression)
+
+    def init_layout(self):
+        self.layout = QGridLayout(self)
+
+        # hero boxes
+        self.layout.addWidget(self.heroes_label, 0, 0)
+        for i in range(len(roles)):
+            self.layout.addWidget(self.hero_boxes[i], 0, i + 1)
+
+            # role checkboxes
+            self.layout.addWidget(QLabel(roles[i] + ":"), i + 1, 0)
+            role_checkboxes = self.hero_role_checkboxes[i]
+            for j in range(len(roles)):
+                # checkboxes for hero box i are placed in the rows underneath
+                self.layout.addWidget(role_checkboxes[j], j + 1, i + 1, Qt.AlignCenter)
+
+        # counter rewards will need to insert the foe hero boxes at this point
+        offset = 7 if isinstance(self, CounterRewardDialog) else 6
+
+        # spin boxes
+        self.layout.addWidget(self.v_1_label, offset, 0)
+        self.layout.addWidget(self.v_1_spinbox, offset, 1, 1, 5)
+        self.layout.addWidget(self.v_2_label, offset + 1, 0)
+        self.layout.addWidget(self.v_2_spinbox, offset + 1, 1, 1, 5)
+
+        # search
+        self.layout.addWidget(self.search_bar, offset + 2, 0, 1, 4)
+        self.layout.addWidget(self.search_view, offset + 3, 0, 1, 6)
+
+        self.layout.addWidget(self.remove_hero_button, offset + 2, 4, 1, 2)  # placed beside search bar
+
+        self.layout.addWidget(self.dialog_buttonbox, offset + 4, 0, 1, 6)
 
     # Only allow heroes with a role reward to be searched for.
     def set_search_heroes(self):
@@ -439,30 +459,28 @@ class SynergyRewardDialog(QDialog):
                 checked_roles.append(role)
         return checked_roles
 
-    def clear_inputs(self):
-        for hero_box in self.hero_boxes:
+    def clear_heroes(self, hero_boxes):
+        for hero_box in hero_boxes:
             hero_box.set_selected(False)
             hero_box.clear()
             self.update_role_checkboxes(hero_box)
+
+    def clear_inputs(self):
+        self.clear_heroes(self.hero_boxes)
         self.v_1_spinbox.setValue(0.00)
         self.v_2_spinbox.setValue(0.00)
         self.search_bar.clear()
         self.search_view.clearSelection()
 
     def set_inputs(self, reward):
-        i = 0
-        for name, used_roles in reward.heroes:
-            self.hero_boxes[i].set_selected(False)
-            self.hero_boxes[i].set_hero(name)
-            self.update_role_checkboxes(self.hero_boxes[i], used_roles)
+        for hero, hero_box in zip(reward.heroes, self.hero_boxes):
+            name, used_roles = hero
+            hero_box.set_selected(False)
+            hero_box.set_hero(name)
+            self.update_role_checkboxes(hero_box, used_roles)
             search_item = self.search_model.findItems(name)[0]
             search_item.setEnabled(False)
-            i += 1
-        # clear any boxes not used for synergy
-        for hero_box in self.hero_boxes[i:]:
-            hero_box.set_selected(False)
-            hero_box.clear()
-            self.update_role_checkboxes(hero_box)
+        self.clear_heroes(self.hero_boxes[len(reward.heroes):])  # clear any boxes not used for synergy
         self.v_1_spinbox.setValue(reward.team_1_value)
         self.v_2_spinbox.setValue(reward.team_2_value)
         self.search_bar.clear()
@@ -513,9 +531,9 @@ class SynergyRewardDialog(QDialog):
             display_message(
                 self,
                 "Reward values already exist for playing these champions" \
-                " in certain role combinations. (See Details).",
-                info_text="To assign different values for synergies between the same" \
-                          " champions in different roles deselect the clashing roles.",
+                " in certain role combinations. (See details).",
+                info_text="Deselect the clashing roles to assign different values for" \
+                          " synergies between the same champions in different roles.",
                 detailed_text=self.format_clashes(clashes),
             )
             return
@@ -534,6 +552,109 @@ class SynergyRewardDialog(QDialog):
         for i, clash in enumerate(clashes):
             text += f"{str(i + 1)}:\n"
             for name, role in clash:
-                text += f"* {name} - {role}\n"
+                text += f"  * {name} - {role}\n"
+            text += "\n"
+        return text
+
+
+# Constructing a counter reward is very similar to a synergy reward with
+# the difference of also needing to supply a set of adversaries.
+class CounterRewardDialog(SynergyRewardDialog):
+
+    def __init__(self, hero_roles, reward_model, hero_icons, team_tags, parent):
+        super().__init__(hero_roles, reward_model, hero_icons, team_tags, parent)
+
+        self.foes_label = QLabel("Adversaries:")
+
+        # add 5 hero boxes for the foes (same list is used to allow
+        # updating methods in synergy dialog to still work)
+        for i in range(len(roles)):
+            hero_box = HeroBox(hero_icons)
+            self.hero_boxes.append(hero_box)
+            hero_box.clicked.connect(self.hero_box_clicked)
+            hero_box.index = len(roles) + i
+
+        # add foe boxes to layout
+        self.layout.addWidget(self.foes_label, 6, 0)
+        for i in range(len(roles)):
+            self.layout.addWidget(self.hero_boxes[len(roles) + i], 6, i + 1)
+
+    # Only the team heroes have applicable roles selected so there are
+    # no role checkboxes for the foe hero boxes.
+    def update_role_checkboxes(self, hero_box, check_if_allowed=roles):
+        if hero_box.index < 5:
+            SynergyRewardDialog.update_role_checkboxes(self, hero_box, check_if_allowed)
+
+    # There are no roles or checkboxes for the foes. All roles are
+    # returned so that hero_box_clicked initially checks all role boxes
+    # when switching a hero from a foe box to a hero box.
+    def get_checked_roles(self, hero_box):
+        if hero_box.index < 5:
+            return SynergyRewardDialog.get_checked_roles(self, hero_box)
+        else:
+            return roles
+
+    # The synergy set_inputs method will handle setting the team heroes
+    # and clearing all remaining boxes which means all thats left to do
+    # is set the foe heroes.
+    def set_inputs(self, reward):
+        SynergyRewardDialog.set_inputs(self, reward)
+        for name, hero_box in zip(reward.foes, self.hero_boxes[len(roles):]):
+            hero_box.set_hero(name)  # box has already been deselected
+            search_item = self.search_model.findItems(name)[0]
+            search_item.setEnabled(False)
+
+    @Slot()
+    def accept(self):
+        heroes = {}
+        for hero_box in self.hero_boxes[:len(roles)]:
+            if hero_box.name:
+                checked_roles = self.get_checked_roles(hero_box)
+                if not checked_roles:
+                    return  # all team heroes must have at least one applicable role
+                heroes[hero_box.name] = checked_roles
+        if not heroes:
+            return  # must be at least one chosen team hero
+
+        foes = []
+        for hero_box in self.hero_boxes[len(roles):]:
+            if hero_box.name:
+                foes.append(hero_box.name)
+        if not foes:
+            return  # must be at least one chosen foe
+
+        team_1_value = self.v_1_spinbox.value()
+        team_2_value = self.v_2_spinbox.value()
+        reward = CounterReward(heroes, foes, team_1_value, team_2_value)
+
+        if not reward.hero_role_asgmts:
+            display_message(self, "Impossible to play each champion in a unique role.")
+            return 
+
+        clashes = reward.hero_role_asgmts & self.reward_model.hero_role_asgmts
+        if clashes:
+            display_message(
+                self,
+                "Reward values already exist for playing these champions in" \
+                " certain role combinations vs the selected adversaries. (See details).",
+                info_text="Deselect the clashing roles to assign different values for" \
+                          " counters between the same champions in different roles.",
+                detailed_text=self.format_clashes(clashes),
+            )
+            return
+
+        self.reward_model.add_reward(reward)
+        QDialog.accept(self)
+
+    def format_clashes(self, clashes):
+        text = ""
+        for i, clash in enumerate(clashes):
+            heroes, foes = clash
+            text += f"{str(i + 1)}:\n"
+            for name, role in heroes:
+                text += f"  * {name} - {role}\n"
+            text += "  VS\n"
+            for name in foes:
+                text += f"  * {name}\n"
             text += "\n"
         return text
