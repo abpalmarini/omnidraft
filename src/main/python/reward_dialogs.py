@@ -6,12 +6,7 @@ from PySide6.QtWidgets import (QDialog, QAbstractItemView, QListView, QLineEdit,
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from ai import draft_ai
-from reward_models import RoleReward
-
-
-MAX_ROLE_RS_ERROR_MSG = """
-The current engine only supports {} role rewards. Extending it to support double has not been a priority, but is on the roadmap.
-"""
+from reward_models import RoleReward, SynergyReward
 
 
 SEARCH_ICON_SIZE = QSize(64, 64)
@@ -74,6 +69,18 @@ def init_search_list_view():
     search_view.setMovement(QListView.Static)
     search_view.setUniformItemSizes(True)
     return search_view
+
+
+def display_message(parent, text, info_text=None, detailed_text=None, error=True):
+    msg_box = QMessageBox(parent)
+    msg_box.setText(text)
+    if info_text:
+        msg_box.setInformativeText(info_text)
+    if detailed_text:
+        msg_box.setDetailedText(detailed_text)
+    if error:
+        msg_box.setIcon(QMessageBox.Critical)
+    msg_box.exec()
 
 
 class RoleRewardDialog(QDialog):
@@ -181,9 +188,13 @@ class RoleRewardDialog(QDialog):
 
     def open_add(self):
         if len(self.reward_model.rewards) == draft_ai.MAX_NUM_HEROES:
-            msg_box = QMessageBox()
-            msg_box.setText(MAX_ROLE_RS_ERROR_MSG.format(draft_ai.MAX_NUM_HEROES))
-            msg_box.exec()
+            display_message(
+                self.parentWidget(),
+                f"The current engine only supports {draft_ai.MAX_NUM_HEROES}" \
+                " role rewards. Extending it to support double has not been a" \
+                " priority, but is on the roadmap.",
+                error=False,
+            )
         else:
             self.edit_reward = None
             self.clear_inputs()
@@ -255,8 +266,12 @@ class SynergyRewardDialog(QDialog):
         self.v_1_spinbox = init_value_spinbox()
         self.v_2_spinbox = init_value_spinbox()
 
-
         self.setup_hero_search()
+
+        dialog_buttonbox = QDialogButtonBox(QDialogButtonBox.Save |
+                                            QDialogButtonBox.Cancel)
+        dialog_buttonbox.accepted.connect(self.accept)
+        dialog_buttonbox.rejected.connect(self.reject)
 
         # FIXME: make this much neater
         self.layout = QGridLayout(self)
@@ -274,6 +289,7 @@ class SynergyRewardDialog(QDialog):
         self.layout.addWidget(self.search_bar, 8, 0, 1, 4)
         self.layout.addWidget(self.remove_hero_button, 8, 4, 1, 2)
         self.layout.addWidget(self.search_view, 9, 0, 1, 6)
+        self.layout.addWidget(dialog_buttonbox, 10, 0, 1, 6)
 
     def setup_hero_search(self):
         # source model (only heroes with role reward will be used)
@@ -425,6 +441,7 @@ class SynergyRewardDialog(QDialog):
 
     def clear_inputs(self):
         for hero_box in self.hero_boxes:
+            hero_box.set_selected(False)
             hero_box.clear()
             self.update_role_checkboxes(hero_box)
         self.v_1_spinbox.setValue(0.00)
@@ -435,6 +452,7 @@ class SynergyRewardDialog(QDialog):
     def set_inputs(self, reward):
         i = 0
         for name, used_roles in reward.heroes:
+            self.hero_boxes[i].set_selected(False)
             self.hero_boxes[i].set_hero(name)
             self.update_role_checkboxes(self.hero_boxes[i], used_roles)
             search_item = self.search_model.findItems(name)[0]
@@ -442,6 +460,7 @@ class SynergyRewardDialog(QDialog):
             i += 1
         # clear any boxes not used for synergy
         for hero_box in self.hero_boxes[i:]:
+            hero_box.set_selected(False)
             hero_box.clear()
             self.update_role_checkboxes(hero_box)
         self.v_1_spinbox.setValue(reward.team_1_value)
@@ -468,7 +487,53 @@ class SynergyRewardDialog(QDialog):
         self.search_bar.setFocus(Qt.PopupFocusReason)
 
     @Slot()
+    def accept(self):
+        heroes = {}
+        for hero_box in self.hero_boxes:
+            if hero_box.name:
+                checked_roles = self.get_checked_roles(hero_box)
+                if not checked_roles:
+                    return  # all synergy heroes must have at least one applicable role
+                heroes[hero_box.name] = checked_roles
+
+        if len(heroes) < 2:
+            display_message(self, "A valid synergy must contain at least two champions.")
+            return
+
+        team_1_value = self.v_1_spinbox.value()
+        team_2_value = self.v_2_spinbox.value()
+        reward = SynergyReward(heroes, team_1_value, team_2_value)
+
+        if not reward.hero_role_asgmts:
+            display_message(self, "Impossible to play each champion in a unique role.")
+            return 
+
+        clashes = reward.hero_role_asgmts & self.reward_model.hero_role_asgmts
+        if clashes:
+            display_message(
+                self,
+                "Reward values already exist for playing these champions" \
+                " in certain role combinations. (See Details).",
+                info_text="To assign different values for synergies between the same" \
+                          " champions in different roles deselect the clashing roles.",
+                detailed_text=self.format_clashes(clashes),
+            )
+            return
+
+        self.reward_model.add_reward(reward)
+        QDialog.accept(self)
+
+    @Slot()
     def reject(self):
         if self.edit_reward is not None:
             self.reward_model.add_reward(self.edit_reward)
         QDialog.reject(self)
+
+    def format_clashes(self, clashes):
+        text = ""
+        for i, clash in enumerate(clashes):
+            text += f"{str(i + 1)}:\n"
+            for name, role in clash:
+                text += f"* {name} - {role}\n"
+            text += "\n"
+        return text

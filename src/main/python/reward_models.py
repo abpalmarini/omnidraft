@@ -257,7 +257,7 @@ class SynergyRewardsModel(BaseRewardsModel):
         super().__init__()
 
         self.headers = tuple(None for _ in range(5)) + (team_tags[0], team_tags[1])
-        self.hero_role_combos = set()
+        self.hero_role_asgmts = set()
 
     # Give users ability to enter multiple hero names separated with a
     # space. For a reward to contain the filter all parts must be part
@@ -280,9 +280,9 @@ class SynergyRewardsModel(BaseRewardsModel):
 
     def update_extra_state(self, reward, add=True):
         if add:
-            self.hero_role_combos |= reward.hero_role_asgmts
+            self.hero_role_asgmts |= reward.hero_role_asgmts
         else:
-            self.hero_role_combos -= reward.hero_role_asgmts
+            self.hero_role_asgmts -= reward.hero_role_asgmts
 
     # Returns a list of all synergy rewards using a role reward.
     def uses_role_reward(self, name, role):
@@ -353,7 +353,7 @@ class CounterRewardsModel(BaseRewardsModel):
         super().__init__()
 
         self.headers = tuple(None for _ in range(10)) + (team_tags[0], team_tags[1])
-        self.hero_role_combos = set()
+        self.hero_role_asgmts = set()
 
     def contains_filter(self, reward):
         filters = self.current_filter.split()
@@ -376,9 +376,9 @@ class CounterRewardsModel(BaseRewardsModel):
 
     def update_extra_state(self, reward, add=True):
         if add:
-            self.hero_role_combos |= reward.hero_role_asgmts
+            self.hero_role_asgmts |= reward.hero_role_asgmts
         else:
-            self.hero_role_combos -= reward.hero_role_asgmts
+            self.hero_role_asgmts -= reward.hero_role_asgmts
 
     # Returns both a list of counter rewards using the specific role
     # reward as part of the team heroes, and a list of counter rewards
