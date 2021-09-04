@@ -136,24 +136,31 @@ class TestWindow(QMainWindow):
 
     @Slot()
     def delete(self):
-        views = (self.role_view, self.synergy_view, self.counter_view)
-        models = (self.role_model, self.synergy_model, self.counter_model)
-        for view, model in zip(views, models):
-            selection_model = view.selectionModel()
+        # this can all be done much cleaner with a model, view, dialog tuple for each type
+        if self.role_view.hasFocus():
+            selection_model = self.role_view.selectionModel()
             indexes = selection_model.selectedRows()
-            if indexes:
-                model.delete_rewards(indexes)
-            view.clearSelection()
+            self.role_dialog.open_delete(indexes, self.synergy_model, self.counter_model)
+        elif self.synergy_view.hasFocus():
+            selection_model = self.synergy_view.selectionModel()
+            indexes = selection_model.selectedRows()
+            self.synergy_dialog.open_delete(indexes)
+        elif self.counter_view.hasFocus():
+            selection_model = self.counter_view.selectionModel()
+            indexes = selection_model.selectedRows()
+            self.counter_dialog.open_delete(indexes)
 
     @Slot()
     def set_teams(self):
         # add relevant rewards
         rr_1 = RoleReward('Ahri', 'Top Laner', 2.4, 3.9)
-        rr_2 = RoleReward('Ashe', 'Bot Laner', 1.4, 8.9)
-        rr_3 = RoleReward('Bard', 'Mid Laner', 7.5, 2.3)
+        rr_2 = RoleReward('Ahri', 'Jungler', 0, 8.9)
+        rr_3 = RoleReward('Ashe', 'Bot Laner', 1.4, 8.9)
+        rr_4 = RoleReward('Bard', 'Mid Laner', 7.5, 2.3)
         self.role_model.add_reward(rr_1)
         self.role_model.add_reward(rr_2)
         self.role_model.add_reward(rr_3)
+        self.role_model.add_reward(rr_4)
 
         sr = SynergyReward({'Ahri': ['Top Laner', 'Jungler'], 'Bard': ['Mid Laner']}, 4.56, 2.34)
         self.synergy_model.add_reward(sr)

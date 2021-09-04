@@ -1,3 +1,8 @@
+"""
+Dialogs for constructing each reward type that ensure the UI doesn't
+allow the user to have rewards incompatible with the draft AI engine.
+"""
+
 from PySide6.QtCore import QSortFilterProxyModel, Signal, Slot, Qt, QSize
 from PySide6.QtWidgets import (QDialog, QAbstractItemView, QListView, QLineEdit,
                                QVBoxLayout, QLabel, QComboBox, QGridLayout, QFrame,
@@ -71,16 +76,24 @@ def init_search_list_view():
     return search_view
 
 
-def display_message(parent, text, info_text=None, detailed_text=None, error=True):
+def display_message(parent, text, info_text=None, detailed_text=None, icon=None):
     msg_box = QMessageBox(parent)
     msg_box.setText(text)
     if info_text:
         msg_box.setInformativeText(info_text)
     if detailed_text:
         msg_box.setDetailedText(detailed_text)
-    if error:
-        msg_box.setIcon(QMessageBox.Critical)
+    if icon:
+        msg_box.setIcon(icon)
     msg_box.exec()
+
+
+def confirm_delete(parent, n_rewards, reward_type):
+    text = "Are you sure you want to delete the {} selected {} rewards?"
+    confirm_box = QMessageBox(parent)
+    confirm_box.setText(text.format(n_rewards, reward_type))
+    confirm_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+    return confirm_box.exec()
 
 
 class RoleRewardDialog(QDialog):
@@ -193,7 +206,6 @@ class RoleRewardDialog(QDialog):
                 f"The current engine only supports {draft_ai.MAX_NUM_HEROES}" \
                 " role rewards. Extending it to support double has not been a" \
                 " priority, but is on the roadmap.",
-                error=False,
             )
         else:
             self.edit_reward = None
@@ -210,6 +222,61 @@ class RoleRewardDialog(QDialog):
         self.set_inputs(self.edit_reward)
         QDialog.open(self)
         self.search_bar.setFocus(Qt.PopupFocusReason)
+
+    # A role reward can't be deleted if it is contained in a synergy,
+    # counter team or is used in a counter foes when it is the only
+    # defined role reward for some hero. For now just displaying the
+    # number of other rewards, but @Later I could present a list that
+    # they can directly edit.
+    def open_delete(self, reward_indexes, synergy_model, counter_model):
+        if not reward_indexes:
+            return
+        ret = confirm_delete(self.parentWidget(), len(reward_indexes), "role")
+        if ret == QMessageBox.No:
+            return
+
+        start_error_text = "Unable to delete {} as {} because they are used "
+        info_text = "Delete or select a different role for {} in these rewards first."
+
+        rewards = [self.reward_model.data(i, Qt.UserRole) for i in reward_indexes]
+        for reward in rewards:
+            synergies = synergy_model.uses_role_reward(reward)
+            counters_h, counters_f = counter_model.uses_role_reward(reward)
+            num_roles = len(self.reward_model.get_hero_roles(reward.name))
+            if synergies and counters_h:
+                display_message(
+                    self.parentWidget(),
+                    start_error_text.format(reward.name, reward.role) +
+                    f"in {len(synergies)} synergy and {len(counters_h)} counter reward(s).",
+                    info_text.format(reward.name),
+                    icon=QMessageBox.Warning,
+                )
+            elif synergies:
+                display_message(
+                    self.parentWidget(),
+                    start_error_text.format(reward.name, reward.role) +
+                    f"in {len(synergies)} synergy reward(s).",
+                    info_text.format(reward.name),
+                    icon=QMessageBox.Warning,
+                )
+            elif counters_h:
+                display_message(
+                    self.parentWidget(),
+                    start_error_text.format(reward.name, reward.role) +
+                    f"in {len(counters_h)} counter reward(s).",
+                    info_text.format(reward.name),
+                    icon=QMessageBox.Warning,
+                )
+            elif counters_f and num_roles == 1:
+                display_message(
+                    self.parentWidget(),
+                    start_error_text.format(reward.name, reward.role) +
+                    f"as an adversary in {len(counters_f)} counter reward(s) " \
+                    f"and there are no other role rewards defined for {reward.name}.",
+                    icon=QMessageBox.Warning,
+                )
+            else:
+                self.reward_model.delete_reward(reward)
 
     # Create role reward and add to model if everything has been input
     # before closing the dialog.
@@ -247,6 +314,7 @@ class SynergyRewardDialog(QDialog):
         self.reward_model = reward_model
         self.hero_icons = hero_icons
         self.edit_reward = None
+        self.type = 'synergy'
 
         self.heroes_label = QLabel("Champions:") 
         self.hero_boxes = []
@@ -504,6 +572,13 @@ class SynergyRewardDialog(QDialog):
         QDialog.open(self)
         self.search_bar.setFocus(Qt.PopupFocusReason)
 
+    def open_delete(self, reward_indexes):
+        if not reward_indexes:
+            return
+        ret = confirm_delete(self.parentWidget(), len(reward_indexes), self.type)
+        if ret == QMessageBox.Yes:
+            self.reward_model.delete_rewards(reward_indexes)
+
     @Slot()
     def accept(self):
         heroes = {}
@@ -515,7 +590,11 @@ class SynergyRewardDialog(QDialog):
                 heroes[hero_box.name] = checked_roles
 
         if len(heroes) < 2:
-            display_message(self, "A valid synergy must contain at least two champions.")
+            display_message(
+                self,
+                "A valid synergy must contain at least two champions.",
+                icon=QMessageBox.Critical,
+            )
             return
 
         team_1_value = self.v_1_spinbox.value()
@@ -523,7 +602,11 @@ class SynergyRewardDialog(QDialog):
         reward = SynergyReward(heroes, team_1_value, team_2_value)
 
         if not reward.hero_role_asgmts:
-            display_message(self, "Impossible to play each champion in a unique role.")
+            display_message(
+                self,
+                "Impossible to play each champion in a unique role.",
+                icon=QMessageBox.Critical,
+            )
             return 
 
         clashes = reward.hero_role_asgmts & self.reward_model.hero_role_asgmts
@@ -535,6 +618,7 @@ class SynergyRewardDialog(QDialog):
                 info_text="Deselect the clashing roles to assign different values for" \
                           " synergies between the same champions in different roles.",
                 detailed_text=self.format_clashes(clashes),
+                icon=QMessageBox.Critical
             )
             return
 
@@ -563,6 +647,8 @@ class CounterRewardDialog(SynergyRewardDialog):
 
     def __init__(self, hero_roles, reward_model, hero_icons, team_tags, parent):
         super().__init__(hero_roles, reward_model, hero_icons, team_tags, parent)
+
+        self.type = 'counter'
 
         self.foes_label = QLabel("Adversaries:")
 
@@ -628,7 +714,11 @@ class CounterRewardDialog(SynergyRewardDialog):
         reward = CounterReward(heroes, foes, team_1_value, team_2_value)
 
         if not reward.hero_role_asgmts:
-            display_message(self, "Impossible to play each champion in a unique role.")
+            display_message(
+                self,
+                "Impossible to play each champion in a unique role.",
+                icon=QMessageBox.Critical,
+            )
             return 
 
         clashes = reward.hero_role_asgmts & self.reward_model.hero_role_asgmts
@@ -640,6 +730,7 @@ class CounterRewardDialog(SynergyRewardDialog):
                 info_text="Deselect the clashing roles to assign different values for" \
                           " counters between the same champions in different roles.",
                 detailed_text=self.format_clashes(clashes),
+                icon=QMessageBox.Critical,
             )
             return
 

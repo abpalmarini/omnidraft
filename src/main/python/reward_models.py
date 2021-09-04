@@ -118,7 +118,16 @@ class BaseRewardsModel(QAbstractTableModel):
             self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
             self.layoutChanged.emit()
 
-    # Deletes rewards while maintaining sorted order.
+    # Delete a single reward given the reward object.
+    def delete_reward(self, reward):
+        self.update_extra_state(reward, add=False)
+        self.rewards.remove(reward)
+        if self.contains_filter(reward): 
+            self.layoutAboutToBeChanged.emit()
+            self.view_rewards.remove(reward)
+            self.layoutChanged.emit()
+
+    # Deletes rewards from a list of indexes while maintaining sorted order.
     def delete_rewards(self, indexes):
         # indices correspond to the rewards in view
         del_rewards = {self.view_rewards[index.row()] for index in indexes}
@@ -285,8 +294,8 @@ class SynergyRewardsModel(BaseRewardsModel):
             self.hero_role_asgmts -= reward.hero_role_asgmts
 
     # Returns a list of all synergy rewards using a role reward.
-    def uses_role_reward(self, name, role):
-        name_role = (name, role)
+    def uses_role_reward(self, role_reward):
+        name_role = (role_reward.name, role_reward.role)
         return [r for r in self.rewards if name_role in r.used_role_rs]
 
 
@@ -383,8 +392,8 @@ class CounterRewardsModel(BaseRewardsModel):
     # Returns both a list of counter rewards using the specific role
     # reward as part of the team heroes, and a list of counter rewards
     # where the hero is used as part of foes.
-    def uses_role_reward(self, name, role):
-        name_role = (name, role)
+    def uses_role_reward(self, role_reward):
+        name_role = (role_reward.name, role_reward.role)
         used_in_team = [r for r in self.rewards if name_role in r.used_role_rs]
-        used_in_foes = [r for r in self.rewards if name in r.foes]
+        used_in_foes = [r for r in self.rewards if role_reward.name in r.foes]
         return used_in_team, used_in_foes
