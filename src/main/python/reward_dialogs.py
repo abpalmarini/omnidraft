@@ -237,7 +237,7 @@ class RoleRewardDialog(QDialog):
                             " adversary in a counter reward and no other role rewards" \
                             f" are defined for {self.edit_reward.name}.")
 
-        self.reward_model.delete_rewards([reward_index])
+        self.reward_model.delete_reward(self.edit_reward)
         self.set_inputs(self.edit_reward)
         QDialog.open(self)
         self.search_bar.setFocus(Qt.PopupFocusReason)
@@ -603,7 +603,7 @@ class SynergyRewardDialog(QDialog):
     def open_edit(self, reward_index):
         self.set_search_heroes()
         self.edit_reward = self.reward_model.data(reward_index, Qt.UserRole)
-        self.reward_model.delete_rewards([reward_index])
+        self.reward_model.delete_reward(self.edit_reward)
         self.set_inputs(self.edit_reward)
         QDialog.open(self)
         self.search_bar.setFocus(Qt.PopupFocusReason)
