@@ -91,7 +91,15 @@ class RewardsPage(QWidget):
     def open_editting(self, reward_index):
         for reward_type in self.reward_types:
             if reward_type.model == reward_index.model():
-                reward_type.dialog.open_edit(reward_index)
+                if reward_type == self.reward_types[0]:
+                    # editing a role reward requires the synergy and counter model
+                    reward_type.dialog.open_edit(
+                        reward_index,
+                        self.reward_types[1].model,
+                        self.reward_types[2].model,
+                    )
+                else:
+                    reward_type.dialog.open_edit(reward_index)
                 reward_type.view.clearSelection()
                 break
 

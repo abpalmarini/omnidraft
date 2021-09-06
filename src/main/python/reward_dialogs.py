@@ -159,7 +159,7 @@ class RoleRewardDialog(QDialog):
         # search bar
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search...")
-        self.search_bar.textChanged.connect(self.search_f_model.setFilterRegularExpression)
+        self.search_bar.textChanged.connect(self.search_f_model.setFilterFixedString)
 
     def update_role_combobox(self):
         hero_name = self.hero_box.name
@@ -216,12 +216,44 @@ class RoleRewardDialog(QDialog):
     # For editing the reward is deleted from model first to allow for
     # same logic when creating a new reward. The original reward is
     # saved so it can be added back if the dialog is rejected.
-    def open_edit(self, reward_index):
+    def open_edit(self, reward_index, synergy_model, counter_model):
         self.edit_reward = self.reward_model.data(reward_index, Qt.UserRole)
+
+        # must check if role reward is used in synergy/counter rewards
+        # and if so ensure user can only change the team values
+        synergies = synergy_model.uses_role_reward(self.edit_reward)
+        counters_h, counters_f = counter_model.uses_role_reward(self.edit_reward)
+        num_roles = len(self.reward_model.get_hero_roles(self.edit_reward.name))
+        if synergies or counters_h:
+            self.disable_hero_role_selections()
+            self.setToolTip("Unable to edit champion or role because this role" \
+                            " reward is used in other synergy/counter rewards.")
+        elif counters_f and num_roles == 1:
+            # if used as a foe in a counter and is the only existing reward
+            # for this hero then users can't edit hero, but can edit the role
+            self.disable_hero_role_selections()
+            self.role_combobox.setEnabled(True)
+            self.setToolTip("Unable to edit champion because they are used as an" \
+                            " adversary in a counter reward and no other role rewards" \
+                            f" are defined for {self.edit_reward.name}.")
+
         self.reward_model.delete_rewards([reward_index])
         self.set_inputs(self.edit_reward)
         QDialog.open(self)
         self.search_bar.setFocus(Qt.PopupFocusReason)
+
+    def disable_hero_role_selections(self):
+        self.role_combobox.setDisabled(True)
+        self.search_f_model.setFilterFixedString("**")  # filter out all heroes
+        self.search_bar.setDisabled(True)
+        self.search_bar.setPlaceholderText(None)
+
+    def enable_hero_role_selections(self):
+        self.role_combobox.setEnabled(True)
+        self.search_f_model.setFilterFixedString("")
+        self.search_bar.setEnabled(True)
+        self.search_bar.setPlaceholderText("Search...")
+        self.setToolTip(None)
 
     # A role reward can't be deleted if it is contained in a synergy,
     # counter team or is used in a counter foes when it is the only
@@ -293,12 +325,15 @@ class RoleRewardDialog(QDialog):
         team_2_value = self.v_2_spinbox.value()
         reward = RoleReward(hero_name, role, team_1_value, team_2_value)
         self.reward_model.add_reward(reward)
+        if self.edit_reward is not None:
+            self.enable_hero_role_selections()  # enable just in case it was disabled
         QDialog.accept(self)
 
     @Slot()
     def reject(self):
         if self.edit_reward is not None:
             self.reward_model.add_reward(self.edit_reward)
+            self.enable_hero_role_selections()  # enable just in case it was disabled
         QDialog.reject(self)
 
 
@@ -365,7 +400,7 @@ class SynergyRewardDialog(QDialog):
         # search bar
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search...")
-        self.search_bar.textChanged.connect(self.search_f_model.setFilterRegularExpression)
+        self.search_bar.textChanged.connect(self.search_f_model.setFilterFixedString)
 
     def init_layout(self):
         self.layout = QGridLayout(self)
