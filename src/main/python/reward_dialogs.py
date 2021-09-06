@@ -233,7 +233,7 @@ class RoleRewardDialog(QDialog):
             return
         ret = confirm_delete(self.parentWidget(), len(reward_indexes), "role")
         if ret == QMessageBox.No:
-            return
+            return False
 
         start_error_text = "Unable to delete {} as {} because they are used "
         info_text = "Delete or select a different role for {} in these rewards first."
@@ -277,6 +277,7 @@ class RoleRewardDialog(QDialog):
                 )
             else:
                 self.reward_model.delete_reward(reward)
+        return True
 
     # Create role reward and add to model if everything has been input
     # before closing the dialog.
@@ -578,6 +579,8 @@ class SynergyRewardDialog(QDialog):
         ret = confirm_delete(self.parentWidget(), len(reward_indexes), self.type)
         if ret == QMessageBox.Yes:
             self.reward_model.delete_rewards(reward_indexes)
+            return True
+        return False
 
     @Slot()
     def accept(self):
