@@ -129,6 +129,9 @@ class RewardsPage(QWidget):
         table_view.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
         table_view.setFixedWidth(horizontal_header.length())
 
+        # for synergies/counters you can only sort by team values
+        horizontal_header.sortIndicatorChanged.connect(self.check_header_sort)
+
         return table_view
 
     def init_add_button(self, reward_name, reward_dialog):
@@ -169,4 +172,20 @@ class RewardsPage(QWidget):
                     ret = reward_type.dialog.open_delete(reward_indexes)
                 if ret:
                     reward_type.view.clearSelection()
+                break
+
+    # Sets the header sort indicator to the underlying model's current
+    # sort column and order if an unsortbale header section is clicked
+    # as no sort will take place.
+    @Slot()
+    def check_header_sort(self, index, order):
+        clicked_header = self.sender()
+        role_reward_header = self.reward_types[0].view.horizontalHeader()
+        if clicked_header == role_reward_header:
+            return  # you can sort any column in the role rewards
+        if index >= clicked_header.count() - 2:
+            return  # last two team value columns can be sorted for all reward types
+        for reward_type in self.reward_types[1:]:
+            if clicked_header == reward_type.view.horizontalHeader():
+                clicked_header.setSortIndicator(*reward_type.model.current_sort)
                 break
