@@ -23,8 +23,9 @@ if __name__ == '__main__':
     appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
 
     hero_icons = {h: QIcon(appctxt.get_resource(h + '.png')) for h in all_heroes}
+    role_icons = {r: QIcon(appctxt.get_resource(r + '.png')) for r in all_roles}
     window = QMainWindow()
-    window.setCentralWidget(RewardsPage(hero_icons, team_tags))
+    window.setCentralWidget(RewardsPage(hero_icons, role_icons, team_tags))
     window.resize(1600, 800)
     window.show()
 

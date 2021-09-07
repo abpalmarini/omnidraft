@@ -17,34 +17,36 @@ RewardType = namedtuple('RewardCollection', ['model', 'view', 'dialog'])
 
 class RewardIconDelegate(QStyledItemDelegate):
 
-    def __init__(self, hero_icons):
+    def __init__(self, hero_icons, role_icons):
         super().__init__()
 
         self.hero_icons = hero_icons
+        self.role_icons = role_icons
 
     def sizeHint(self, option, index):
         return REWARD_ICON_SIZE
 
     def paint(self, painter, option, index):
-        hero = index.model().data(index)
-        if not hero:
-            super().paint(painter, option, index)
+        data = index.model().data(index, Qt.DisplayRole)
+        if data in self.hero_icons:
+            self.hero_icons[data].paint(painter, option.rect)
+        elif data in self.role_icons:
+            self.role_icons[data].paint(painter, option.rect)
         else:
-            icon = self.hero_icons[hero]
-            icon.paint(painter, option.rect)
+            super().paint(painter, option, index)
 
 
 class RewardsPage(QWidget):
 
-    def __init__(self, hero_icons, team_tags):
+    def __init__(self, hero_icons, role_icons, team_tags):
         super().__init__()
 
         self.reward_types = []
-        self.icon_delegate = RewardIconDelegate(hero_icons)
+        self.icon_delegate = RewardIconDelegate(hero_icons, role_icons)
 
         # role reward
         role_model = RoleRewardsModel(list(hero_icons.keys()), team_tags)
-        role_view = self.init_reward_view(role_model, [0])
+        role_view = self.init_reward_view(role_model, [0, 1])
         role_dialog = RoleRewardDialog(role_model, hero_icons, team_tags, self)
         self.reward_types.append(RewardType(role_model, role_view, role_dialog))
 
