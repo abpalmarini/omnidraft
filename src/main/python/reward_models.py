@@ -79,14 +79,10 @@ class BaseRewardsModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def filter_rewards(self, text):
-        prev_filter = self.current_filter
         self.current_filter = text.lower()
         self.layoutAboutToBeChanged.emit()
         if not self.current_filter:
             self.view_rewards = list(self.rewards)
-        elif self.current_filter.startswith(prev_filter):
-            # new view rewards will be subset of old
-            self.view_rewards = [r for r in self.view_rewards if self.contains_filter(r)]
         else:
             self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
         self.layoutChanged.emit()
@@ -193,8 +189,14 @@ class RoleRewardsModel(BaseRewardsModel):
         self.headers = (None, None, team_tags[0], team_tags[1])
         self.hero_roles = {hero: set() for hero in all_heroes}
 
+    # Allows for filtering for a list of hero names separated by a space.
     def contains_filter(self, reward):
-        return self.current_filter in reward.name.lower()
+        if not self.current_filter:
+            return True
+        for text in self.current_filter.split():
+            if text in reward.name.lower():
+                return True
+        return False
 
     def update_extra_state(self, reward, add=True):
         if add:
