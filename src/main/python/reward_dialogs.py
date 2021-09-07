@@ -279,7 +279,7 @@ class RoleRewardDialog(QDialog):
                 display_message(
                     self.parentWidget(),
                     start_error_text.format(reward.name, reward.role) +
-                    f"in {len(synergies)} synergy and {len(counters_h)} counter reward(s).",
+                    f"in {len(synergies)} synergy and {len(counters_h)} counter rewards.",
                     info_text.format(reward.name),
                     icon=QMessageBox.Warning,
                 )
@@ -287,7 +287,7 @@ class RoleRewardDialog(QDialog):
                 display_message(
                     self.parentWidget(),
                     start_error_text.format(reward.name, reward.role) +
-                    f"in {len(synergies)} synergy reward(s).",
+                    f"in {len(synergies)} synergy rewards.",
                     info_text.format(reward.name),
                     icon=QMessageBox.Warning,
                 )
@@ -295,7 +295,7 @@ class RoleRewardDialog(QDialog):
                 display_message(
                     self.parentWidget(),
                     start_error_text.format(reward.name, reward.role) +
-                    f"in {len(counters_h)} counter reward(s).",
+                    f"in {len(counters_h)} counter rewards.",
                     info_text.format(reward.name),
                     icon=QMessageBox.Warning,
                 )
@@ -303,7 +303,7 @@ class RoleRewardDialog(QDialog):
                 display_message(
                     self.parentWidget(),
                     start_error_text.format(reward.name, reward.role) +
-                    f"as an adversary in {len(counters_f)} counter reward(s) " \
+                    f"as an adversary in {len(counters_f)} counter rewards " \
                     f"and there are no other role rewards defined for {reward.name}.",
                     icon=QMessageBox.Warning,
                 )
