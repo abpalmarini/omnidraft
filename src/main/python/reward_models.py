@@ -190,7 +190,7 @@ class RoleRewardsModel(BaseRewardsModel):
     def __init__(self, all_heroes, team_tags):
         super().__init__()
 
-        self.headers = ("Hero", "Role", team_tags[0], team_tags[1])
+        self.headers = (None, None, team_tags[0], team_tags[1])
         self.hero_roles = {hero: set() for hero in all_heroes}
 
     def contains_filter(self, reward):

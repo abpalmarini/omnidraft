@@ -1,6 +1,7 @@
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot, QSize
 from PySide6.QtWidgets import (QWidget, QTableView, QAbstractItemView, QLineEdit,
-                               QPushButton, QGridLayout)
+                               QPushButton, QGridLayout, QStyledItemDelegate,
+                               QSizePolicy, QHBoxLayout, QHeaderView)
 
 from collections import namedtuple
 
@@ -8,7 +9,29 @@ from reward_models import RoleRewardsModel, SynergyRewardsModel, CounterRewardsM
 from reward_dialogs import RoleRewardDialog, SynergyRewardDialog, CounterRewardDialog
 
 
+REWARD_ICON_SIZE = QSize(50, 50)
+
+
 RewardType = namedtuple('RewardCollection', ['model', 'view', 'dialog'])
+
+
+class RewardIconDelegate(QStyledItemDelegate):
+
+    def __init__(self, hero_icons):
+        super().__init__()
+
+        self.hero_icons = hero_icons
+
+    def sizeHint(self, option, index):
+        return REWARD_ICON_SIZE
+
+    def paint(self, painter, option, index):
+        hero = index.model().data(index)
+        if not hero:
+            super().paint(painter, option, index)
+        else:
+            icon = self.hero_icons[hero]
+            icon.paint(painter, option.rect)
 
 
 class RewardsPage(QWidget):
@@ -17,23 +40,24 @@ class RewardsPage(QWidget):
         super().__init__()
 
         self.reward_types = []
+        self.icon_delegate = RewardIconDelegate(hero_icons)
 
         # role reward
         role_model = RoleRewardsModel(list(hero_icons.keys()), team_tags)
-        role_view = self.init_reward_view(role_model)
+        role_view = self.init_reward_view(role_model, [0])
         role_dialog = RoleRewardDialog(role_model, hero_icons, team_tags, self)
         self.reward_types.append(RewardType(role_model, role_view, role_dialog))
 
         # synergy reward
         synergy_model = SynergyRewardsModel(team_tags)
-        synergy_view = self.init_reward_view(synergy_model)
+        synergy_view = self.init_reward_view(synergy_model, list(range(5)))
         synergy_dialog = SynergyRewardDialog(role_model.hero_roles, synergy_model,
                                              hero_icons, team_tags, self)
         self.reward_types.append(RewardType(synergy_model, synergy_view, synergy_dialog))
 
         # counter reward
         counter_model = CounterRewardsModel(team_tags)
-        counter_view = self.init_reward_view(counter_model)
+        counter_view = self.init_reward_view(counter_model, list(range(10)))
         counter_dialog = CounterRewardDialog(role_model.hero_roles, counter_model,
                                              hero_icons, team_tags, self)
         self.reward_types.append(RewardType(counter_model, counter_view, counter_dialog))
@@ -57,18 +81,25 @@ class RewardsPage(QWidget):
         delete_button = QPushButton("Delete Selected Rewards")
         delete_button.clicked.connect(self.delete_clicked)
 
+        # @Temp: dummy team builder widget to occupy all remaining space
+        team_builder = QWidget()
+        team_builder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # layout
         layout = QGridLayout(self)
-        layout.addWidget(search_bar, 0, 0, 1, 2)
-        layout.addWidget(delete_button, 0, 2)
+        search_delete_layout = QHBoxLayout()
+        search_delete_layout.addWidget(search_bar)
+        search_delete_layout.addWidget(delete_button)
+        layout.addLayout(search_delete_layout, 0, 0, 1, 3)
         layout.addWidget(add_role_button, 1, 0)
         layout.addWidget(add_synergy_button, 1, 1)
         layout.addWidget(add_counter_button, 1, 2)
         layout.addWidget(role_view, 2, 0)
         layout.addWidget(synergy_view, 2, 1)
         layout.addWidget(counter_view, 2, 2)
+        layout.addWidget(team_builder, 0, 3, 3, 1)
 
-    def init_reward_view(self, reward_model):
+    def init_reward_view(self, reward_model, icon_columns):
         table_view = QTableView()
         table_view.setModel(reward_model)
 
@@ -79,6 +110,24 @@ class RewardsPage(QWidget):
         team_1_value_column = reward_model.columnCount() - 2
         table_view.sortByColumn(team_1_value_column, Qt.DescendingOrder)
         table_view.setSortingEnabled(True)
+
+        # adjusting team value columns to size, but @Later want to give same
+        table_view.resizeColumnsToContents()
+
+        # resize hero cells to icon size and have custom delegate paint them
+        vertical_header = table_view.verticalHeader()
+        vertical_header.setDefaultSectionSize(REWARD_ICON_SIZE.height())
+        vertical_header.hide()
+        for column in icon_columns:
+            table_view.setColumnWidth(column, REWARD_ICON_SIZE.width())
+            table_view.setItemDelegateForColumn(column, self.icon_delegate)
+
+        # have table view occupy exact horizontal space with no adjusting
+        horizontal_header = table_view.horizontalHeader()
+        horizontal_header.setSectionResizeMode(QHeaderView.Fixed)
+        table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        table_view.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        table_view.setFixedWidth(horizontal_header.length())
 
         return table_view
 
