@@ -10,6 +10,7 @@ from reward_dialogs import RoleRewardDialog, SynergyRewardDialog, CounterRewardD
 
 
 REWARD_ICON_SIZE = QSize(50, 50)
+ARROW_COLUMN_WIDTH = 15
 
 
 RewardType = namedtuple('RewardCollection', ['model', 'view', 'dialog'])
@@ -17,11 +18,12 @@ RewardType = namedtuple('RewardCollection', ['model', 'view', 'dialog'])
 
 class RewardIconDelegate(QStyledItemDelegate):
 
-    def __init__(self, hero_icons, role_icons):
+    def __init__(self, hero_icons, role_icons, arrow_icon):
         super().__init__()
 
         self.hero_icons = hero_icons
         self.role_icons = role_icons
+        self.arrow_icon = arrow_icon
 
     def sizeHint(self, option, index):
         return REWARD_ICON_SIZE
@@ -32,17 +34,19 @@ class RewardIconDelegate(QStyledItemDelegate):
             self.hero_icons[data].paint(painter, option.rect)
         elif data in self.role_icons:
             self.role_icons[data].paint(painter, option.rect)
+        elif data == ">":
+            self.arrow_icon.paint(painter, option.rect, Qt.AlignCenter)
         else:
             super().paint(painter, option, index)
 
 
 class RewardsPage(QWidget):
 
-    def __init__(self, hero_icons, role_icons, team_tags):
+    def __init__(self, hero_icons, role_icons, arrow_icon, team_tags):
         super().__init__()
 
         self.reward_types = []
-        self.icon_delegate = RewardIconDelegate(hero_icons, role_icons)
+        self.icon_delegate = RewardIconDelegate(hero_icons, role_icons, arrow_icon)
 
         # role reward
         role_model = RoleRewardsModel(list(hero_icons.keys()), team_tags)
@@ -59,7 +63,7 @@ class RewardsPage(QWidget):
 
         # counter reward
         counter_model = CounterRewardsModel(team_tags)
-        counter_view = self.init_reward_view(counter_model, list(range(10)))
+        counter_view = self.init_reward_view(counter_model, list(range(11)))
         counter_dialog = CounterRewardDialog(role_model.hero_roles, counter_model,
                                              hero_icons, team_tags, self)
         self.reward_types.append(RewardType(counter_model, counter_view, counter_dialog))
@@ -123,6 +127,9 @@ class RewardsPage(QWidget):
         for column in icon_columns:
             table_view.setColumnWidth(column, REWARD_ICON_SIZE.width())
             table_view.setItemDelegateForColumn(column, self.icon_delegate)
+        if isinstance(reward_model, CounterRewardsModel):
+            # 6th column of counter rewards used to separate heroes and foes
+            table_view.setColumnWidth(5, ARROW_COLUMN_WIDTH)
 
         # have table view occupy exact horizontal space with no adjusting
         horizontal_header = table_view.horizontalHeader()

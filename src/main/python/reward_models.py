@@ -284,7 +284,7 @@ class SynergyRewardsModel(BaseRewardsModel):
 
     def sort(self, column, order=Qt.AscendingOrder):
         # only allow sorting of team values
-        if column >= 5:
+        if column >= len(self.headers) - 2:
             BaseRewardsModel.sort(self, column, order)
 
     def update_extra_state(self, reward, add=True):
@@ -339,18 +339,22 @@ class CounterReward:
         else:
             self.status = NO_TEAM
 
+    # First 5 indices correspond to team heroes, 6th index is a separator,
+    # next 5 indices are foe heroes, then final 2 are team values.
     def __getitem__(self, index):
         if index < len(self.heroes):
             return self.heroes[index][0]
         elif index < 5:
             return None
-        elif index < 5 + len(self.foes):
-            return self.foes[index - 5]
-        elif index < 10:
+        elif index == 5:  # separator gap between team heroes and foes
+            return ">"
+        elif index < 6 + len(self.foes):
+            return self.foes[index - 6]
+        elif index < 11:
             return None
-        elif index == 10:
-            return self.team_1_value
         elif index == 11:
+            return self.team_1_value
+        elif index == 12:
             return self.team_2_value
         else:
             raise IndexError
@@ -361,7 +365,7 @@ class CounterRewardsModel(BaseRewardsModel):
     def __init__(self, team_tags):
         super().__init__()
 
-        self.headers = tuple(None for _ in range(10)) + (team_tags[0], team_tags[1])
+        self.headers = tuple(None for _ in range(11)) + (team_tags[0], team_tags[1])
         self.hero_role_asgmts = set()
 
     def contains_filter(self, reward):
@@ -380,7 +384,7 @@ class CounterRewardsModel(BaseRewardsModel):
 
     def sort(self, column, order=Qt.AscendingOrder):
         # only allow sorting of team values
-        if column >= 10:
+        if column >= len(self.headers) - 2:
             BaseRewardsModel.sort(self, column, order)
 
     def update_extra_state(self, reward, add=True):
