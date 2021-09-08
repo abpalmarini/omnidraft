@@ -60,6 +60,39 @@ class HeroBox(QLabel):
     def mousePressEvent(self, event):
         self.clicked.emit(self.name)
 
+    # Handles all situations of switching the contents of the hero box
+    # with a different hero box for cases where it is clicked and the
+    # other hero box is already selected.
+    def switch_with_selected(self, selected_box):
+        assert selected_box.selected and selected_box != self
+        if not selected_box.name and not self.name:
+            selected_box.set_selected(False)
+            self.set_selected(True)
+        else:
+            selected_box.set_selected(False)
+            if selected_box.name and not self.name:
+                self.set_hero(selected_box.name)
+                selected_box.clear()
+            elif not selected_box.name and self.name:
+                selected_box.set_hero(self.name)
+                self.clear()
+            else:
+                selected_box_name = selected_box.name
+                selected_box.set_hero(self.name)
+                self.set_hero(selected_box_name)
+
+    # Sets a hero item from a search model to the hero box, disabling
+    # the item from search. If the hero box already contains a hero then
+    # the corresponding item is re-enabled for search.
+    def set_hero_from_search_item(self, search_item):
+        if self.name:
+            search_model = search_item.model()
+            prev_item = search_model.findItems(self.name)[0]
+            prev_item.setEnabled(True)
+        search_item.setEnabled(False)
+        self.set_selected(False)
+        self.set_hero(search_item.text())
+
 
 def init_value_spinbox():
     v_spinbox = QDoubleSpinBox()
@@ -452,7 +485,7 @@ class SynergyRewardDialog(QDialog):
             if hero_box.selected and hero_box != clicked_box:
                 selected_box_roles = self.get_checked_roles(hero_box)   # save checked roles before switching
                 clicked_box_roles = self.get_checked_roles(clicked_box) # so they can be restored after
-                self.switch_hero_box_contents(hero_box, clicked_box)
+                clicked_box.switch_with_selected(hero_box)
                 self.update_role_checkboxes(hero_box, clicked_box_roles)
                 self.update_role_checkboxes(clicked_box, selected_box_roles)
                 self.remove_hero_button.setEnabled(False)
@@ -476,7 +509,8 @@ class SynergyRewardDialog(QDialog):
         else:
             index = self.search_f_model.mapToSource(selected_search_indexes[0])
             search_item = self.search_model.itemFromIndex(index)
-            self.set_search_item_to_hero_box(search_item, clicked_box)
+            clicked_box.set_hero_from_search_item(search_item)
+            self.search_view.clearSelection()
             self.update_role_checkboxes(clicked_box)
             self.remove_hero_button.setEnabled(False)
 
@@ -490,40 +524,11 @@ class SynergyRewardDialog(QDialog):
         # check if a hero box is selected and if so set its contents
         for hero_box in self.hero_boxes:
             if hero_box.selected:
-                self.set_search_item_to_hero_box(search_item, hero_box)
+                hero_box.set_hero_from_search_item(search_item)
+                self.search_view.clearSelection()
                 self.update_role_checkboxes(hero_box)
                 self.remove_hero_button.setEnabled(False)
                 return
-
-    # Handles all situations of switching the hero contents of two hero
-    # boxes if one was already selected when a new one was clicked.
-    def switch_hero_box_contents(self, selected_box, clicked_box):
-        if not selected_box.name and not clicked_box.name:
-            selected_box.set_selected(False)
-            clicked_box.set_selected(True)
-        else:
-            selected_box.set_selected(False)
-            if selected_box.name and not clicked_box.name:
-                clicked_box.set_hero(selected_box.name)
-                selected_box.clear()
-            elif not selected_box.name and clicked_box.name:
-                selected_box.set_hero(clicked_box.name)
-                clicked_box.clear()
-            else:
-                selected_box_name = selected_box.name
-                selected_box.set_hero(clicked_box.name)
-                clicked_box.set_hero(selected_box_name)
-
-    # Sets a hero item in search to a hero box, disabling it in process.
-    # If box already contains a hero the item is re-enabled for search.
-    def set_search_item_to_hero_box(self, search_item, hero_box):
-        if hero_box.name:
-            prev_item = self.search_model.findItems(hero_box.name)[0]
-            prev_item.setEnabled(True)
-        search_item.setEnabled(False)
-        self.search_view.clearSelection()
-        hero_box.set_selected(False)
-        hero_box.set_hero(search_item.text())
 
     @Slot()
     def remove_hero(self):
