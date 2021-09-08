@@ -43,11 +43,13 @@ class HeroBox(QLabel):
         self.clicked.emit(self.name)
 
     # Handles all situations of switching the contents of the hero box
-    # with a different hero box for cases where it is clicked and the
+    # with another hero box for cases where it is clicked and the
     # other hero box is already selected.
     def switch_with_selected(self, selected_box):
-        assert selected_box.selected and selected_box != self
-        if not selected_box.name and not self.name:
+        assert selected_box.selected
+        if selected_box == self:
+            self.set_selected(False)
+        elif not selected_box.name and not self.name:
             selected_box.set_selected(False)
             self.set_selected(True)
         else:

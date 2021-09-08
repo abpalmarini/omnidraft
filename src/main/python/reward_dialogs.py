@@ -410,7 +410,7 @@ class SynergyRewardDialog(QDialog):
         
         # check if some other box is selected
         for hero_box in self.hero_boxes:
-            if hero_box.selected and hero_box != clicked_box:
+            if hero_box.selected:
                 selected_box_roles = self.get_checked_roles(hero_box)   # save checked roles before switching
                 clicked_box_roles = self.get_checked_roles(clicked_box) # so they can be restored after
                 clicked_box.switch_with_selected(hero_box)
@@ -423,17 +423,12 @@ class SynergyRewardDialog(QDialog):
         selected_search_indexes = self.search_view.selectedIndexes()
         if not selected_search_indexes:
             # then no other box or search hero are selected
-            if not clicked_box.name:
-                # flip selection status if box is empty
-                clicked_box.set_selected(not clicked_box.selected)
+            if clicked_box.name:
+                # set selected and enable delete button if box contains hero
+                clicked_box.set_selected(True)
+                self.remove_hero_button.setEnabled(True)
             else:
-                # flip status and enable/disable delete button if box contains hero
-                if clicked_box.selected:
-                    clicked_box.set_selected(False)
-                    self.remove_hero_button.setEnabled(False)
-                else:
-                    clicked_box.set_selected(True)
-                    self.remove_hero_button.setEnabled(True)
+                clicked_box.set_selected(True)
         else:
             index = self.search_f_model.mapToSource(selected_search_indexes[0])
             search_item = self.search_model.itemFromIndex(index)
