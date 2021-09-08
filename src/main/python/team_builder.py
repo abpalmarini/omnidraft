@@ -1,8 +1,8 @@
 import itertools
 
-from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel
+from PySide6.QtCore import Qt, Slot, QSize, QSortFilterProxyModel
 from PySide6.QtWidgets import (QWidget, QLabel, QGridLayout, QDialog, QLineEdit,
-                               QDialogButtonBox, QVBoxLayout)
+                               QDialogButtonBox, QVBoxLayout, QPushButton)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from hero_box import HeroBox
@@ -41,6 +41,13 @@ class TeamBuilder(QWidget):
         self.select_dialog = HeroSelectDialog(hero_icons, self)
         self.select_dialog.search_view.clicked.connect(self.search_item_clicked)
 
+        self.remove_hero_button = QPushButton("Remove")
+        self.remove_hero_button.clicked.connect(self.remove_hero)
+        self.remove_hero_button.setEnabled(False)
+
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear_all_hero_boxes)
+
         layout = QGridLayout(self)
         layout.addWidget(team_1_label, 0, 0, Qt.AlignCenter)
         layout.addWidget(team_2_label, 0, 2, Qt.AlignCenter)
@@ -48,32 +55,68 @@ class TeamBuilder(QWidget):
             layout.addWidget(self.team_1_boxes[i], i + 1, 0)
             layout.addWidget(role_labels[i], i + 1, 1, Qt.AlignCenter)
             layout.addWidget(self.team_2_boxes[i], i + 1, 2)
+        layout.addWidget(self.remove_hero_button, 6, 2)
+        layout.addWidget(self.clear_button, 6, 0)
 
     # Switch hero box contents if there is an already selected box and
     # if not set the box to being selected.
+    @Slot()
     def hero_box_clicked(self, hero_name):
         clicked_box = self.sender()
         for hero_box in itertools.chain(self.team_1_boxes, self.team_2_boxes):
             if hero_box.selected:
                 clicked_box.switch_with_selected(hero_box)
+                self.remove_hero_button.setEnabled(False)
                 return
+        # select the clicked box if no other hero box is selected
         clicked_box.set_selected(True)
+        if clicked_box.name:
+            self.remove_hero_button.setEnabled(True)
 
     # Stores box that was double clicked and opens up the hero selector.
+    @Slot()
     def hero_box_double_clicked(self, hero_name):
         self.dbl_clicked_box = self.sender()
         for hero_box in itertools.chain(self.team_1_boxes, self.team_2_boxes):
             hero_box.set_selected(False)
         self.dbl_clicked_box.set_selected(True)
+        if self.dbl_clicked_box.name:
+            self.remove_hero_button.setEnabled(True)
         self.select_dialog.open()
 
     # Sets the selected hero to the hero box that was double clicked and
     # opened the select dialog in the first place.
+    @Slot()
     def search_item_clicked(self, f_index):
         search_item = self.select_dialog.get_item(f_index)
         if search_item.isEnabled():
             self.select_dialog.accept()
             self.dbl_clicked_box.set_hero_from_search_item(search_item)
+            self.remove_hero_button.setEnabled(False)
+
+    @Slot()
+    def remove_hero(self):
+        for hero_box in itertools.chain(self.team_1_boxes, self.team_2_boxes):
+            if hero_box.selected:
+                assert hero_box.name
+                # re-enable search item if removing it from box
+                search_item = self.select_dialog.get_item(hero_box.name)
+                search_item.setEnabled(True)
+                hero_box.set_selected(False)
+                hero_box.clear()
+                self.remove_hero_button.setEnabled(False)
+                return
+
+    @Slot()
+    def clear_all_hero_boxes(self):
+        for hero_box in itertools.chain(self.team_1_boxes, self.team_2_boxes):
+            if hero_box.name:
+                # re-enable search item if box to be cleared contains a hero
+                search_item = self.select_dialog.get_item(hero_box.name)
+                search_item.setEnabled(True)
+            hero_box.set_selected(False)
+            hero_box.clear()
+            self.remove_hero_button.setEnabled(False)
 
 
 class HeroSelectDialog(QDialog):
@@ -120,8 +163,11 @@ class HeroSelectDialog(QDialog):
         QDialog.open(self)
         self.search_bar.setFocus(Qt.PopupFocusReason)
 
-    # Returns the search item corresponding to the filter index.
-    def get_item(self, f_index):
-        index = self.search_f_model.mapToSource(f_index)
-        search_item = self.search_model.itemFromIndex(index)
+    # Returns the search item corresponding to the name or filter index.
+    def get_item(self, name_or_f_index):
+        if isinstance(name_or_f_index, str):
+            search_item = self.search_model.findItems(name_or_f_index)[0]
+        else:
+            index = self.search_f_model.mapToSource(name_or_f_index)
+            search_item = self.search_model.itemFromIndex(index)
         return search_item

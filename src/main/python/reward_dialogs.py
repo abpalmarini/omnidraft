@@ -423,12 +423,9 @@ class SynergyRewardDialog(QDialog):
         selected_search_indexes = self.search_view.selectedIndexes()
         if not selected_search_indexes:
             # then no other box or search hero are selected
+            clicked_box.set_selected(True)
             if clicked_box.name:
-                # set selected and enable delete button if box contains hero
-                clicked_box.set_selected(True)
-                self.remove_hero_button.setEnabled(True)
-            else:
-                clicked_box.set_selected(True)
+                self.remove_hero_button.setEnabled(True)  # enable delete button if box contains hero
         else:
             index = self.search_f_model.mapToSource(selected_search_indexes[0])
             search_item = self.search_model.itemFromIndex(index)
