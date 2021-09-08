@@ -1,6 +1,6 @@
 import itertools
 
-from PySide6.QtCore import Qt, Slot, QSize, QSortFilterProxyModel
+from PySide6.QtCore import Qt, Signal, Slot, QSize, QSortFilterProxyModel
 from PySide6.QtWidgets import (QWidget, QLabel, QGridLayout, QDialog, QLineEdit,
                                QDialogButtonBox, QVBoxLayout, QPushButton)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
@@ -15,10 +15,14 @@ ROLE_LABEL_SIZE = QSize(32, 32)
 
 class TeamBuilder(QWidget):
 
+    teams_changed = Signal(list, list)
+
     def __init__(self, hero_icons, role_icons, team_tags):
         super().__init__()
 
         self.roles = list(role_icons)
+        self.team_1 = []
+        self.team_2 = []
 
         team_1_label = QLabel(team_tags[0])
         team_2_label = QLabel(team_tags[1])
@@ -58,6 +62,23 @@ class TeamBuilder(QWidget):
         layout.addWidget(self.remove_hero_button, 6, 2)
         layout.addWidget(self.clear_button, 6, 0)
 
+    # Creates a list of hero-role tuples using the non-empty hero boxes
+    # for each team. The teams_changed signal is emitted so that the
+    # reward models can check which of their rewards should be granted
+    # based on the teams.
+    def update_teams(self):
+
+        def get_team(team_hero_boxes):
+            team = []
+            for hero_box, role in zip(team_hero_boxes, self.roles):
+                if hero_box.name:
+                    team.append((hero_box.name, role))
+            return team
+
+        self.team_1 = get_team(self.team_1_boxes)
+        self.team_2 = get_team(self.team_2_boxes)
+        self.teams_changed.emit(self.team_1, self.team_2)
+
     # Switch hero box contents if there is an already selected box and
     # if not set the box to being selected.
     @Slot()
@@ -66,6 +87,8 @@ class TeamBuilder(QWidget):
         for hero_box in itertools.chain(self.team_1_boxes, self.team_2_boxes):
             if hero_box.selected:
                 clicked_box.switch_with_selected(hero_box)
+                if hero_box != clicked_box:
+                    self.update_teams()  # no point in updating if switching box with itself
                 self.remove_hero_button.setEnabled(False)
                 return
         # select the clicked box if no other hero box is selected
@@ -92,6 +115,7 @@ class TeamBuilder(QWidget):
         if search_item.isEnabled():
             self.select_dialog.accept()
             self.dbl_clicked_box.set_hero_from_search_item(search_item)
+            self.update_teams()
             self.remove_hero_button.setEnabled(False)
 
     @Slot()
@@ -104,6 +128,7 @@ class TeamBuilder(QWidget):
                 search_item.setEnabled(True)
                 hero_box.set_selected(False)
                 hero_box.clear()
+                self.update_teams()
                 self.remove_hero_button.setEnabled(False)
                 return
 
@@ -117,6 +142,7 @@ class TeamBuilder(QWidget):
             hero_box.set_selected(False)
             hero_box.clear()
             self.remove_hero_button.setEnabled(False)
+        self.update_teams()
 
 
 class HeroSelectDialog(QDialog):

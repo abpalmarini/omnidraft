@@ -30,6 +30,12 @@ class RewardIconDelegate(QStyledItemDelegate):
         return REWARD_ICON_SIZE
 
     def paint(self, painter, option, index):
+        # check and paint background first if needed
+        background = index.model().data(index, Qt.BackgroundRole)
+        if background is not None:
+            painter.fillRect(option.rect, background)
+
+        # paint icon
         data = index.model().data(index, Qt.DisplayRole)
         if data in self.hero_icons:
             self.hero_icons[data].paint(painter, option.rect)
@@ -37,8 +43,6 @@ class RewardIconDelegate(QStyledItemDelegate):
             self.role_icons[data].paint(painter, option.rect)
         elif data == ">":
             self.arrow_icon.paint(painter, option.rect, Qt.AlignCenter)
-        else:
-            super().paint(painter, option, index)
 
 
 class RewardsPage(QWidget):
@@ -91,6 +95,9 @@ class RewardsPage(QWidget):
         # team builder
         team_builder = TeamBuilder(hero_icons, role_icons, team_tags)
         team_builder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        for reward_type in self.reward_types:
+            model = reward_type.model
+            team_builder.teams_changed.connect(model.update_reward_statuses)
 
         # layout
         layout = QGridLayout(self)
