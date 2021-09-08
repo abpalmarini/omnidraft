@@ -1,7 +1,7 @@
 import itertools
 from operator import itemgetter
 
-from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
+from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Slot
 from PySide6.QtGui import QColor, QFont
 
 
@@ -141,6 +141,7 @@ class BaseRewardsModel(QAbstractTableModel):
 
     # To be called whenever the teams in the team builder change, so
     # that rewards being granted can be highlighted.
+    @Slot()
     def update_reward_statuses(self, team_1, team_2):
         team_1.sort(key=itemgetter(0))  # sort first to ensure it matches any
         team_2.sort(key=itemgetter(0))  # synergy/counter combinations
