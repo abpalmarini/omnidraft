@@ -7,6 +7,7 @@ from collections import namedtuple
 
 from reward_models import RoleRewardsModel, SynergyRewardsModel, CounterRewardsModel
 from reward_dialogs import RoleRewardDialog, SynergyRewardDialog, CounterRewardDialog
+from team_builder import TeamBuilder
 
 
 REWARD_ICON_SIZE = QSize(50, 50)
@@ -87,8 +88,8 @@ class RewardsPage(QWidget):
         delete_button = QPushButton("Delete Selected Rewards")
         delete_button.clicked.connect(self.delete_clicked)
 
-        # @Temp: dummy team builder widget to occupy all remaining space
-        team_builder = QWidget()
+        # team builder
+        team_builder = TeamBuilder(hero_icons, role_icons, team_tags)
         team_builder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # layout

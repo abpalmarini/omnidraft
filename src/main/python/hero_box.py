@@ -6,6 +6,7 @@ class HeroBox(QLabel):
     """Clickable box that can hold a hero name and display its icon."""
 
     clicked = Signal(str)
+    doubleClicked = Signal(str)
 
     def __init__(self, hero_icons, size):
         super().__init__()
@@ -41,6 +42,9 @@ class HeroBox(QLabel):
 
     def mousePressEvent(self, event):
         self.clicked.emit(self.name)
+
+    def mouseDoubleClickEvent(self, event):
+        self.doubleClicked.emit(self.name)
 
     # Handles all situations of switching the contents of the hero box
     # with another hero box for cases where it is clicked and the
