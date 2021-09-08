@@ -25,7 +25,7 @@ class HeroBox(QLabel):
 
     clicked = Signal(str)
 
-    def __init__(self, hero_icons):
+    def __init__(self, hero_icons, size):
         super().__init__()
 
         self.name = ""
@@ -33,12 +33,13 @@ class HeroBox(QLabel):
         self.selected = None  # can't set directly because frame won't get set up
         self.set_selected(False)
 
+        self.size = size
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setLineWidth(2)
 
     def set_hero(self, name):
         self.name = name
-        self.setPixmap(self.hero_icons[name].pixmap(self.sizeHint()))
+        self.setPixmap(self.hero_icons[name].pixmap(self.size))
 
     def set_selected(self, selected):
         if selected == self.selected:
@@ -50,7 +51,7 @@ class HeroBox(QLabel):
             self.setFrameStyle(QFrame.Panel | QFrame.Raised)
 
     def sizeHint(self):
-        return HERO_BOX_SIZE
+        return self.size
 
     def clear(self):
         self.name = ""
@@ -106,7 +107,7 @@ class RoleRewardDialog(QDialog):
         self.edit_reward = None
 
         self.hero_label = QLabel("Champion:") 
-        self.hero_box = HeroBox(hero_icons)
+        self.hero_box = HeroBox(hero_icons, HERO_BOX_SIZE)
         self.hero_box.set_selected(True)
 
         self.role_label = QLabel("Role:")
@@ -355,7 +356,7 @@ class SynergyRewardDialog(QDialog):
         self.heroes_label = QLabel("Champions:") 
         self.hero_boxes = []
         for i in range(len(roles)):
-            hero_box = HeroBox(hero_icons)
+            hero_box = HeroBox(hero_icons, HERO_BOX_SIZE)
             self.hero_boxes.append(hero_box)
             hero_box.clicked.connect(self.hero_box_clicked)
             hero_box.index = i
@@ -693,7 +694,7 @@ class CounterRewardDialog(SynergyRewardDialog):
         # add 5 hero boxes for the foes (same list is used to allow
         # updating methods in synergy dialog to still work)
         for i in range(len(roles)):
-            hero_box = HeroBox(hero_icons)
+            hero_box = HeroBox(hero_icons, HERO_BOX_SIZE)
             self.hero_boxes.append(hero_box)
             hero_box.clicked.connect(self.hero_box_clicked)
             hero_box.index = len(roles) + i
