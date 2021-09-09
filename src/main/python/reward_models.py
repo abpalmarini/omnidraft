@@ -10,6 +10,9 @@ TEAM_1  = 1
 TEAM_2  = 2
 NO_TEAM = 3
 
+TEAM_1_COLOR = QColor(24, 144, 240, 150)
+TEAM_2_COLOR = QColor(255, 88, 79, 150)
+
 
 class BaseRewardsModel(QAbstractTableModel):
 
@@ -48,9 +51,9 @@ class BaseRewardsModel(QAbstractTableModel):
         elif role == Qt.BackgroundRole:
             # highlight rewards based on status in team builder
             if reward.status == TEAM_1:
-                return QColor(0, 0, 255, 127)
+                return TEAM_1_COLOR
             elif reward.status == TEAM_2:
-                return QColor(255, 0, 0, 127)
+                return TEAM_2_COLOR
         elif role == Qt.FontRole:
             # return bold value if reward is granted for either team
             font = QFont()

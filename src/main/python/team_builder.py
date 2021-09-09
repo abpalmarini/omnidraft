@@ -3,11 +3,12 @@ import itertools
 from PySide6.QtCore import Qt, Signal, Slot, QSize, QSortFilterProxyModel
 from PySide6.QtWidgets import (QWidget, QLabel, QGridLayout, QDialog, QLineEdit,
                                QDialogButtonBox, QVBoxLayout, QPushButton,
-                               QCheckBox)
+                               QCheckBox, QGroupBox, QLCDNumber, QFrame)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from hero_box import HeroBox
 from reward_dialogs import init_search_list_view
+from reward_models import TEAM_1, TEAM_2, NO_TEAM, TEAM_1_COLOR, TEAM_2_COLOR
 
 
 HERO_BOX_SIZE = QSize(72, 72)
@@ -201,3 +202,53 @@ class HeroSelectDialog(QDialog):
             index = self.search_f_model.mapToSource(name_or_f_index)
             search_item = self.search_model.itemFromIndex(index)
         return search_item
+
+
+# For now this simply displays each team's total value and the overall
+# overall value from team 1's perspective. More can be added @Later.
+class RewardInfo(QGroupBox):
+    """Displays group of information on the rewards granted in team builder."""
+
+    def __init__(self, role_model, synergy_model, counter_model, team_tags):
+        super().__init__()
+
+        self.role_model = role_model
+        self.synergy_model = synergy_model
+        self.counter_model = counter_model
+        self.reward_models = (role_model, synergy_model, counter_model)
+
+        self.team_1_value_lcd = self.init_lcd(TEAM_1_COLOR)
+        self.team_2_value_lcd = self.init_lcd(TEAM_2_COLOR)
+        self.overall_value_lcd = self.init_lcd()
+
+        self.update()  # ensure correct starting values
+
+        layout = QGridLayout(self)
+        layout.addWidget(self.team_1_value_lcd, 0, 0)
+        layout.addWidget(self.team_2_value_lcd, 0, 1)
+        layout.addWidget(self.overall_value_lcd, 1, 0, 2, 2)
+
+    def init_lcd(self, color=None):
+        lcd = QLCDNumber(6)
+        lcd.setSegmentStyle(QLCDNumber.Flat)
+        if color is not None:
+            palette = lcd.palette()
+            palette.setColor(palette.WindowText, color)
+            lcd.setPalette(palette)
+        return lcd
+
+    # Find relevant info on all granted rewards and update displays.
+    def update(self):
+        team_1_value = 0
+        team_2_value = 0
+
+        for model in self.reward_models:
+            for reward in model.rewards:
+                if reward.status == TEAM_1:
+                    team_1_value += reward.team_1_value
+                elif reward.status == TEAM_2:
+                    team_2_value += reward.team_2_value
+
+        self.team_1_value_lcd.display(team_1_value)
+        self.team_2_value_lcd.display(team_2_value)
+        self.overall_value_lcd.display(team_1_value - team_2_value)

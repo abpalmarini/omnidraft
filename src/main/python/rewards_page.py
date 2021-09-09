@@ -1,13 +1,13 @@
 from PySide6.QtCore import Qt, Slot, QSize
 from PySide6.QtWidgets import (QWidget, QTableView, QAbstractItemView, QLineEdit,
                                QPushButton, QGridLayout, QStyledItemDelegate,
-                               QSizePolicy, QHBoxLayout, QHeaderView)
+                               QSizePolicy, QHBoxLayout, QHeaderView, QVBoxLayout)
 
 from collections import namedtuple
 
 from reward_models import RoleRewardsModel, SynergyRewardsModel, CounterRewardsModel
 from reward_dialogs import RoleRewardDialog, SynergyRewardDialog, CounterRewardDialog
-from team_builder import TeamBuilder
+from team_builder import TeamBuilder, RewardInfo
 
 
 REWARD_ICON_SIZE = QSize(50, 50)
@@ -94,13 +94,23 @@ class RewardsPage(QWidget):
 
         # team builder
         team_builder = TeamBuilder(hero_icons, role_icons, team_tags)
-        team_builder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         for reward_type in self.reward_types:
             model = reward_type.model
             team_builder.teams_changed.connect(model.update_reward_statuses)
             team_builder.hide_non_granted_checkbox.toggled.connect(
                 model.hide_non_granted_rewards
             )
+
+        # reward info
+        # The update method is connected to all signals that are emitted
+        # whenever there is a change to the rewards and/or their status
+        # of being granted in the team builder. @Important: the update
+        # method must be connected after the update_reward_statuses of
+        # each model as it takes the info directly from each model.
+        reward_info = RewardInfo(role_model, synergy_model, counter_model, team_tags)
+        team_builder.teams_changed.connect(reward_info.update)
+        for reward_type in self.reward_types:
+            reward_type.dialog.accepted.connect(reward_info.update)  # covers an add, edit, delete
 
         # layout
         layout = QGridLayout(self)
@@ -114,8 +124,11 @@ class RewardsPage(QWidget):
         layout.addWidget(role_view, 2, 0)
         layout.addWidget(synergy_view, 2, 1)
         layout.addWidget(counter_view, 2, 2)
-        layout.addWidget(team_builder, 0, 3, 3, 1)
-
+        builder_info_layout = QVBoxLayout()
+        builder_info_layout.addWidget(team_builder)
+        builder_info_layout.addWidget(reward_info)
+        layout.addLayout(builder_info_layout, 0, 3, 3, 1)
+        
     def init_reward_view(self, reward_model, icon_columns):
         table_view = QTableView()
         table_view.setModel(reward_model)
