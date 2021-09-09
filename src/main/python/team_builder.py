@@ -2,7 +2,8 @@ import itertools
 
 from PySide6.QtCore import Qt, Signal, Slot, QSize, QSortFilterProxyModel
 from PySide6.QtWidgets import (QWidget, QLabel, QGridLayout, QDialog, QLineEdit,
-                               QDialogButtonBox, QVBoxLayout, QPushButton)
+                               QDialogButtonBox, QVBoxLayout, QPushButton,
+                               QCheckBox)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from hero_box import HeroBox
@@ -52,6 +53,8 @@ class TeamBuilder(QWidget):
         self.clear_button = QPushButton("Clear")
         self.clear_button.clicked.connect(self.clear_all_hero_boxes)
 
+        self.hide_non_granted_checkbox = QCheckBox("Hide non-granted rewards")
+
         layout = QGridLayout(self)
         layout.addWidget(team_1_label, 0, 0, Qt.AlignCenter)
         layout.addWidget(team_2_label, 0, 2, Qt.AlignCenter)
@@ -59,8 +62,9 @@ class TeamBuilder(QWidget):
             layout.addWidget(self.team_1_boxes[i], i + 1, 0)
             layout.addWidget(role_labels[i], i + 1, 1, Qt.AlignCenter)
             layout.addWidget(self.team_2_boxes[i], i + 1, 2)
-        layout.addWidget(self.remove_hero_button, 6, 2)
-        layout.addWidget(self.clear_button, 6, 0)
+        layout.addWidget(self.remove_hero_button, 6, 0, 1, 3)
+        layout.addWidget(self.clear_button, 7, 0, 1, 3)
+        layout.addWidget(self.hide_non_granted_checkbox, 8, 0, 1, 3)
 
     # Creates a list of hero-role tuples using the non-empty hero boxes
     # for each team. The teams_changed signal is emitted so that the

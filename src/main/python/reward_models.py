@@ -20,6 +20,7 @@ class BaseRewardsModel(QAbstractTableModel):
         self.view_rewards = []
         self.current_sort = (None, None)
         self.current_filter = ""
+        self.non_granted_hidden = False  # if only rewards granted in team builder should be shown
 
         # heroes selected for each team in the team builder
         self.team_1 = []
@@ -72,19 +73,13 @@ class BaseRewardsModel(QAbstractTableModel):
         else:
             self.rewards.sort(key=itemgetter(column), reverse=True)
         self.layoutAboutToBeChanged.emit()
-        if not self.current_filter:
-            self.view_rewards = list(self.rewards)
-        else:
-            self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
+        self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
         self.layoutChanged.emit()
 
     def filter_rewards(self, text):
         self.current_filter = text.lower()
         self.layoutAboutToBeChanged.emit()
-        if not self.current_filter:
-            self.view_rewards = list(self.rewards)
-        else:
-            self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
+        self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
         self.layoutChanged.emit()
 
     def add_reward(self, reward):
@@ -150,7 +145,26 @@ class BaseRewardsModel(QAbstractTableModel):
         self.layoutAboutToBeChanged.emit()
         for reward in self.rewards:
             reward.update_status(team_1, team_2)
+        self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
         self.layoutChanged.emit()
+
+    # Toggle to either show all rewards (that contain search filter) or
+    # only rewards that are granted based on the teams in team builder.
+    @Slot()
+    def hide_non_granted_rewards(self, non_granted_hidden):
+        self.non_granted_hidden = non_granted_hidden
+        self.layoutAboutToBeChanged.emit()
+        self.view_rewards = [r for r in self.rewards if self.contains_filter(r)]
+        self.layoutChanged.emit()
+
+    # Returns if the reward should be shown based on whether or not the
+    # team builder filter is applied and its status of being granted or
+    # not. (Should be used in the contains_filter method of subclasses).
+    def show_based_on_status(self, reward):
+        if self.non_granted_hidden and reward.status == NO_TEAM:
+            return False
+        else:
+            return True
 
 
 class RoleReward:
@@ -192,6 +206,9 @@ class RoleRewardsModel(BaseRewardsModel):
 
     # Allows for filtering for a list of hero names separated by a space.
     def contains_filter(self, reward):
+        if not self.show_based_on_status(reward):
+            return False
+
         if not self.current_filter:
             return True
         for text in self.current_filter.split():
@@ -275,6 +292,9 @@ class SynergyRewardsModel(BaseRewardsModel):
     # space. For a reward to contain the filter all parts must be part
     # of any hero name.
     def contains_filter(self, reward):
+        if not self.show_based_on_status(reward):
+            return False
+
         filters = self.current_filter.split()
 
         def filter_in_any_name(text):
@@ -372,6 +392,9 @@ class CounterRewardsModel(BaseRewardsModel):
         self.hero_role_asgmts = set()
 
     def contains_filter(self, reward):
+        if not self.show_based_on_status(reward):
+            return False
+
         filters = self.current_filter.split()
 
         def filter_in_any_name(text):

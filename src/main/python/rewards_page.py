@@ -98,6 +98,9 @@ class RewardsPage(QWidget):
         for reward_type in self.reward_types:
             model = reward_type.model
             team_builder.teams_changed.connect(model.update_reward_statuses)
+            team_builder.hide_non_granted_checkbox.toggled.connect(
+                model.hide_non_granted_rewards
+            )
 
         # layout
         layout = QGridLayout(self)
