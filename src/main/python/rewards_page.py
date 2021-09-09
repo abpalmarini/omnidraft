@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt, Slot, QSize
 from PySide6.QtWidgets import (QWidget, QTableView, QAbstractItemView, QLineEdit,
-                               QPushButton, QGridLayout, QStyledItemDelegate,
+                               QPushButton, QGridLayout, QStyledItemDelegate, QStyle,
                                QSizePolicy, QHBoxLayout, QHeaderView, QVBoxLayout)
 
 from collections import namedtuple
@@ -32,7 +32,8 @@ class RewardIconDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         # check and paint background first if needed
         background = index.model().data(index, Qt.BackgroundRole)
-        if background is not None:
+        is_selected = bool(option.state & QStyle.State_Selected)
+        if background is not None and not is_selected:
             painter.fillRect(option.rect, background)
 
         # paint icon
