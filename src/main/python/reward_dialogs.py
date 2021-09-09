@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QDialog, QAbstractItemView, QListView, QLineEdit,
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from ai import draft_ai
-from hero_box import HeroBox
+from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_models import RoleReward, SynergyReward, CounterReward
 
 
@@ -91,6 +91,7 @@ class RoleRewardDialog(QDialog):
         self.layout = QGridLayout(self)
         self.layout.addWidget(self.hero_label, 0, 0)
         self.layout.addWidget(self.hero_box, 0, 1, Qt.AlignCenter)
+        set_hero_box_layout_sizes(HERO_BOX_SIZE, self.layout, [0], [1])
         self.layout.addWidget(self.role_label, 1, 0)
         self.layout.addWidget(self.role_combobox, 1, 1)
         self.layout.addWidget(self.v_1_label, 2, 0)
@@ -371,7 +372,7 @@ class SynergyRewardDialog(QDialog):
         # hero boxes
         self.layout.addWidget(self.heroes_label, 0, 0)
         for i in range(len(roles)):
-            self.layout.addWidget(self.hero_boxes[i], 0, i + 1)
+            self.layout.addWidget(self.hero_boxes[i], 0, i + 1, Qt.AlignCenter)
 
             # role checkboxes
             self.layout.addWidget(QLabel(roles[i] + ":"), i + 1, 0)
@@ -379,6 +380,7 @@ class SynergyRewardDialog(QDialog):
             for j in range(len(roles)):
                 # checkboxes for hero box i are placed in the rows underneath
                 self.layout.addWidget(role_checkboxes[j], j + 1, i + 1, Qt.AlignCenter)
+        set_hero_box_layout_sizes(HERO_BOX_SIZE, self.layout, [0], [1, 2, 3, 4, 5])
 
         # counter rewards will need to insert the foe hero boxes at this point
         offset = 7 if isinstance(self, CounterRewardDialog) else 6
@@ -629,7 +631,8 @@ class CounterRewardDialog(SynergyRewardDialog):
         # add foe boxes to layout
         self.layout.addWidget(self.foes_label, 6, 0)
         for i in range(len(roles)):
-            self.layout.addWidget(self.hero_boxes[len(roles) + i], 6, i + 1)
+            self.layout.addWidget(self.hero_boxes[len(roles) + i], 6, i + 1, Qt.AlignCenter)
+        set_hero_box_layout_sizes(HERO_BOX_SIZE, self.layout, [6], [1, 2, 3, 4, 5])
 
     # Only the team heroes have applicable roles selected so there are
     # no role checkboxes for the foe hero boxes.

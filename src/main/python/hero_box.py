@@ -24,6 +24,8 @@ class HeroBox(QLabel):
         self.name = name
         self.setPixmap(self.hero_icons[name].pixmap(self.size))
 
+    # @Important: If I change how to show a selected box I may need to
+    # update set_hero_box_layout_sizes.
     def set_selected(self, selected):
         if selected == self.selected:
             return
@@ -80,3 +82,22 @@ class HeroBox(QLabel):
         search_item.setEnabled(False)
         self.set_selected(False)
         self.set_hero(search_item.text())
+
+
+# A hero box will grow/shrink in size based on whether or not it contains
+# a hero pixmap and whether or not it is selected. This causes the
+# layouts they are used in to constantly shift everything about when one
+# changes state. To make up for this I can set the minimum width/height
+# of the columns/rows containg hero boxes in a layout to the max a hero
+# box could ever be.
+def set_hero_box_layout_sizes(box_size, layout, rows, columns):
+    hero_box = HeroBox(None, box_size)
+    hero_box.set_selected(True)
+    max_size_increase = hero_box.frameWidth() * 2
+
+    max_height = box_size.height() + max_size_increase
+    max_width = box_size.width() + max_size_increase
+    for row in rows:
+        layout.setRowMinimumHeight(row, max_height)
+    for column in columns:
+        layout.setColumnMinimumWidth(column, max_width)

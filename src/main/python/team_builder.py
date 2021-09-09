@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QWidget, QLabel, QGridLayout, QDialog, QLineEdit,
                                QCheckBox, QGroupBox, QLCDNumber, QFrame)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
-from hero_box import HeroBox
+from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
 from reward_models import TEAM_1, TEAM_2, NO_TEAM, TEAM_1_COLOR, TEAM_2_COLOR
 
@@ -60,9 +60,10 @@ class TeamBuilder(QWidget):
         layout.addWidget(team_1_label, 0, 0, Qt.AlignCenter)
         layout.addWidget(team_2_label, 0, 2, Qt.AlignCenter)
         for i in range(len(self.roles)):
-            layout.addWidget(self.team_1_boxes[i], i + 1, 0)
+            layout.addWidget(self.team_1_boxes[i], i + 1, 0, Qt.AlignCenter)
             layout.addWidget(role_labels[i], i + 1, 1, Qt.AlignCenter)
-            layout.addWidget(self.team_2_boxes[i], i + 1, 2)
+            layout.addWidget(self.team_2_boxes[i], i + 1, 2, Qt.AlignCenter)
+        set_hero_box_layout_sizes(HERO_BOX_SIZE, layout, [1, 2, 3, 4, 5], [0, 2])
         layout.addWidget(self.remove_hero_button, 6, 0, 1, 3)
         layout.addWidget(self.clear_button, 7, 0, 1, 3)
         layout.addWidget(self.hide_non_granted_checkbox, 8, 0, 1, 3)
