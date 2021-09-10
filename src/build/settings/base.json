@@ -2,5 +2,6 @@
     "app_name": "omnidraft",
     "author": "Alessandro B. Palmarini",
     "main_module": "src/main/python/main.py",
-    "version": "0.0.0"
+    "version": "0.0.0",
+    "hidden_imports": ["_cffi_backend"]
 }
