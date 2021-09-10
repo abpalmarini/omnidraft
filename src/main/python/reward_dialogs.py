@@ -590,6 +590,18 @@ class SynergyRewardDialog(QDialog):
             )
             return
 
+        # check there is enough memory allocated in engine for the synergy combos
+        total_combos = len(reward.hero_role_asgmts) + len(self.reward_model.hero_role_asgmts)
+        if total_combos > draft_ai.MAX_SYNERGY_RS:
+            display_message(
+                self,
+                "You have created more synergy rewards than I thought needed." \
+                " The AI engine does not have enough allocated memory for this many" \
+                " reward combinations. This, however, is not a problem and" \
+                " can be instantly extended. Please get in touch to let me know.",
+            )
+            return
+
         self.reward_model.add_reward(reward)
         QDialog.accept(self)
 
@@ -700,6 +712,17 @@ class CounterRewardDialog(SynergyRewardDialog):
                           " counters between the same champions in different roles.",
                 detailed_text=self.format_clashes(clashes),
                 icon=QMessageBox.Critical,
+            )
+            return
+
+        total_combos = len(reward.hero_role_asgmts) + len(self.reward_model.hero_role_asgmts)
+        if total_combos > draft_ai.MAX_COUNTER_RS:
+            display_message(
+                self,
+                "You have created more counter rewards than I thought needed." \
+                " The AI engine does not have enough allocated memory for this many" \
+                " reward combinations. This, however, is not a problem and" \
+                " can be instantly extended. Please get in touch to let me know.",
             )
             return
 
