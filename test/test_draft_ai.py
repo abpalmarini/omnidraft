@@ -673,7 +673,7 @@ class TestDraftAI(unittest.TestCase):
         self.assertTrue((action, action_2) == target_actions 
                         or (action_2, action) == target_actions)
 
-    def test_flex_pick_in_history_B_last_pick(self):
+    def test_multilineup_terminal_value_B(self):
         random.seed(9)
         old_draft = draft_az.Draft()
         scale_rewards(old_draft)
@@ -704,6 +704,42 @@ class TestDraftAI(unittest.TestCase):
         # target_value, target_action = alphabeta(old_draft, -INF, INF)
         # target_value = -target_value  # get value in terms of team B's perspective
         target_value, target_action = 1671, 14  # hard coding after running once
+
+        value, action = self.run_c_search(*translate_old_draft(old_draft))
+
+        self.assertEqual(value, target_value)
+        self.assertEqual(action, target_action)
+
+    def test_multilineup_terminal_value_A(self):
+        random.seed(9)
+        old_draft = draft_az.Draft()
+        scale_rewards(old_draft)
+        old_draft.format = (
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.B, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),
+            (draft_az.A, draft_az.PICK),  # starting from here
+            (draft_az.B, draft_az.PICK),
+        )
+        # from inspection these are pairs of heroes and playable roles 
+        # for this random draft:
+        # (44, [0, 1, 2]), (45, [1, 2]), (46, [1, 3]), (49, [1, 3])
+        # by giving A 44 and 45, and B 46 and 49, there will be multiple
+        # considerations needed for final pick no matter what
+        old_draft.apply(44)
+        old_draft.apply(46)
+        old_draft.apply(49)
+        old_draft.apply(45)
+        for _ in range(4):
+            old_draft.apply(random.choice(old_draft.legal_actions()))
+
+        # target_value, target_action = alphabeta(old_draft, -INF, INF)
+        target_value, target_action = -726, 39  # hard coding after running once
 
         value, action = self.run_c_search(*translate_old_draft(old_draft))
 
