@@ -301,8 +301,8 @@ class SynergyRewardsModel(BaseRewardsModel):
         filters = self.current_filter.split()
 
         def filter_in_any_name(text):
-            for hero in reward.heroes:
-                if text in hero[0].lower():
+            for hero_name in reward.hero_names:
+                if text in hero_name.lower():
                     return True
             return False
 
@@ -330,25 +330,32 @@ class CounterReward:
     def __init__(self, heroes, foes, team_1_value, team_2_value):
         self.heroes = list(heroes.items())
         self.heroes.sort(key=itemgetter(0))
-        self.foes = tuple(sorted(foes))
+        self.foes = list(foes.items())
+        self.foes.sort(key=itemgetter(0))
         self.team_1_value = team_1_value
         self.team_2_value = team_2_value
         self.init_hero_role_asgmts()
         self.init_used_role_rs()
 
     def init_hero_role_asgmts(self):
-        names, roles = zip(*self.heroes)
-        self.hero_names = names
+        hero_names, hero_roles = zip(*self.heroes)
+        self.hero_names = hero_names
+        foe_names, foe_roles = zip(*self.foes)
+        self.foe_names = foe_names
         self.hero_role_asgmts = set()
-        for role_asgmt in itertools.product(*roles):
-            if len(set(role_asgmt)) == len(self.heroes):
-                asgmt = tuple(zip(names, role_asgmt))
-                self.hero_role_asgmts.add((asgmt, self.foes))  # counters must store foes as well
+        for roles_h in itertools.product(*hero_roles):
+            if len(set(roles_h)) == len(self.heroes):
+                hero_asgmt = tuple(zip(hero_names, roles_h))
+                # find each valid foe hero role assignment as well
+                for roles_f in itertools.product(*foe_roles):
+                    if len(set(roles_f)) == len(self.foes):
+                        foe_asgmt = tuple(zip(foe_names, roles_f))
+                        self.hero_role_asgmts.add((hero_asgmt, foe_asgmt))
 
     def init_used_role_rs(self):
         self.used_role_rs = set()
-        for hero_role_asgmt, _ in self.hero_role_asgmts:
-            for name_role in hero_role_asgmt:
+        for hero_asgmt, foe_asgmt in self.hero_role_asgmts:
+            for name_role in itertools.chain(hero_asgmt, foe_asgmt):
                 self.used_role_rs.add(name_role)
 
     # To check if a counter is granted one team must have all heroes
@@ -356,8 +363,8 @@ class CounterReward:
     def update_status(self, team_1, team_2):
         team_1_h = tuple(hero for hero in team_1 if hero[0] in self.hero_names)
         team_2_h = tuple(hero for hero in team_2 if hero[0] in self.hero_names)
-        team_1_f = tuple(hero[0] for hero in team_1 if hero[0] in self.foes)
-        team_2_f = tuple(hero[0] for hero in team_2 if hero[0] in self.foes)
+        team_1_f = tuple(hero for hero in team_1 if hero[0] in self.foe_names)
+        team_2_f = tuple(hero for hero in team_2 if hero[0] in self.foe_names)
         if (team_1_h, team_2_f) in self.hero_role_asgmts:
             self.status = TEAM_1
         elif (team_2_h, team_1_f) in self.hero_role_asgmts:
@@ -375,7 +382,7 @@ class CounterReward:
         elif index == 5:  # separator gap between team heroes and foes
             return ">"
         elif index < 6 + len(self.foes):
-            return self.foes[index - 6]
+            return self.foes[index - 6][0]
         elif index < 11:
             return None
         elif index == 11:
@@ -401,11 +408,11 @@ class CounterRewardsModel(BaseRewardsModel):
         filters = self.current_filter.split()
 
         def filter_in_any_name(text):
-            for hero in reward.heroes:
-                if text in hero[0].lower():
+            for hero_name in reward.hero_names:
+                if text in hero_name.lower():
                     return True
-            for name in reward.foes:
-                if text in name.lower():
+            for foe_name in reward.foe_names:
+                if text in foe_name.lower():
                     return True
             return False
 
@@ -427,6 +434,4 @@ class CounterRewardsModel(BaseRewardsModel):
     # where the hero is used as part of foes.
     def uses_role_reward(self, role_reward):
         name_role = (role_reward.name, role_reward.role)
-        used_in_team = [r for r in self.rewards if name_role in r.used_role_rs]
-        used_in_foes = [r for r in self.rewards if role_reward.name in r.foes]
-        return used_in_team, used_in_foes
+        return [r for r in self.rewards if name_role in r.used_role_rs]
