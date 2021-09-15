@@ -32,10 +32,9 @@ ZOBRIST_BITS = 64
 ROLES = range(5)
 
 
-# For synergies and counters the heroes are expected to be a list of
-# tuples with each tuple containing the hero name and a list of
-# applicable roles. Foes should only be a list of names as you can't
-# control what role the enemy team will play their heroes in.
+# For synergies and counters the heroes (and foes) are expected to be a
+# list of tuples with each tuple containing the hero name and a list of
+# applicable roles. 
 RoleR = namedtuple('RoleR', ['hero_name', 'role', 'A_value', 'B_value'])
 SynergyR = namedtuple('SynergyR', ['heroes', 'A_value', 'B_value'])
 CounterR = namedtuple('CounterR', ['heroes', 'foes', 'A_value', 'B_value'])
@@ -177,15 +176,15 @@ class DraftAI:
         ai_counter_rs = []
         counters = set()
 
-        def valid_counter_nums(heroes, foe_names):
+        def valid_counter_nums(heroes, foes):
             valid = []
             hero_names, hero_roles = zip(*heroes)
-            foe_roles = [self.hero_roles[name] for name in foe_names]  # all playable roles used
+            foe_names, foe_roles = zip(*foes)
             for roles_h in itertools.product(*hero_roles):
                 if len(set(roles_h)) != len(heroes):
                     continue
                 for roles_f in itertools.product(*foe_roles):
-                    if len(set(roles_f)) != len(foe_names):
+                    if len(set(roles_f)) != len(foes):
                         continue
                     counter_nums_h = []
                     for hero_name, role in zip(hero_names, roles_h):
@@ -206,7 +205,10 @@ class DraftAI:
                     counters.add(counter)
                 else:
                     hero_names = [self.ordered_heroes[h].name for h in heroes]
-                    raise ValueError(f"Duplicate counter reward: {hero_names} vs {r.foes}")
+                    foe_names = [self.ordered_heroes[h].name for h in foes]
+                    raise ValueError(
+                        f"Duplicate counter reward possible for {hero_names} vs {foe_names}"
+                    )
 
         if len(ai_counter_rs) <= MAX_COUNTER_RS:
             return ai_counter_rs

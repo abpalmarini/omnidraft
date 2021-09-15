@@ -25,6 +25,10 @@ struct draft_stage draft[MAX_DRAFT_LEN];
 // identify unique states--see wikipedia.org/wiki/Zobrist_hashing)
 u64 zobrist_keys[3][MAX_NUM_HEROES];
 
+// set by run_search and used for evaluating multiple lineup
+// terminal values in flex_negamax
+int root_selecting_team;
+
 // transposition table
 struct tt_entry tt[TT_IDX_BITS + 1];
 
@@ -468,37 +472,90 @@ int flex_negamax(
 
         return value;
     } else if (stage == draft_len) {
-        // for each A lineup find best (min) value B can get
-        // then take best (max) value A can get as final value
-        // (each team gets their best lineup if terminal state)
-        int value_max = -INF;
+        // Need to find terminal value when teams have multiple lineups.
+        // In most cases each team will have a preferred lineup that is
+        // independent of the enemy lineup used. However, with the ability
+        // to specify specific roles for adversaries in counter rewards,
+        // this may not always be the case. It could be possible for teams
+        // to alternate indefinitely in unilaterally changing the roles
+        // they play their heroes in to exploit the enemy composition and
+        // gain more value (the game is not over when drafting finishes).
+        // As the value doesn't converge the best guaranteed value for the
+        // selecting team is returned. This ensures consistency with what
+        // would have been decided in earlier searches. This is because
+        // each lineup vs lineup can only have one value, but if the
+        // optimal value returned was found from following a lineup that
+        // leads to this situation then it must have assumed the best
+        // enemy response. This would have also resulted in more value for
+        // the selecting team than when considering one of the alternate
+        // lineups. Interestingly, in these situations, the value returned
+        // for each team when following the Nash equilibrium (minimax)
+        // strategy may not be the same. Instead, as stated earlier, each
+        // team will get the best value they can be guaranteed to get
+        // without leaving themselves open to counter exploitation. Its
+        // impossible for these values to contradict each other.
 
+        // at terminal state its guaranteed that team is A and e_team is B
         int team_arr[5];
         int e_team_arr[5];
 
-        for (int i = 0; i < num_teams; i++) {
-            int *team_ptr = init_team_heroes(teams[i], team_arr);  // team guaranteed to be A if terminal
+        if (root_selecting_team == A) {
+            // find the best (max) value A can get with a lineup where
+            // each value is the best (min) value B can get in response
+            int value_max = -INF;
 
-            int value_min = INF;
+            for (int i = 0; i < num_teams; i++) {
+                int *team_ptr = init_team_heroes(teams[i], team_arr);
 
-            for (int j = 0; j < num_e_teams; j++) {
-                int *e_team_ptr = init_team_heroes(e_teams[j], e_team_arr);
+                int value_min = INF;
 
-                int value = terminal_value(teams[i], e_teams[j], team_ptr, e_team_ptr);
+                for (int j = 0; j < num_e_teams; j++) {
+                    int *e_team_ptr = init_team_heroes(e_teams[j], e_team_arr);
 
-                if (value < value_min)
-                    value_min = value;
+                    int value = terminal_value(teams[i], e_teams[j], team_ptr, e_team_ptr);
 
-                if (value_min <= value_max)
-                    // team A won't use this lineup
-                    break;
+                    if (value < value_min)
+                        value_min = value;
+
+                    if (value_min <= value_max)
+                        // team A won't use this lineup
+                        break;
+                }
+
+                if (value_min > value_max)
+                    value_max = value_min;
             }
 
-            if (value_min > value_max)
-                value_max = value_min;
-        }
+            return value_max;
+        } else {
+            // find the best (min) value B can get with a lineup where
+            // each value is the best (max) value A can get in response
+            int value_min = INF;
 
-        return value_max;
+            for (int i = 0; i < num_e_teams; i++) {
+                int *e_team_ptr = init_team_heroes(e_teams[i], e_team_arr);
+
+                int value_max = -INF;
+
+                for (int j = 0; j < num_teams; j++) {
+                    int *team_ptr = init_team_heroes(teams[j], team_arr);
+
+                    int value = terminal_value(teams[j], e_teams[i], team_ptr, e_team_ptr);
+
+                    if (value > value_max)
+                        value_max = value;
+
+                    if (value_max >= value_min)
+                        // team B won't use this lineup
+                        break;
+                }
+
+                if (value_max < value_min)
+                    value_min = value_max;
+            }
+
+            return value_min;
+        }
     }
 
     // if there are multiple enemy lineups and its not a terminal 
@@ -1362,6 +1419,7 @@ struct search_result run_search(
 
     // call search for selecting team
     int stage = team_A_size + team_B_size + banned_size;
+    root_selecting_team = draft[stage].team;
     if (draft[stage].team == A)
         return root_negamax(
             num_teams_A,
