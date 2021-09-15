@@ -815,5 +815,118 @@ class TestDraftAI(unittest.TestCase):
         self.assertEqual(value_s, target_value_s, "after initial switch")
         self.assertEqual(action_s, target_action_s, "after initial switch")
 
+    # Tests that the correct terminal value is returned for an A pick in
+    # a situation where the value doesn't converge.
+    def test_both_teams_flex_with_counter_terminal_value_A(self):
+        role_rs = [
+            # heroes for team A
+            RoleR('Taka', 0, 3, 3),
+            RoleR('Taka', 1, 0, 0),
+            RoleR('Krul', 0, 0, 0),
+            RoleR('Krul', 1, 3, 3),
+            RoleR('Rona', 2, 1, 1),
+            RoleR('Gwen', 3, 1, 1),
+            # heroes for team B
+            RoleR('Lyra', 0, 2, 2),
+            RoleR('Lyra', 1, 0, 0),
+            RoleR('Reim', 0, 0, 0),
+            RoleR('Reim', 1, 2, 2),
+            RoleR('Reza', 2, 1, 1),
+            RoleR('Skye', 3, 1, 1),
+            # options
+            RoleR('Vyra', 4, 1, 1),
+            RoleR('Ozo', 4, 1, 1),
+        ]
+        counter_rs = [
+            CounterR([('Taka', [1])], [('Lyra', [0])], 20, 20),
+        ]
+        history = [
+            'Taka', 'Lyra', 'Reim', 'Krul',
+            'Rona', 'Reza', 'Skye', 'Gwen',
+        ]
+
+        # The focus is on the Taka/Krul flex for team A and the Lyra/Reim
+        # flex for team B. The reward values of all other heroes will
+        # cancel out. The preferred lineup for A alone is with Taka in 0
+        # and Krul in 1. This will get them a value of 5. However, if B
+        # plays with Lyra in 0 and Reim in 1 they can get the counter
+        # reward for 20. Giving them a value of 20 - 4 = 16. Team B would
+        # prefer playing Lyra in 0 and Reim in 1 if team A plays Taka in
+        # 0, but ofc prefers Lyra in 1 and reim in 0 to avoid the counter.
+        # This is a case where the teams could alternate in unilaterally
+        # switching their role assignments to get more value.
+        #
+        # In this test it is A to pick. If they go with Taka in 0 and
+        # Krul in 1 then B can play Lyra in 0 and Reim in 1 resulting
+        # in A getting a value of 6 - 4 = 2. If they go with Taka in
+        # 1 and Krul in 0 then B can avoid the counter resulting in
+        # a value of 0 overall for A. Thus, the returned value should
+        # be 2 as a guarantee even though with B playing that assignment
+        # they could gain more.
+        value, action = self.run_c_search(
+            history,
+            SIMPLE_FORMAT,
+            role_rs,
+            [],
+            counter_rs,
+        )
+        self.assertEqual(value, 2)
+        self.assertTrue(action == 'Vyra' or action == 'Ozo')
+
+    # Tests that the correct terminal value is returned for a B pick in
+    # a situation where the value doesn't converge.
+    def test_both_teams_flex_with_counter_terminal_value_B(self):
+        role_rs = [
+            # heroes for team A
+            RoleR('Taka', 0, 3, 3),
+            RoleR('Taka', 1, 0, 0),
+            RoleR('Krul', 0, 0, 0),
+            RoleR('Krul', 1, 3, 3),
+            RoleR('Rona', 2, 1, 1),
+            RoleR('Gwen', 3, 1, 1),
+            RoleR('Vyra', 4, 1, 1),
+            # heroes for team B
+            RoleR('Lyra', 0, 2, 2),
+            RoleR('Lyra', 1, 0, 0),
+            RoleR('Reim', 0, 0, 0),
+            RoleR('Reim', 1, 2, 2),
+            RoleR('Reza', 2, 1, 1),
+            RoleR('Skye', 3, 1, 1),
+            # only one option because only caring about terminal value here
+            RoleR('Ozo', 4, 1, 1),
+        ]
+        counter_rs = [
+            CounterR([('Taka', [1])], [('Lyra', [0])], 20, 20),
+        ]
+        history = [
+            'Taka', 'Lyra', 'Reim', 'Krul', 'Rona',
+            'Reza', 'Skye', 'Gwen', 'Vyra',
+        ]
+
+        # See above test for overview. In this test since it is B's last
+        # pick. If they were to play Lyra in 0 and Reim in 1 then A
+        # could play Taka in 1 to get the counter and leave B with a
+        # value of -16. If they play Lyra in 1 and Reim in 0 then A has
+        # no need to go for the counter and this would leave B with a
+        # value of -6. This should be the returned value as even though
+        # with Taka in role 0 they could play Lyra in 0 and Reim in 1
+        # for a value of -2, the returned value should be the worst
+        # case gurantee as it doesn't converge.
+        # 
+        # Notice how, following along from the above test, a range is
+        # created around the non-converging values rather than a
+        # specific value. It is the case though that neither value
+        # contradicts the guarantee of the other.
+        value, action = self.run_c_search(
+            history,
+            SIMPLE_FORMAT,
+            role_rs,
+            [],
+            counter_rs,
+        )
+        self.assertEqual(value, -6)
+        self.assertEqual(action, 'Ozo')
+
+
 if __name__ == '__main__':
     unittest.main()
