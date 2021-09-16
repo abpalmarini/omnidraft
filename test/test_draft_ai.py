@@ -22,25 +22,10 @@ def scale_rewards(draft):
 # indicator on applicable roles for a synergy to be granted.
 def translate_old_draft(draft):
     new_format = []
-    for stage in range(len(draft.format)):
-        team, selection = draft.format[stage]
-        team_n, selection_n = draft.format[(stage + 1) % len(draft.format)]
-        if team != team_n:
-            if selection == draft_az.PICK:
-                new_format.append((A if team == draft_az.A else B, PICK))
-            else:
-                new_format.append((A if team == draft_az.A else B, BAN))
-        else:
-            if selection == draft_az.PICK and selection_n == draft_az.PICK:
-                new_format.append((A if team == draft_az.A else B, PICK_PICK))
-            elif selection == draft_az.PICK and selection_n == draft_az.BAN:
-                new_format.append((A if team == draft_az.A else B, PICK_BAN))
-            elif selection == draft_az.BAN and selection_n == draft_az.BAN:
-                new_format.append((A if team == draft_az.A else B, BAN_BAN))
-            elif selection == draft_az.BAN and selection_n == draft_az.PICK:
-                new_format.append((A if team == draft_az.A else B, BAN_PICK))
-            else:
-                assert False
+    for team_az, selection_az in draft.format:
+        team = A if team_az == draft_az.A else B
+        selection = PICK if selection_az == draft_az.PICK else BAN
+        new_format.append((team, selection))
 
     role_rs = []
     for r in draft.rewards['role']:
@@ -119,13 +104,13 @@ def alphabeta(draft, alpha, beta):
 
 SIMPLE_FORMAT = [
     (A, PICK),
-    (B, PICK_PICK),
     (B, PICK),
-    (A, PICK_PICK),
+    (B, PICK),
     (A, PICK),
-    (B, PICK_PICK),
+    (A, PICK),
     (B, PICK),
-    (A, PICK_PICK),
+    (B, PICK),
+    (A, PICK),
     (A, PICK),
     (B, PICK),
 ]

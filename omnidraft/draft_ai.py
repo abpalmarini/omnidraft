@@ -107,7 +107,7 @@ class DraftAI:
             check_value(r.A_value)
             check_value(r.B_value)
 
-        self.draft_format = draft_format
+        self.draft_format = self.get_ai_draft_format(draft_format)
         self.init_ordered_heroes(role_rs, synergy_rs, counter_rs)
         self._set_C_globals(synergy_rs, counter_rs)
 
@@ -438,3 +438,31 @@ class DraftAI:
         else:
             best_hero_2 = self.ordered_heroes[search_result.best_hero_2].name
             return value, best_hero, best_hero_2
+
+    # Turns a draft format where each stage is an indictor of the
+    # selecting team and a selection type consisting of either a pick
+    # or ban to one that further indicates if it is a double selection
+    # of some kind.
+    def get_ai_draft_format(self, draft_format):
+        ai_draft_format = []
+        for stage in range(len(draft_format)):
+            team, selection = draft_format[stage]
+            if stage + 1 < len(draft_format):
+                next_team, next_selection = draft_format[stage + 1]
+            else:
+                next_team, next_selection = None, None
+
+            # find new selection flag if current team has two in a row
+            if team == next_team:
+                if selection == PICK and next_selection == PICK:
+                    selection = PICK_PICK
+                elif selection == PICK and next_selection == BAN:
+                    selection = PICK_BAN
+                elif selection == BAN and next_selection == PICK:
+                    selection = BAN_PICK
+                elif selection == BAN and next_selection == BAN:
+                    selection = BAN_BAN
+                else:
+                    assert False
+            ai_draft_format.append((team, selection))
+        return ai_draft_format

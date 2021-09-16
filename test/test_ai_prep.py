@@ -220,9 +220,9 @@ class TestAIPrep(unittest.TestCase):
         small_format = [
             (A, BAN),
             (B, BAN),
-            (A, PICK_PICK),
             (A, PICK),
-            (B, PICK_PICK),
+            (A, PICK),
+            (B, PICK),
             (B, PICK),
         ]
         role_rs = [
@@ -316,7 +316,7 @@ class TestAIPrep(unittest.TestCase):
             (A, PICK),
             (B, PICK),
             (A, BAN),
-            (B, BAN_PICK),
+            (B, BAN),
             (B, PICK),
             (A, PICK),
         ]
