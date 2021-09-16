@@ -28,6 +28,9 @@ PICK_BAN  = constants.pick_ban
 BAN_PICK  = constants.ban_pick
 BAN_BAN   = constants.ban_ban
 
+PICKS = {PICK, PICK_PICK, PICK_BAN}
+BANS = {BAN, BAN_PICK, BAN_BAN}
+
 ZOBRIST_BITS = 64
 ROLES = range(5)
 
@@ -107,7 +110,7 @@ class DraftAI:
             check_value(r.A_value)
             check_value(r.B_value)
 
-        self.draft_format = draft_format
+        self.draft_format = self.get_ai_draft_format(draft_format)
         self.init_ordered_heroes(role_rs, synergy_rs, counter_rs)
         self._set_C_globals(synergy_rs, counter_rs)
 
@@ -349,7 +352,7 @@ class DraftAI:
         team_A_names = []
         team_B_names = []
         for hero_name, (team, selection) in zip(history, self.draft_format):
-            if selection == BAN or selection == BAN_PICK or selection == BAN_BAN:
+            if selection in BANS:
                 banned_names.append(hero_name)
             elif team == A:
                 team_A_names.append(hero_name)
@@ -438,3 +441,69 @@ class DraftAI:
         else:
             best_hero_2 = self.ordered_heroes[search_result.best_hero_2].name
             return value, best_hero, best_hero_2
+
+    # Turns a draft format where each stage is an indictor of the
+    # selecting team and a selection type consisting of either a pick
+    # or ban to one that further indicates if it is a double selection
+    # of some kind.
+    def get_ai_draft_format(self, draft_format):
+        ai_draft_format = []
+        for stage in range(len(draft_format)):
+            team, selection = draft_format[stage]
+            if stage + 1 < len(draft_format):
+                next_team, next_selection = draft_format[stage + 1]
+            else:
+                next_team, next_selection = None, None
+
+            # find new selection flag if current team has two in a row
+            if team == next_team:
+                if selection == PICK and next_selection == PICK:
+                    selection = PICK_PICK
+                elif selection == PICK and next_selection == BAN:
+                    selection = PICK_BAN
+                elif selection == BAN and next_selection == PICK:
+                    selection = BAN_PICK
+                elif selection == BAN and next_selection == BAN:
+                    selection = BAN_BAN
+                else:
+                    assert False
+            ai_draft_format.append((team, selection))
+        return ai_draft_format
+
+    def selectable_heroes(self, history, stage=None):
+        """
+        Returns the set of all hero names that can be selected at the
+        given stage in the draft history. If no stage is provided it
+        defaults to the next selection.
+
+        To be selectable, heroes must not be present in the history
+        and for picks there must also exist a valid role assignment
+        between the hero and the rest of the selecting team.
+        """
+
+        stage = len(history) if stage is None else stage
+        team, selection = self.draft_format[stage]
+        selected = set()
+        team_heroes = []
+        for i in range(len(history)):
+            if i == stage:
+                continue  # ignore any current hero for deciding selectable
+            selected.add(history[i])
+            team_i, selection_i = self.draft_format[i]
+            if team_i == team and selection_i in PICKS:
+                team_heroes.append(history[i])
+
+        if selection in BANS:
+            selectable = set(self.hero_roles.keys()) - selected
+        else:
+            selectable = set()
+            team_roles = [self.hero_roles[hero] for hero in team_heroes]
+            for hero in self.hero_roles.keys():
+                if hero in selected:
+                    continue
+                # check for a valid role assignment with hero and current team
+                for roles in itertools.product(*team_roles, self.hero_roles[hero]):
+                    if len(set(roles)) == len(team_heroes) + 1:
+                        selectable.add(hero)
+                        break
+        return selectable

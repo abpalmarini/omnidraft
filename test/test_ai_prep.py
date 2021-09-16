@@ -225,9 +225,9 @@ class TestAIPrep(unittest.TestCase):
         small_format = [
             (A, BAN),
             (B, BAN),
-            (A, PICK_PICK),
             (A, PICK),
-            (B, PICK_PICK),
+            (A, PICK),
+            (B, PICK),
             (B, PICK),
         ]
         role_rs = [
@@ -321,7 +321,7 @@ class TestAIPrep(unittest.TestCase):
             (A, PICK),
             (B, PICK),
             (A, BAN),
-            (B, BAN_PICK),
+            (B, BAN),
             (B, PICK),
             (A, PICK),
         ]
@@ -368,6 +368,60 @@ class TestAIPrep(unittest.TestCase):
         self.assertTrue(len(set(ban_keys)) == 3)
         self.assertEqual(ban_keys[1], ban_keys[3])
         self.assertEqual(ban_keys[2], ban_keys[4])
+
+    def test_selectable_heroes(self):
+        draft_format = [
+            (A, BAN),
+            (B, BAN),
+            (A, PICK),
+            (B, PICK),
+            (B, PICK),
+            (A, PICK),
+            (A, PICK),
+            (B, PICK),
+            (B, PICK),
+            (A, PICK),
+            (A, PICK),
+            (B, PICK),
+        ]
+        role_rs = [
+            RoleR('Taka', 0, 0, 0),
+            RoleR('Krul', 1, 0, 0),
+            RoleR('Rona', 2, 0, 0),
+            RoleR('Rona', 4, 0, 0),
+            RoleR('Skye', 3, 0, 0),
+            RoleR('Gwen', 3, 0, 0),
+            RoleR('Reza', 2, 0, 0),
+            RoleR('Reza', 3, 0, 0),
+            RoleR('Lyra', 2, 0, 0),
+        ]
+        draft_ai = DraftAI(draft_format, role_rs, [], [])
+
+        # test all heroes can be picked on empty history
+        all_heroes = {'Taka', 'Krul', 'Rona', 'Skye', 'Gwen', 'Reza', 'Lyra'}
+        self.assertEqual(all_heroes, draft_ai.selectable_heroes([]))
+
+        history = ['Taka', 'Krul', 'Rona', 'Skye']
+
+        # selected heroes and Gwen should not be avaialble because Skye
+        # and Gwen only play role 3
+        self.assertEqual({'Reza', 'Lyra'}, draft_ai.selectable_heroes(history))
+
+        # test giving index for a ban (all should be selectable except other
+        # heroes in history)
+        selectable = all_heroes - {'Taka', 'Rona', 'Skye'}
+        self.assertEqual(selectable, draft_ai.selectable_heroes(history, 1))
+
+        history = ['Taka', 'Krul', 'Rona', 'Skye', 'Reza']
+
+        # test giving index for a pick (Reza should be available, but not Gwen)
+        self.assertEqual({'Reza', 'Lyra'}, draft_ai.selectable_heroes(history, 4))
+        # again, but this time Gwen as well as Skye should be available
+        self.assertEqual({'Gwen', 'Skye', 'Lyra'}, draft_ai.selectable_heroes(history, 3))
+
+        # test selectable for A pick (this time hero in team can play multiple
+        # so Lyra should be selectable)
+        self.assertEqual({'Lyra', 'Gwen'}, draft_ai.selectable_heroes(history))
 
 
 if __name__ == '__main__':
