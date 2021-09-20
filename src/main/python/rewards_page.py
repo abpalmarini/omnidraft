@@ -160,7 +160,7 @@ class RewardsPage(QWidget):
         horizontal_header = table_view.horizontalHeader()
         horizontal_header.setSectionResizeMode(QHeaderView.Fixed)
         table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        table_view.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        table_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         table_view.setFixedWidth(horizontal_header.length())
 
         # for synergies/counters you can only sort by team values
