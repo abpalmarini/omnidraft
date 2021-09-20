@@ -6,9 +6,9 @@ from PySide6.QtGui import QColor, QFont
 
 
 # Flags for the status of a reward based on teams in the team builder.
-TEAM_1  = 1
-TEAM_2  = 2
-NO_TEAM = 3
+TEAM_1  = 0
+TEAM_2  = 1
+NO_TEAM = 2
 
 TEAM_1_COLOR = QColor(24, 144, 240, 150)
 TEAM_2_COLOR = QColor(255, 88, 79, 150)
