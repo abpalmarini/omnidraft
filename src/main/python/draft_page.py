@@ -58,16 +58,13 @@ class DraftPage(QWidget):
     # For now the layout simply consists of the team headers side by side.
     # Underneath that is a row of the 5 picks for each team side by side
     # and underneath that a row for however many bans needed. Assuming
-    # for now that there won't be more than 5 bans. Providing a label for
-    # the picks and bans, but @Later it may be better to use a ban icon.
+    # for now that there won't be more than 5 bans. Could be useful to
+    # have ban icons @Later to avoid confusion.
     def init_layout(self):
         self.layout = QGridLayout(self)
 
-        self.layout.addWidget(self.team_A_label, 0, 1, Qt.AlignCenter)
-        self.layout.addWidget(self.team_B_label, 0, 2, Qt.AlignCenter)
-
-        self.layout.addWidget(QLabel("Picks:"), 1, 0)
-        self.layout.addWidget(QLabel("Bans:"), 2, 0)
+        self.layout.addWidget(self.team_A_label, 0, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.team_B_label, 0, 1, Qt.AlignCenter)
 
         # separate hero boxes by selection type
         boxes = {(A, PICK): [], (B, PICK): [], (A, BAN): [], (B, BAN): []}
@@ -75,14 +72,14 @@ class DraftPage(QWidget):
             boxes[selection].append(hero_box)
 
         # add grouped selection type boxes to layout
-        self.layout.addWidget(self.group_hero_boxes(boxes[(A, PICK)]), 1, 1)
-        self.layout.addWidget(self.group_hero_boxes(boxes[(B, PICK)]), 1, 2)
-        self.layout.addWidget(self.group_hero_boxes(boxes[(A, BAN)]), 2, 1)
-        self.layout.addWidget(self.group_hero_boxes(boxes[(B, BAN)]), 2, 2)
+        self.layout.addWidget(self.group_hero_boxes(boxes[(A, PICK)]), 1, 0)
+        self.layout.addWidget(self.group_hero_boxes(boxes[(B, PICK)]), 1, 1)
+        self.layout.addWidget(self.group_hero_boxes(boxes[(A, BAN)]), 2, 0)
+        self.layout.addWidget(self.group_hero_boxes(boxes[(B, BAN)]), 2, 1)
 
         # search
-        self.layout.addWidget(self.search_bar, 3, 1, 1, 2)
-        self.layout.addWidget(self.search_view, 4, 1, 1, 2)
+        self.layout.addWidget(self.search_bar, 3, 0, 1, 2)
+        self.layout.addWidget(self.search_view, 4, 0, 1, 2)
 
     # Lays out the hero boxes of some selection type into a self
     # contained groupbox.
