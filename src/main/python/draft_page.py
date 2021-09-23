@@ -6,7 +6,7 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
 from reward_models import TEAM_1, TEAM_2
-from ai.draft_ai import DraftAI, A, B, PICK, BAN
+from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR, A, B, PICK, BAN
 
 
 HERO_BOX_SIZE = QSize(100, 100)
@@ -14,9 +14,11 @@ HERO_BOX_SIZE = QSize(100, 100)
 
 class DraftPage(QWidget):
 
-    def __init__(self, hero_icons, draft_format, team_tags):
+    def __init__(self, hero_icons, roles, draft_format, team_tags):
         super().__init__()
         
+        self.hero_icons = hero_icons
+        self.ai_roles = {role: i for i, role in enumerate(roles)}
         self.draft_format = draft_format
         self.team_tags = team_tags
         self.team_A = TEAM_1
@@ -91,6 +93,81 @@ class DraftPage(QWidget):
         set_hero_box_layout_sizes(HERO_BOX_SIZE, layout, [0], list(range(len(hero_boxes))))
         groupbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         return groupbox
+
+    # Updates the DraftAI object used for creating histories and
+    # running searches using the reward attributes and the team A flag
+    # attibute. (Should be called after any of these change). Method
+    # also ensures that any existing history is compatible with the new
+    # DraftAI object.
+    def update_draft_ai(self):
+        self.draft_ai = DraftAI(
+            self.draft_format,
+            [self.ai_reward(r, 'role') for r in self.role_rs],
+            [self.ai_reward(r, 'synergy') for r in self.synergy_rs],
+            [self.ai_reward(r, 'counter') for r in self.counter_rs],
+        )
+
+        # check and update history in hero boxes
+        # TODO
+
+    # Rewards constructed by the user are not directly useable with the
+    # engine and must be adjusted. Firstly, the user creates values for
+    # specific teams that could play as either A or B. The AI expects
+    # values for A and B and so uses the team_A flag to create the
+    # correct reward. Secondly, the values are expected to be integers
+    # not floats. Lastly, the AI expects each role to be an integer
+    # between 0 and 4.
+    def ai_reward(self, reward, reward_type):
+
+        # scaled by 100 because users use 2 decimal places
+        def ai_value(value): 
+            return int(value * 100)
+
+        # maps applicable roles to ai ones for heroes in a combo reward
+        def ai_heroes(heroes):
+            _ai_heroes = []
+            for hero_name, appl_roles in heroes:
+                ai_appl_roles = [self.ai_roles[role] for role in appl_roles]
+                _ai_heroes.append((hero_name, ai_appl_roles))
+            return _ai_heroes
+
+        # find A/B values
+        if self.team_A == TEAM_1:
+            A_value = ai_value(reward.team_1_value)
+            B_value = ai_value(reward.team_2_value)
+        else:
+            A_value = ai_value(reward.team_2_value)
+            B_value = ai_value(reward.team_1_value)
+
+        if reward_type == 'role':
+            role = self.ai_roles[reward.role]
+            return RoleR(reward.name, role, A_value, B_value)
+        elif reward_type == 'synergy':
+            heroes = ai_heroes(reward.heroes)
+            return SynergyR(heroes, A_value, B_value)
+        elif reward_type == 'counter':
+            heroes = ai_heroes(reward.heroes)
+            foes = ai_heroes(reward.foes)
+            return CounterR(heroes, foes, A_value, B_value)
+        else:
+            raise ValueError
+
+    # Updates the search model to only include heroes that have a
+    # defined role reward, sets the reward attributes, then calls
+    # to have the draft ai updated.
+    def set_rewards(self, role_rs, synergy_rs, counter_rs):
+        # set search heroes
+        valid_heroes = sorted({role_r.name for role_r in role_rs})
+        self.search_model.clear()
+        for name in valid_heroes:
+            item = QStandardItem(self.hero_icons[name], name)
+            self.search_model.appendRow(item)
+
+        self.role_rs = role_rs
+        self.synergy_rs = synergy_rs
+        self.counter_rs = counter_rs
+
+        self.update_draft_ai()
 
     @Slot()
     def hero_box_clicked(self, hero_name):

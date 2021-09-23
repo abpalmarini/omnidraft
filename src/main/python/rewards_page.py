@@ -223,3 +223,10 @@ class RewardsPage(QWidget):
             if clicked_header == reward_type.view.horizontalHeader():
                 clicked_header.setSortIndicator(*reward_type.model.current_sort)
                 break
+
+    # Returns the rewards stored in each of the rewards type models.
+    def get_rewards(self):
+        role_rs = self.reward_types[0].model.rewards
+        synergy_rs = self.reward_types[1].model.rewards
+        counter_rs = self.reward_types[2].model.rewards
+        return role_rs, synergy_rs, counter_rs
