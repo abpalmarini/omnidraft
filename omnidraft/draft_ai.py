@@ -482,6 +482,7 @@ class DraftAI:
         """
 
         stage = len(history) if stage is None else stage
+        assert stage <= len(history)
         team, selection = self.draft_format[stage]
         selected = set()
         team_heroes = []
