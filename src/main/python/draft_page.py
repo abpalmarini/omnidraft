@@ -1,6 +1,6 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QWidget, QLineEdit, QLabel, QGridLayout,
-                               QGroupBox, QSizePolicy)
+                               QGroupBox, QSizePolicy, QPushButton)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
@@ -36,6 +36,10 @@ class DraftPage(QWidget):
         self.hero_boxes[0].set_selected(True)
 
         self.setup_hero_search()
+
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear_button_clicked)
+
         self.init_layout()
 
     # @CopyPaste from reward_dialogs.py
@@ -84,6 +88,9 @@ class DraftPage(QWidget):
         # search
         self.layout.addWidget(self.search_bar, 3, 0, 1, 2)
         self.layout.addWidget(self.search_view, 4, 0, 1, 2)
+
+        # @Temp position until I add remove button
+        self.layout.addWidget(self.clear_button, 5, 0)
 
     # Lays out the hero boxes of some selection type into a self
     # contained groupbox.
@@ -257,3 +264,10 @@ class DraftPage(QWidget):
         history_len = self.get_history_len()
         if history_len < len(self.draft_format):
             self.change_selected_box(self.hero_boxes[history_len])
+
+    # Clears all hero boxes and sets the first box as the selected box.
+    @Slot()
+    def clear_button_clicked(self):
+        for hero_box in self.hero_boxes:
+            hero_box.clear()
+        self.change_selected_box(self.hero_boxes[0])  # handles the enabling/disabling of search items
