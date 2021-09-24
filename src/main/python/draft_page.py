@@ -32,6 +32,8 @@ class DraftPage(QWidget):
             hero_box = HeroBox(hero_icons, HERO_BOX_SIZE)
             self.hero_boxes.append(hero_box)
             hero_box.clicked.connect(self.hero_box_clicked)
+            hero_box.index = i
+        self.hero_boxes[0].set_selected(True)
 
         self.setup_hero_search()
         self.init_layout()
@@ -107,8 +109,26 @@ class DraftPage(QWidget):
             [self.ai_reward(r, 'counter') for r in self.counter_rs],
         )
 
-        # check and update history in hero boxes
-        # TODO
+        # validate history with new rewards
+        history = self.get_history()
+        for hero_box in self.hero_boxes:
+            hero_box.clear()
+            if hero_box.selected:
+                selected_index = hero_box.index
+        stage = 0
+        for hero in history:
+            # check if hero is still selectable with history before it
+            selectable = self.draft_ai.selectable_heroes(history[:stage])
+            if hero not in selectable:
+                break
+            self.hero_boxes[stage].set_hero(hero)
+            stage += 1
+        # keep users old selection so long as it's either next one
+        # needing entered or before that
+        if selected_index <= stage:
+            self.change_selected_box(self.hero_boxes[selected_index])
+        else:
+            self.change_selected_box(self.hero_boxes[stage])
 
     # Rewards constructed by the user are not directly useable with the
     # engine and must be adjusted. Firstly, the user creates values for
@@ -169,11 +189,71 @@ class DraftPage(QWidget):
 
         self.update_draft_ai()
 
+    # Returns the history as a list of hero names based on the heroes
+    # input into the hero boxes.
+    def get_history(self):
+        history = []
+        for hero_box in self.hero_boxes:
+            if not hero_box.name:
+                break
+            history.append(hero_box.name)
+        return history
+
+    # History length is needed by the clicked methods so providing this
+    # method to stop the unnecessary creation of list objects.
+    def get_history_len(self):
+        history_len = 0
+        for hero_box in self.hero_boxes:
+            if not hero_box.name:
+                break
+            history_len += 1
+        return history_len
+
+    # Deselects the currently selected box and selects the given box so
+    # long as it is either the next box needing to be entered or one
+    # before that. The heroes in search are then enabled/disabled based
+    # on whether or not they can be selected for the box's stage in the
+    # format given the history.
+    def change_selected_box(self, hero_box):
+        history = self.get_history()
+        assert hero_box.index <= len(history)
+
+        for box in self.hero_boxes:
+            box.set_selected(False)
+        hero_box.set_selected(True)
+
+        # ensure only selectable heroes are enabled in search
+        selectable = self.draft_ai.selectable_heroes(history, hero_box.index)
+        for row in range(self.search_model.rowCount()):
+            item = self.search_model.item(row)
+            item.setEnabled(item.text() in selectable)
+
+    # Change the selected box so long as it is next one needing entered
+    # or one before that.
     @Slot()
     def hero_box_clicked(self, hero_name):
         clicked_box = self.sender()
-        pass
+        if clicked_box.index <= self.get_history_len():
+            self.change_selected_box(clicked_box)
 
     @Slot()
     def search_hero_clicked(self, f_index):
-        pass
+        index = self.search_f_model.mapToSource(f_index)
+        search_item = self.search_model.itemFromIndex(index)
+        if not search_item.isEnabled():
+            return
+
+        # find the selected hero box and set its hero to clicked item
+        for hero_box in self.hero_boxes:
+            if hero_box.selected:
+                # not using set_hero_from_search_item because the item should
+                # not be disabled if selection stays on this box and if not
+                # then change_selected_box will handle enabling and disabling
+                hero_box.set_hero(search_item.text())
+                break
+        self.search_view.clearSelection()
+
+        # move selection to next empty stage unless all have been entered
+        history_len = self.get_history_len()
+        if history_len < len(self.draft_format):
+            self.change_selected_box(self.hero_boxes[history_len])
