@@ -1,6 +1,6 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
-from PySide6.QtWidgets import (QWidget, QLineEdit, QLabel, QGridLayout,
-                               QGroupBox, QSizePolicy, QPushButton)
+from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
+                               QGroupBox, QLabel, QPushButton, QHBoxLayout)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
@@ -39,6 +39,9 @@ class DraftPage(QWidget):
 
         self.clear_button = QPushButton("Clear")
         self.clear_button.clicked.connect(self.clear_button_clicked)
+
+        self.remove_button = QPushButton("Remove")
+        self.remove_button.clicked.connect(self.remove_button_clicked)
 
         self.init_layout()
 
@@ -85,12 +88,16 @@ class DraftPage(QWidget):
         self.layout.addWidget(self.group_hero_boxes(boxes[(A, BAN)]), 2, 0)
         self.layout.addWidget(self.group_hero_boxes(boxes[(B, BAN)]), 2, 1)
 
-        # search
-        self.layout.addWidget(self.search_bar, 3, 0, 1, 2)
+        # search and remove buttons
+        search_buttons_layout = QHBoxLayout()
+        search_buttons_layout.addWidget(self.search_bar)
+        search_buttons_layout.addWidget(self.remove_button)
+        search_buttons_layout.addWidget(self.clear_button)
+        search_buttons_layout.setStretch(0, 4)
+        search_buttons_layout.setStretch(1, 1)
+        search_buttons_layout.setStretch(2, 1)
+        self.layout.addLayout(search_buttons_layout, 3, 0, 1, 2)
         self.layout.addWidget(self.search_view, 4, 0, 1, 2)
-
-        # @Temp position until I add remove button
-        self.layout.addWidget(self.clear_button, 5, 0)
 
     # Lays out the hero boxes of some selection type into a self
     # contained groupbox.
@@ -235,6 +242,12 @@ class DraftPage(QWidget):
             item = self.search_model.item(row)
             item.setEnabled(item.text() in selectable)
 
+        # enable remove button if box contains a hero
+        if hero_box.name:
+            self.remove_button.setEnabled(True)
+        else:
+            self.remove_button.setEnabled(False)
+
     # Change the selected box so long as it is next one needing entered
     # or one before that.
     @Slot()
@@ -271,3 +284,16 @@ class DraftPage(QWidget):
         for hero_box in self.hero_boxes:
             hero_box.clear()
         self.change_selected_box(self.hero_boxes[0])  # handles the enabling/disabling of search items
+
+    # Find selected box and remove it and all heroes after it in the
+    # draft history as it should not contain gaps.
+    @Slot()
+    def remove_button_clicked(self):
+        remove = False
+        for hero_box in self.hero_boxes:
+            if hero_box.selected:
+                selected_box = hero_box
+                remove = True
+            if remove:
+                hero_box.clear()
+        self.change_selected_box(selected_box)  # selection is same, but legal search heroes need updated
