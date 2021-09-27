@@ -1,7 +1,8 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
-                               QGroupBox, QLabel, QPushButton, QHBoxLayout)
-from PySide6.QtGui import QStandardItemModel, QStandardItem
+                               QGroupBox, QLabel, QPushButton, QHBoxLayout,
+                               QToolTip)
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QCursor
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
@@ -261,6 +262,10 @@ class DraftPage(QWidget):
         index = self.search_f_model.mapToSource(f_index)
         search_item = self.search_model.itemFromIndex(index)
         if not search_item.isEnabled():
+            # display tool tip if disabled because of no open role
+            hero_name = search_item.text()
+            if hero_name not in self.get_history():
+                QToolTip.showText(QCursor.pos(), f"{hero_name} has no available role.")
             return
 
         # find the selected hero box and set its hero to clicked item
