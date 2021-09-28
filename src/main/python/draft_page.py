@@ -44,6 +44,9 @@ class DraftPage(QWidget):
         self.remove_button = QPushButton("Remove")
         self.remove_button.clicked.connect(self.remove_button_clicked)
 
+        self.switch_sides_button = QPushButton("Switch Sides")
+        self.switch_sides_button.clicked.connect(self.switch_sides_button_clicked)
+
         self.init_layout()
 
     # @CopyPaste from reward_dialogs.py
@@ -91,12 +94,14 @@ class DraftPage(QWidget):
 
         # search and remove buttons
         search_buttons_layout = QHBoxLayout()
+        search_buttons_layout.addWidget(self.switch_sides_button)
         search_buttons_layout.addWidget(self.search_bar)
         search_buttons_layout.addWidget(self.remove_button)
         search_buttons_layout.addWidget(self.clear_button)
-        search_buttons_layout.setStretch(0, 4)
-        search_buttons_layout.setStretch(1, 1)
+        search_buttons_layout.setStretch(0, 1)
+        search_buttons_layout.setStretch(1, 4)
         search_buttons_layout.setStretch(2, 1)
+        search_buttons_layout.setStretch(3, 1)
         self.layout.addLayout(search_buttons_layout, 3, 0, 1, 2)
         self.layout.addWidget(self.search_view, 4, 0, 1, 2)
 
@@ -302,3 +307,18 @@ class DraftPage(QWidget):
             if remove:
                 hero_box.clear()
         self.change_selected_box(selected_box)  # selection is same, but legal search heroes need updated
+
+    # Switches the team playing as A, updating the labels and calling
+    # to update the draft ai. @Later this will need to check for a
+    # saved TT to load the new draft ai with.
+    @Slot()
+    def switch_sides_button_clicked(self):
+        if self.team_A == TEAM_1:
+            self.team_A = TEAM_2
+            self.team_A_label.setText(self.team_tags[1])
+            self.team_B_label.setText(self.team_tags[0])
+        else:
+            self.team_A = TEAM_1
+            self.team_A_label.setText(self.team_tags[0])
+            self.team_B_label.setText(self.team_tags[1])
+        self.update_draft_ai()
