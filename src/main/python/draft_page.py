@@ -270,7 +270,10 @@ class DraftPage(QWidget):
             # display tool tip if disabled because of no open role
             hero_name = search_item.text()
             if hero_name not in self.get_history():
-                QToolTip.showText(QCursor.pos(), f"{hero_name} has no available role.")
+                QToolTip.showText(
+                    QCursor.pos(),
+                    f"{hero_name} has no available role for the selecting team.",
+                )
             return
 
         # find the selected hero box and set its hero to clicked item
