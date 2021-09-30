@@ -52,7 +52,7 @@ class TeamBuilder(QWidget):
         self.remove_hero_button.setEnabled(False)
 
         self.clear_button = QPushButton("Clear")
-        self.clear_button.clicked.connect(self.clear_all_hero_boxes)
+        self.clear_button.clicked.connect(self.clear_button_clicked)
 
         self.hide_non_granted_checkbox = QCheckBox("Hide non-granted rewards")
 
@@ -138,7 +138,10 @@ class TeamBuilder(QWidget):
                 self.remove_hero_button.setEnabled(False)
                 return
 
-    @Slot()
+    # Provides the functionality of clearing all hero boxes and
+    # re-enabling search items, but should not be used on its own. The
+    # teams are being modified and so update_teams must be called
+    # either directly after, or after further changes.
     def clear_all_hero_boxes(self):
         for hero_box in itertools.chain(self.team_1_boxes, self.team_2_boxes):
             if hero_box.name:
@@ -148,6 +151,10 @@ class TeamBuilder(QWidget):
             hero_box.set_selected(False)
             hero_box.clear()
             self.remove_hero_button.setEnabled(False)
+
+    @Slot()
+    def clear_button_clicked(self):
+        self.clear_all_hero_boxes()
         self.update_teams()
 
 
