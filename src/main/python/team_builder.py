@@ -157,6 +157,23 @@ class TeamBuilder(QWidget):
         self.clear_all_hero_boxes()
         self.update_teams()
 
+    # Updates the hero boxes to match the provided teams. The teams
+    # should be a list of hero name-role tuples. Any role not provided
+    # is left empty.
+    def set_all_hero_boxes(self, team_1, team_2):
+        self.clear_all_hero_boxes()
+
+        def set_team_boxes(team, team_boxes):
+            for name, role in team:
+                # find corresponding search item to ensure it gets disabled
+                search_item = self.select_dialog.get_item(name)
+                box_index = self.roles.index(role)
+                team_boxes[box_index].set_hero_from_search_item(search_item)
+
+        set_team_boxes(team_1, self.team_1_boxes)
+        set_team_boxes(team_2, self.team_2_boxes)
+        self.update_teams()
+
 
 class HeroSelectDialog(QDialog):
     """
