@@ -28,6 +28,8 @@ PICK_BAN  = constants.pick_ban
 BAN_PICK  = constants.ban_pick
 BAN_BAN   = constants.ban_ban
 
+INF = constants.inf
+
 PICKS = {PICK, PICK_PICK, PICK_BAN}
 BANS = {BAN, BAN_PICK, BAN_BAN}
 

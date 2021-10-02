@@ -1617,5 +1617,7 @@ struct constants_s get_constants()
     constants.ban_pick = BAN_PICK;
     constants.ban_ban = BAN_BAN;
 
+    constants.inf = INF;
+
     return constants;
 }

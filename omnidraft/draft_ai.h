@@ -123,6 +123,7 @@ struct constants_s
     int pick_ban;
     int ban_pick;
     int ban_ban;
+    int inf;
 };
 
 
