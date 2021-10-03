@@ -340,6 +340,21 @@ class DraftAI:
 
         lib.clear_tt()  # ensure state values for old drafts aren't used
 
+    # Group all bans, team A selections and team B selections into
+    # separate lists.
+    def _split_history(self, history):
+        banned = []
+        team_A = []
+        team_B = []
+        for hero, (team, selection) in zip(history, self.draft_format):
+            if selection in BANS:
+                banned.append(hero)
+            elif team == A:
+                team_A.append(hero)
+            else:
+                team_B.append(hero)
+        return banned, team_A, team_B
+
     # As flex picks map to a different hero num for every role they play,
     # there can be many possible 'teams'. All valid ones (no role clashes)
     # should be accounted for in search. This does not effect bans as the
@@ -350,16 +365,7 @@ class DraftAI:
     # on the AI's suggestion can eliminate the other flex possibilities as
     # we know the intended role for maximum value.
     def get_picks_n_bans(self, history):
-        banned_names = []
-        team_A_names = []
-        team_B_names = []
-        for hero_name, (team, selection) in zip(history, self.draft_format):
-            if selection in BANS:
-                banned_names.append(hero_name)
-            elif team == A:
-                team_A_names.append(hero_name)
-            else:
-                team_B_names.append(hero_name)
+        banned_names, team_A_names, team_B_names = self._split_history(history)
 
         banned = []
         for hero_name in banned_names:
