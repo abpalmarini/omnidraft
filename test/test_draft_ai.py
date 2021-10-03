@@ -116,7 +116,7 @@ SIMPLE_FORMAT = [
 ]
 
 
-class TestDraftAI(unittest.TestCase):
+class TestDraftAISearch(unittest.TestCase):
 
     def run_c_search(self, history, draft_format, role_rs, synergy_rs, counter_rs):
         ai = DraftAI(draft_format, role_rs, synergy_rs, counter_rs)
@@ -911,6 +911,86 @@ class TestDraftAI(unittest.TestCase):
         )
         self.assertEqual(value, -6)
         self.assertEqual(action, 'Ozo')
+
+
+class TestDraftAIMisc(unittest.TestCase):
+
+    def test_optimal_role_asgmts_synergy(self):
+        role_rs = [
+            RoleR('Taka', 0, 3, 0),
+            RoleR('Taka', 1, 1, 0),
+            RoleR('Rona', 0, 1, 0),
+            RoleR('Rona', 1, 4, 0),
+            RoleR('Krul', 0, 3, 3),
+            RoleR('Krul', 1, 1, 1),
+            RoleR('Lyra', 0, 1, 1),
+            RoleR('Lyra', 1, 4, 4),
+        ]
+        synergy_rs = [
+            SynergyR([('Taka', [1]), ('Rona', [0])], 1, 10),
+            SynergyR([('Krul', [1]), ('Lyra', [0])], 1, 6),
+        ]
+        counter_rs = [
+            CounterR([('Rona', [0])], [('Taka', [0])], 4, 4),  # doesn't apply
+        ]
+        draft_ai = DraftAI(SIMPLE_FORMAT, role_rs, synergy_rs, counter_rs)
+        history = ['Taka', 'Krul', 'Lyra', 'Rona']
+
+        # Team A should play with Taka 0 and Rona 1 because the synergy
+        # is not worth it. Team B should play with Krul 1 and Lyra 0
+        # because the synergy is worth getting worse role rewards.
+        correct_asgmts = ([('Taka', 0), ('Rona', 1)], [('Krul', 1), ('Lyra', 0)])
+        self.assertEqual(correct_asgmts, draft_ai.optimal_role_asgmts(history, A))
+        self.assertEqual(correct_asgmts, draft_ai.optimal_role_asgmts(history, B))
+
+    def test_optimal_role_asgmts_counter(self):
+        role_rs = [
+            RoleR('Taka', 0, 0, 0),
+            RoleR('Krul', 0, 0, 1),
+            RoleR('Krul', 1, 0, 0),
+            RoleR('Lyra', 0, 0, 0),
+            RoleR('Lyra', 1, 0, 2),
+        ]
+        counter_rs = [
+            CounterR([('Lyra', [0])], [('Taka', [0])], 4, 4),
+        ]
+        draft_ai = DraftAI(SIMPLE_FORMAT, role_rs, [], counter_rs)
+        history = ['Taka', 'Krul', 'Lyra']
+
+        # B gets more value playing Lyra in 0 to get counter reward than
+        # with the role rewards for both Krul and Lyra. Team A can't
+        # flex so returned assignments should be same for either team
+        # selecting first.
+        correct_asgmts = ([('Taka', 0)], [('Krul', 1), ('Lyra', 0)])
+        self.assertEqual(correct_asgmts, draft_ai.optimal_role_asgmts(history, A))
+        self.assertEqual(correct_asgmts, draft_ai.optimal_role_asgmts(history, B))
+
+    def test_optimal_role_asgmts_cycle(self):
+        role_rs = [
+            # heroes for team A
+            RoleR('Taka', 0, 3, 3),
+            RoleR('Taka', 1, 0, 0),
+            RoleR('Krul', 0, 0, 0),
+            RoleR('Krul', 1, 3, 3),
+            # heroes for team B
+            RoleR('Lyra', 0, 2, 2),
+            RoleR('Lyra', 1, 0, 0),
+            RoleR('Reim', 0, 0, 0),
+            RoleR('Reim', 1, 2, 2),
+        ]
+        counter_rs = [
+            CounterR([('Taka', [1])], [('Lyra', [0])], 20, 20),
+        ]
+        draft_ai = DraftAI(SIMPLE_FORMAT, role_rs, [], counter_rs)
+        history = ['Taka', 'Lyra', 'Reim', 'Krul']
+
+        # Same scenario as in test_both_teams_flex_with_counter_terminal_value_A.
+        # See the comments there for description. Here the optimal role assignments
+        # change based on which team is chosen to be unexploitable.
+        correct_asgmt = ([('Taka', 0), ('Krul', 1)], [('Lyra', 0), ('Reim', 1)])
+        self.assertEqual(correct_asgmt, draft_ai.optimal_role_asgmts(history, A))
+        correct_asgmt = ([('Taka', 0), ('Krul', 1)], [('Lyra', 1), ('Reim', 0)])
+        self.assertEqual(correct_asgmt, draft_ai.optimal_role_asgmts(history, B))
 
 
 if __name__ == '__main__':
