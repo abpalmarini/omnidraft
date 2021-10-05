@@ -28,6 +28,7 @@ ffibuilder.cdef(
         int pick_ban;
         int ban_pick;
         int ban_ban;
+        int inf;
     };
 
     // ensure python stays consistent with constants defined in draft_ai.h

@@ -28,6 +28,8 @@ PICK_BAN  = constants.pick_ban
 BAN_PICK  = constants.ban_pick
 BAN_BAN   = constants.ban_ban
 
+INF = constants.inf
+
 PICKS = {PICK, PICK_PICK, PICK_BAN}
 BANS = {BAN, BAN_PICK, BAN_BAN}
 
@@ -282,14 +284,14 @@ class DraftAI:
             lib.set_role_r(hero_num, hero.A_role_value, hero.B_role_value)
 
         # synergy rewards
-        ai_synergy_rs = self.translate_synergy_rs(synergy_rs)
-        for i, synergy_r in enumerate(ai_synergy_rs):
+        self.ai_synergy_rs = self.translate_synergy_rs(synergy_rs)
+        for i, synergy_r in enumerate(self.ai_synergy_rs):
             heroes, A_value, B_value = synergy_r
             lib.set_synergy_r(i, len(heroes), heroes, A_value, B_value)
 
         # counter rewards
-        ai_counter_rs = self.translate_counter_rs(counter_rs)
-        for i, counter_r in enumerate(ai_counter_rs):
+        self.ai_counter_rs = self.translate_counter_rs(counter_rs)
+        for i, counter_r in enumerate(self.ai_counter_rs):
             heroes, foes, A_value, B_value = counter_r
             lib.set_counter_r(
                 i,
@@ -323,8 +325,8 @@ class DraftAI:
         # sizes
         lib.set_sizes(
             len(self.ordered_heroes),
-            len(ai_synergy_rs),
-            len(ai_counter_rs),
+            len(self.ai_synergy_rs),
+            len(self.ai_counter_rs),
             len(self.draft_format),
         )
 
@@ -338,6 +340,21 @@ class DraftAI:
 
         lib.clear_tt()  # ensure state values for old drafts aren't used
 
+    # Group all bans, team A selections and team B selections into
+    # separate lists.
+    def _split_history(self, history):
+        banned = []
+        team_A = []
+        team_B = []
+        for hero, (team, selection) in zip(history, self.draft_format):
+            if selection in BANS:
+                banned.append(hero)
+            elif team == A:
+                team_A.append(hero)
+            else:
+                team_B.append(hero)
+        return banned, team_A, team_B
+
     # As flex picks map to a different hero num for every role they play,
     # there can be many possible 'teams'. All valid ones (no role clashes)
     # should be accounted for in search. This does not effect bans as the
@@ -348,16 +365,7 @@ class DraftAI:
     # on the AI's suggestion can eliminate the other flex possibilities as
     # we know the intended role for maximum value.
     def get_picks_n_bans(self, history):
-        banned_names = []
-        team_A_names = []
-        team_B_names = []
-        for hero_name, (team, selection) in zip(history, self.draft_format):
-            if selection in BANS:
-                banned_names.append(hero_name)
-            elif team == A:
-                team_A_names.append(hero_name)
-            else:
-                team_B_names.append(hero_name)
+        banned_names, team_A_names, team_B_names = self._split_history(history)
 
         banned = []
         for hero_name in banned_names:
@@ -508,3 +516,105 @@ class DraftAI:
                         selectable.add(hero)
                         break
         return selectable
+
+    # Returns a list of all role assignments based on what the heroes
+    # can play and ensuring no clashes.
+    def valid_role_asgmts(self, team_names):
+        role_asgmts = []
+        team_roles = [self.hero_roles[hero_name] for hero_name in team_names]
+        for roles in itertools.product(*team_roles):
+            if len(set(roles)) == len(team_names):
+                role_asgmts.append(roles)
+        return role_asgmts
+
+    # Get hero nums for the given hero names playing in the given roles.
+    def get_hero_nums(self, names, roles):
+        nums = []
+        for name_role in zip(names, roles):
+            nums.append(self.hero_nums[name_role])
+        return nums
+
+    # To find the optimal role assignments a small minimax search is
+    # done over both team's possible role assignments. The unexploitable
+    # team choosese first and is set to the MAX player. Thus, the
+    # returned assignments is whichever assignement gets MAX the most
+    # value given MIN's best response.
+    def optimal_role_asgmts(self, history, unexploitable):
+        """
+        Returns the optimal role assignments for the heroes of each team
+        at the given point in history. The unexploitable argument is
+        used to resolve situations where the value doesn't converge. It
+        indicates the team who should receive the role assignment
+        that results in their best guaranteed value even if more would be
+        possible vs the enemy assignment if they were willing to leave
+        themselves open to counter exploitation.
+        """
+
+        _, team_A_names, team_B_names = self._split_history(history)
+        if unexploitable == A:
+            names_max = team_A_names
+            names_min = team_B_names
+        else:
+            names_max = team_B_names
+            names_min = team_A_names
+
+        value_max = -INF
+        for roles_max in self.valid_role_asgmts(names_max):
+            team_nums_max = self.get_hero_nums(names_max, roles_max)
+
+            value_min = INF
+            for roles_min in self.valid_role_asgmts(names_min):
+                team_nums_min = self.get_hero_nums(names_min, roles_min)
+
+                # get value in terms of MAX's perspective
+                if unexploitable == A:
+                    value = self.reward_value(team_nums_max, team_nums_min)
+                else:
+                    value = -self.reward_value(team_nums_min, team_nums_max)
+
+                if value < value_min:
+                    value_min = value
+                    _opt_roles_min = roles_min
+
+            if value_min > value_max:
+                value_max = value_min
+                opt_roles_max = roles_max
+                opt_roles_min = _opt_roles_min
+
+        opt_asgmt_max = list(zip(names_max, opt_roles_max))
+        opt_asgmt_min = list(zip(names_min, opt_roles_min))
+        if unexploitable == A:
+            return opt_asgmt_max, opt_asgmt_min
+        else:
+            return opt_asgmt_min, opt_asgmt_max
+
+    # Return the zero-sum value in team A's perspective for all granted
+    # role, synergy and counter rewards for the given team hero nums.
+    def reward_value(self, team_A, team_B):
+        value = 0
+        team_A = set(team_A)
+        team_B = set(team_B)
+
+        # role rewards
+        for h in team_A:
+            value += self.ordered_heroes[h].A_role_value
+        for h in team_B:
+            value -= self.ordered_heroes[h].B_role_value
+
+        # synergy rewards
+        for synergy_hs, A_value, B_value in self.ai_synergy_rs:
+            if all(map(lambda h: h in team_A, synergy_hs)):
+                value += A_value
+            elif all(map(lambda h: h in team_B, synergy_hs)):
+                value -= B_value
+
+        # counter rewards
+        for counter_hs, counter_fs, A_value, B_value in self.ai_counter_rs:
+            if (all(map(lambda h: h in team_A, counter_hs))
+                    and all(map(lambda f: f in team_B, counter_fs))):
+                value += A_value
+            elif (all(map(lambda h: h in team_B, counter_hs))
+                    and all(map(lambda f: f in team_A, counter_fs))):
+                value -= B_value
+
+        return value
