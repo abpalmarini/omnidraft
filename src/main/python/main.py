@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     # pages
     rewards_page = RewardsPage(hero_icons, role_icons, arrow_icon, team_tags)
-    draft_page = DraftPage(hero_icons, all_roles, draft_format, team_tags)
+    draft_page = DraftPage(hero_icons, all_roles, draft_format, team_tags, rewards_page.team_builder)
     tab_widget = TabWidget(rewards_page, draft_page)
 
     window = QMainWindow()

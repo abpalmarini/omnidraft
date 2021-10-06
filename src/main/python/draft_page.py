@@ -15,15 +15,17 @@ HERO_BOX_SIZE = QSize(100, 100)
 
 class DraftPage(QWidget):
 
-    def __init__(self, hero_icons, roles, draft_format, team_tags):
+    def __init__(self, hero_icons, roles, draft_format, team_tags, team_builder):
         super().__init__()
         
         self.hero_icons = hero_icons
+        self.roles = roles
         self.ai_roles = {role: i for i, role in enumerate(roles)}
         self.draft_format = draft_format
         self.team_tags = team_tags
-        self.team_A = TEAM_1
+        self.team_builder = team_builder
 
+        self.team_A = TEAM_1
         self.team_A_label = QLabel(team_tags[0])
         self.team_B_label = QLabel(team_tags[1])
 
@@ -46,6 +48,9 @@ class DraftPage(QWidget):
 
         self.switch_sides_button = QPushButton("Switch Sides")
         self.switch_sides_button.clicked.connect(self.switch_sides_button_clicked)
+
+        self.copy_to_tb_button = QPushButton("Copy to TB")
+        self.copy_to_tb_button.clicked.connect(self.copy_to_tb_button_clicked)
 
         self.init_layout()
 
@@ -95,13 +100,15 @@ class DraftPage(QWidget):
         # search and remove buttons
         search_buttons_layout = QHBoxLayout()
         search_buttons_layout.addWidget(self.switch_sides_button)
+        search_buttons_layout.addWidget(self.copy_to_tb_button)
         search_buttons_layout.addWidget(self.search_bar)
         search_buttons_layout.addWidget(self.remove_button)
         search_buttons_layout.addWidget(self.clear_button)
         search_buttons_layout.setStretch(0, 1)
-        search_buttons_layout.setStretch(1, 4)
-        search_buttons_layout.setStretch(2, 1)
+        search_buttons_layout.setStretch(1, 1)
+        search_buttons_layout.setStretch(2, 4)
         search_buttons_layout.setStretch(3, 1)
+        search_buttons_layout.setStretch(4, 1)
         self.layout.addLayout(search_buttons_layout, 3, 0, 1, 2)
         self.layout.addWidget(self.search_view, 4, 0, 1, 2)
 
@@ -325,3 +332,37 @@ class DraftPage(QWidget):
             self.team_A_label.setText(self.team_tags[0])
             self.team_B_label.setText(self.team_tags[1])
         self.update_draft_ai()
+
+    # Has DraftAI determine current optimal roles for each hero in
+    # both teams for the current point in history, sets them to the
+    # team builder then automatically switches to that tab.
+    @Slot()
+    def copy_to_tb_button_clicked(self):
+        history = self.get_history()
+        if len(history) == 0:
+            team_1 = []
+            team_2 = []
+        else:
+            # ensure consistency with a possible returned AI search value and
+            # the value displayed in TB by having role assignments chosen based
+            # on the team to have selected last getting a guaranteed value
+            unexploitable, _ = self.draft_format[len(history) - 1]
+            team_A_asgmt, team_B_asgmt = self.draft_ai.optimal_role_asgmts(
+                history,
+                unexploitable,
+            )
+
+            def switch_ai_roles(asgmt):
+                ui_asgmt = []
+                for name, ai_role in asgmt:
+                    ui_asgmt.append((name, self.roles[ai_role]))
+                return ui_asgmt
+
+            if self.team_A == TEAM_1:
+                team_1 = switch_ai_roles(team_A_asgmt)
+                team_2 = switch_ai_roles(team_B_asgmt)
+            else:
+                team_1 = switch_ai_roles(team_B_asgmt)
+                team_2 = switch_ai_roles(team_A_asgmt)
+        self.team_builder.set_all_hero_boxes(team_1, team_2)
+        self.parent().parent().setCurrentIndex(0)  # first parent gives stacked widget, second gives tab

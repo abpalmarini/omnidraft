@@ -94,11 +94,11 @@ class RewardsPage(QWidget):
         delete_button.clicked.connect(self.delete_clicked)
 
         # team builder
-        team_builder = TeamBuilder(hero_icons, role_icons, team_tags)
+        self.team_builder = TeamBuilder(hero_icons, role_icons, team_tags)
         for reward_type in self.reward_types:
             model = reward_type.model
-            team_builder.teams_changed.connect(model.update_reward_statuses)
-            team_builder.hide_non_granted_checkbox.toggled.connect(
+            self.team_builder.teams_changed.connect(model.update_reward_statuses)
+            self.team_builder.hide_non_granted_checkbox.toggled.connect(
                 model.hide_non_granted_rewards
             )
 
@@ -109,7 +109,7 @@ class RewardsPage(QWidget):
         # method must be connected after the update_reward_statuses of
         # each model as it takes the info directly from each model.
         reward_info = RewardInfo(role_model, synergy_model, counter_model, team_tags)
-        team_builder.teams_changed.connect(reward_info.update)
+        self.team_builder.teams_changed.connect(reward_info.update)
         for reward_type in self.reward_types:
             reward_type.dialog.accepted.connect(reward_info.update)  # covers an add, edit, delete
 
@@ -126,7 +126,7 @@ class RewardsPage(QWidget):
         layout.addWidget(synergy_view, 2, 1)
         layout.addWidget(counter_view, 2, 2)
         builder_info_layout = QVBoxLayout()
-        builder_info_layout.addWidget(team_builder)
+        builder_info_layout.addWidget(self.team_builder)
         builder_info_layout.addWidget(reward_info)
         layout.addLayout(builder_info_layout, 0, 3, 3, 1)
         
