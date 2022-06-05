@@ -72,10 +72,11 @@ if __name__ == '__main__':
     hero_icons = {h: QIcon(appctxt.get_resource(h + '.png')) for h in all_heroes}
     role_icons = {r: QIcon(appctxt.get_resource(r + '.png')) for r in all_roles}
     arrow_icon = QIcon(appctxt.get_resource("right-arrow.png"))
+    ban_icons = [QIcon(appctxt.get_resource("ban-0.png")), QIcon(appctxt.get_resource("ban-1.png"))]
 
     # pages
     rewards_page = RewardsPage(hero_icons, role_icons, arrow_icon, team_tags)
-    draft_page = DraftPage(hero_icons, all_roles, draft_format, team_tags, rewards_page.team_builder)
+    draft_page = DraftPage(hero_icons, ban_icons, all_roles, draft_format, team_tags, rewards_page.team_builder)
     tab_widget = TabWidget(rewards_page, draft_page)
 
     window = QMainWindow()

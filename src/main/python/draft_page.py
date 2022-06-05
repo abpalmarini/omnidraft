@@ -15,10 +15,11 @@ HERO_BOX_SIZE = QSize(100, 100)
 
 class DraftPage(QWidget):
 
-    def __init__(self, hero_icons, roles, draft_format, team_tags, team_builder):
+    def __init__(self, hero_icons, ban_icons, roles, draft_format, team_tags, team_builder):
         super().__init__()
         
         self.hero_icons = hero_icons
+        self.ban_icons = ban_icons
         self.roles = roles
         self.ai_roles = {role: i for i, role in enumerate(roles)}
         self.draft_format = draft_format
@@ -86,9 +87,12 @@ class DraftPage(QWidget):
         self.layout.addWidget(self.team_A_label, 0, 0, Qt.AlignCenter)
         self.layout.addWidget(self.team_B_label, 0, 1, Qt.AlignCenter)
 
-        # separate hero boxes by selection type
+        # separate hero boxes by selection type and initialise a BanOverlay for all bans
         boxes = {(A, PICK): [], (B, PICK): [], (A, BAN): [], (B, BAN): []}
         for hero_box, selection in zip(self.hero_boxes, self.draft_format):
+            if selection[1] == BAN:
+                hero_box.ban_overlay = BanOverlay(hero_box)
+                hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
             boxes[selection].append(hero_box)
 
         # add grouped selection type boxes to layout
@@ -119,6 +123,8 @@ class DraftPage(QWidget):
         layout = QGridLayout(groupbox)
         for i, hero_box in enumerate(hero_boxes):
             layout.addWidget(hero_box, 0, i, Qt.AlignCenter)
+            if hasattr(hero_box, "ban_overlay"):
+                layout.addWidget(hero_box.ban_overlay, 0, i, Qt.AlignCenter)
         set_hero_box_layout_sizes(HERO_BOX_SIZE, layout, [0], list(range(len(hero_boxes))))
         groupbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         return groupbox
@@ -290,6 +296,9 @@ class DraftPage(QWidget):
                 # not be disabled if selection stays on this box and if not
                 # then change_selected_box will handle enabling and disabling
                 hero_box.set_hero(search_item.text())
+                # update ban overlay to the selected image if necessary
+                if hasattr(hero_box, "ban_overlay"):
+                    hero_box.ban_overlay.setPixmap(self.ban_icons[1].pixmap(hero_box.size))
                 break
         self.search_view.clearSelection()
 
@@ -303,6 +312,9 @@ class DraftPage(QWidget):
     def clear_button_clicked(self):
         for hero_box in self.hero_boxes:
             hero_box.clear()
+            # update ban overlay to the non-selected image if necessary
+            if hasattr(hero_box, "ban_overlay"):
+                hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
         self.change_selected_box(self.hero_boxes[0])  # handles the enabling/disabling of search items
 
     # Find selected box and remove it and all heroes after it in the
@@ -316,6 +328,8 @@ class DraftPage(QWidget):
                 remove = True
             if remove:
                 hero_box.clear()
+                if hasattr(hero_box, "ban_overlay"):
+                    hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
         self.change_selected_box(selected_box)  # selection is same, but legal search heroes need updated
 
     # Switches the team playing as A, updating the labels and calling
@@ -366,3 +380,24 @@ class DraftPage(QWidget):
                 team_2 = switch_ai_roles(team_A_asgmt)
         self.team_builder.set_all_hero_boxes(team_1, team_2)
         self.parent().parent().setCurrentIndex(0)  # first parent gives stacked widget, second gives tab
+
+
+class BanOverlay(QLabel):
+    """
+    Used to display a ban indicator on top of a hero box where all clicks
+    redirect to the hero box being overlaid.
+    """
+
+    def __init__(self, hero_box):
+        super().__init__()
+
+        self.hero_box = hero_box
+
+    def mousePressEvent(self, event):
+        self.hero_box.clicked.emit(self.hero_box.name)
+
+    def mouseDoubleClickEvent(self, event):
+        self.hero_box.doubleClicked.emit(self.hero_box.name)
+
+    def sizeHint(self):
+        return self.hero_box.sizeHint()
