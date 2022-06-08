@@ -1,12 +1,12 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
                                QGroupBox, QLabel, QPushButton, QHBoxLayout,
-                               QToolTip)
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QCursor
+                               QToolTip, QFrame)
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QCursor, QColor
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
-from reward_models import TEAM_1, TEAM_2
+from reward_models import TEAM_1, TEAM_2, TEAM_1_COLOR, TEAM_2_COLOR
 from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR, A, B, PICK, BAN
 
 
@@ -37,6 +37,7 @@ class DraftPage(QWidget):
             self.hero_boxes.append(hero_box)
             hero_box.clicked.connect(self.hero_box_clicked)
             hero_box.index = i
+            hero_box.value_label = ValueLabel(hero_box, self)
         self.hero_boxes[0].set_selected(True)
 
         self.setup_hero_search()
@@ -123,8 +124,11 @@ class DraftPage(QWidget):
         layout = QGridLayout(groupbox)
         for i, hero_box in enumerate(hero_boxes):
             layout.addWidget(hero_box, 0, i, Qt.AlignCenter)
+            # add ban overlay for all bans
             if hasattr(hero_box, "ban_overlay"):
                 layout.addWidget(hero_box.ban_overlay, 0, i, Qt.AlignCenter)
+            # add value label to bottom left corner
+            layout.addWidget(hero_box.value_label, 0, i, Qt.AlignLeft | Qt.AlignBottom)
         set_hero_box_layout_sizes(HERO_BOX_SIZE, layout, [0], list(range(len(hero_boxes))))
         groupbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         return groupbox
@@ -345,6 +349,9 @@ class DraftPage(QWidget):
             self.team_A = TEAM_1
             self.team_A_label.setText(self.team_tags[0])
             self.team_B_label.setText(self.team_tags[1])
+        for hero_box in self.hero_boxes:
+            hero_box.value_label.clear()
+            hero_box.value_label.update_color()
         self.update_draft_ai()
 
     # Has DraftAI determine current optimal roles for each hero in
@@ -401,3 +408,39 @@ class BanOverlay(QLabel):
 
     def sizeHint(self):
         return self.hero_box.sizeHint()
+
+
+class ValueLabel(QLabel):
+    """
+    Used to hold an optimal value (returned by AI) that is possible to achieve
+    for the slecting team in the displayed draft (held in draft_page) at the
+    given hero box's corresponding stage in the draft.
+    """
+
+    def __init__(self, hero_box, draft_page):
+        super().__init__()
+
+        self.hero_box = hero_box
+        self.draft_page = draft_page
+        self.side = draft_page.draft_format[hero_box.index][0]
+
+        self.setAlignment(Qt.AlignCenter)
+        self.setFrameStyle(QFrame.Panel | QFrame.Plain)
+        self.setLineWidth(1)
+        self.setFixedSize(HERO_BOX_SIZE * 0.40)
+        self.margin = hero_box.frameWidth() * 2  # add margin so it doesn't overlap with hero box frame
+        self.update_color()
+
+    def clear(self):
+        self.setText(None)
+
+    def update_color(self):
+        if self.draft_page.team_A == TEAM_1:
+            color = TEAM_1_COLOR if self.side == A else TEAM_2_COLOR
+        else:
+            color = TEAM_2_COLOR if self.side == A else TEAM_1_COLOR
+        self.setStyleSheet(f"background-color: {color.name()}; margin: {self.margin}px")
+
+    def mousePressEvent(self, event):
+        # TODO: if storing a value then present display of optimal actions to achieve the value
+        pass
