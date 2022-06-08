@@ -10,8 +10,8 @@ TEAM_1  = 0
 TEAM_2  = 1
 NO_TEAM = 2
 
-TEAM_1_COLOR = QColor(24, 144, 240, 150)
-TEAM_2_COLOR = QColor(255, 88, 79, 150)
+TEAM_1_COLOR = QColor(81, 176, 250)
+TEAM_2_COLOR = QColor(255, 129, 129)
 
 
 class BaseRewardsModel(QAbstractTableModel):
