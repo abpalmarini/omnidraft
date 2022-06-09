@@ -54,6 +54,14 @@ class DraftPage(QWidget):
         self.copy_to_tb_button = QPushButton("Copy to TB")
         self.copy_to_tb_button.clicked.connect(self.copy_to_tb_button_clicked)
 
+        # features for running AI
+        self.run_search_button = QPushButton("Find optimal selection(s)")
+        self.run_search_button.clicked.connect(self.run_search_button_clicked)
+        self.optimal_hero_boxes = (HeroBox(hero_icons, HERO_BOX_SIZE), 
+                                   HeroBox(hero_icons, HERO_BOX_SIZE)) 
+        self.optimal_hero_boxes[0].clicked.connect(self.optimal_hero_box_clicked)
+        self.optimal_hero_boxes[1].clicked.connect(self.optimal_hero_box_clicked)
+
         self.init_layout()
 
     # @CopyPaste from reward_dialogs.py
@@ -80,8 +88,7 @@ class DraftPage(QWidget):
     # For now the layout simply consists of the team headers side by side.
     # Underneath that is a row of the 5 picks for each team side by side
     # and underneath that a row for however many bans needed. Assuming
-    # for now that there won't be more than 5 bans. Could be useful to
-    # have ban icons @Later to avoid confusion.
+    # for now that there won't be more than 5 bans.
     def init_layout(self):
         self.layout = QGridLayout(self)
 
@@ -102,20 +109,19 @@ class DraftPage(QWidget):
         self.layout.addWidget(self.group_hero_boxes(boxes[(A, BAN)]), 2, 0)
         self.layout.addWidget(self.group_hero_boxes(boxes[(B, BAN)]), 2, 1)
 
-        # search and remove buttons
-        search_buttons_layout = QHBoxLayout()
-        search_buttons_layout.addWidget(self.switch_sides_button)
-        search_buttons_layout.addWidget(self.copy_to_tb_button)
-        search_buttons_layout.addWidget(self.search_bar)
-        search_buttons_layout.addWidget(self.remove_button)
-        search_buttons_layout.addWidget(self.clear_button)
-        search_buttons_layout.setStretch(0, 1)
-        search_buttons_layout.setStretch(1, 1)
-        search_buttons_layout.setStretch(2, 4)
-        search_buttons_layout.setStretch(3, 1)
-        search_buttons_layout.setStretch(4, 1)
-        self.layout.addLayout(search_buttons_layout, 3, 0, 1, 2)
-        self.layout.addWidget(self.search_view, 4, 0, 1, 2)
+        # group features related to running AI search
+        ai_groupbox = self.init_ai_groupbox()
+
+        controls_layout = QGridLayout()
+        controls_layout.addWidget(self.switch_sides_button, 0, 0)
+        controls_layout.addWidget(self.copy_to_tb_button, 0, 1)
+        controls_layout.addWidget(self.remove_button, 0, 2)
+        controls_layout.addWidget(self.clear_button, 0, 3)
+        controls_layout.addWidget(self.search_bar, 1, 0, 1, 4)
+        controls_layout.addWidget(self.search_view, 2, 0, 1, 4)
+        controls_layout.addWidget(ai_groupbox, 0, 5, 3, 1)
+
+        self.layout.addLayout(controls_layout, 3, 0, 1, 2)
 
     # Lays out the hero boxes of some selection type into a self
     # contained groupbox.
@@ -132,6 +138,17 @@ class DraftPage(QWidget):
         set_hero_box_layout_sizes(HERO_BOX_SIZE, layout, [0], list(range(len(hero_boxes))))
         groupbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         return groupbox
+
+    # Groups together the run ai search button and hero boxes to display the
+    # optimal selections. @Later can contain total number of states and the
+    # optimal value.
+    def init_ai_groupbox(self):
+        ai_groupbox = QGroupBox()
+        layout = QGridLayout(ai_groupbox)
+        layout.addWidget(self.run_search_button, 0, 0, 1, 2, Qt.AlignTop | Qt.AlignHCenter)
+        layout.addWidget(self.optimal_hero_boxes[0], 1, 0, 10, 1, Qt.AlignCenter)
+        layout.addWidget(self.optimal_hero_boxes[1], 1, 1, 10, 1, Qt.AlignCenter)
+        return ai_groupbox
 
     # Updates the DraftAI object used for creating histories and
     # running searches using the reward attributes and the team A flag
@@ -387,6 +404,15 @@ class DraftPage(QWidget):
                 team_2 = switch_ai_roles(team_A_asgmt)
         self.team_builder.set_all_hero_boxes(team_1, team_2)
         self.parent().parent().setCurrentIndex(0)  # first parent gives stacked widget, second gives tab
+
+    @Slot()
+    def run_search_button_clicked(self):
+        pass
+
+    @Slot()
+    def optimal_hero_box_clicked(self, hero_name):
+        clicked_box = self.sender()
+        pass
 
 
 class BanOverlay(QLabel):
