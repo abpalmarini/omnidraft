@@ -26,7 +26,7 @@ class DraftPage(QWidget):
         self.team_tags = team_tags
         self.team_builder = team_builder
 
-        self.team_A = TEAM_1
+        self.curr_team_A = TEAM_1
         self.team_A_label = QLabel(team_tags[0])
         self.team_B_label = QLabel(team_tags[1])
 
@@ -206,7 +206,7 @@ class DraftPage(QWidget):
             return _ai_heroes
 
         # find A/B values
-        if self.team_A == TEAM_1:
+        if self.curr_team_A == TEAM_1:
             A_value = ai_value(reward.team_1_value)
             B_value = ai_value(reward.team_2_value)
         else:
@@ -358,12 +358,12 @@ class DraftPage(QWidget):
     # saved TT to load the new draft ai with.
     @Slot()
     def switch_sides_button_clicked(self):
-        if self.team_A == TEAM_1:
-            self.team_A = TEAM_2
+        if self.curr_team_A == TEAM_1:
+            self.curr_team_A = TEAM_2
             self.team_A_label.setText(self.team_tags[1])
             self.team_B_label.setText(self.team_tags[0])
         else:
-            self.team_A = TEAM_1
+            self.curr_team_A = TEAM_1
             self.team_A_label.setText(self.team_tags[0])
             self.team_B_label.setText(self.team_tags[1])
         for hero_box in self.hero_boxes:
@@ -396,7 +396,7 @@ class DraftPage(QWidget):
                     ui_asgmt.append((name, self.roles[ai_role]))
                 return ui_asgmt
 
-            if self.team_A == TEAM_1:
+            if self.curr_team_A == TEAM_1:
                 team_1 = switch_ai_roles(team_A_asgmt)
                 team_2 = switch_ai_roles(team_B_asgmt)
             else:
@@ -461,7 +461,7 @@ class ValueLabel(QLabel):
         self.setText(None)
 
     def update_color(self):
-        if self.draft_page.team_A == TEAM_1:
+        if self.draft_page.curr_team_A == TEAM_1:
             color = TEAM_1_COLOR if self.side == A else TEAM_2_COLOR
         else:
             color = TEAM_2_COLOR if self.side == A else TEAM_1_COLOR
