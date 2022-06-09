@@ -64,6 +64,8 @@ class DraftPage(QWidget):
 
         self.init_layout()
 
+        self.history_changed()
+
     # @CopyPaste from reward_dialogs.py
     def setup_hero_search(self):
         # source model (only heroes with role reward will be used and
@@ -288,6 +290,34 @@ class DraftPage(QWidget):
         else:
             self.remove_button.setEnabled(False)
 
+    # To be called whenever the draft history changes in anyway (including the team
+    # having selected the heroes). Handles all the necessary logic for such a change.
+    def history_changed(self):
+        self.update_optimal_boxes_next_selection_color()
+
+    # Changes the colours of the optimal hero selection boxes to reflect which team
+    # has the next selection(s) to highlight what the returned heroes from running
+    # the AI would represent.
+    def update_optimal_boxes_next_selection_color(self):
+        stage = self.get_history_len()
+        if stage == len(self.draft_format):
+            # no more selections for either team 
+            self.optimal_hero_boxes[0].setStyleSheet(None)
+            self.optimal_hero_boxes[1].setStyleSheet(None)
+            return
+        side = self.draft_format[stage][0]
+        if self.curr_team_A == TEAM_1:
+            team_color = TEAM_1_COLOR if side == A else TEAM_2_COLOR
+        else:
+            team_color = TEAM_2_COLOR if side == A else TEAM_1_COLOR
+        self.optimal_hero_boxes[0].setStyleSheet(f"background-color: {team_color.name()}")
+        if side == self.draft_format[(stage + 1) % len(self.draft_format)][0]:
+            # double selection
+            self.optimal_hero_boxes[1].setStyleSheet(f"background-color: {team_color.name()}")
+        else:
+            # single selection
+            self.optimal_hero_boxes[1].setStyleSheet(None)
+
     # Change the selected box so long as it is next one needing entered
     # or one before that.
     @Slot()
@@ -328,6 +358,8 @@ class DraftPage(QWidget):
         if history_len < len(self.draft_format):
             self.change_selected_box(self.hero_boxes[history_len])
 
+        self.history_changed()
+
     # Clears all hero boxes and sets the first box as the selected box.
     @Slot()
     def clear_button_clicked(self):
@@ -337,6 +369,7 @@ class DraftPage(QWidget):
             if hasattr(hero_box, "ban_overlay"):
                 hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
         self.change_selected_box(self.hero_boxes[0])  # handles the enabling/disabling of search items
+        self.history_changed()
 
     # Find selected box and remove it and all heroes after it in the
     # draft history as it should not contain gaps.
@@ -352,6 +385,7 @@ class DraftPage(QWidget):
                 if hasattr(hero_box, "ban_overlay"):
                     hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
         self.change_selected_box(selected_box)  # selection is same, but legal search heroes need updated
+        self.history_changed()
 
     # Switches the team playing as A, updating the labels and calling
     # to update the draft ai. @Later this will need to check for a
@@ -370,6 +404,7 @@ class DraftPage(QWidget):
             hero_box.value_label.clear()
             hero_box.value_label.update_color()
         self.update_draft_ai()
+        self.history_changed()
 
     # Has DraftAI determine current optimal roles for each hero in
     # both teams for the current point in history, sets them to the
