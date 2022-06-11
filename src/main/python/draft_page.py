@@ -391,6 +391,8 @@ class DraftPage(QWidget):
         history_len = self.get_history_len()
         if history_len < len(self.draft_format):
             self.change_selected_box(self.hero_boxes[history_len])
+        else:
+            self.change_selected_box(self.hero_boxes[history_len - 1])  # so remove button becomes enabled
 
         self.history_changed(selected_stage)
 
