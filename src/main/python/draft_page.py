@@ -64,7 +64,7 @@ class DraftPage(QWidget):
 
         self.init_layout()
 
-        self.history_changed()
+        self.history_changed(-1)
 
     # @CopyPaste from reward_dialogs.py
     def setup_hero_search(self):
@@ -291,9 +291,42 @@ class DraftPage(QWidget):
             self.remove_button.setEnabled(False)
 
     # To be called whenever the draft history changes in anyway (including the team
-    # having selected the heroes). Handles all the necessary logic for such a change.
-    def history_changed(self):
+    # having selected the heroes), passing in the stage where the history is first
+    # changed from what it previously was. Handles all the necessary logic for such
+    # a change.
+    def history_changed(self, change_stage):
         self.update_optimal_boxes_next_selection_color()
+
+        # Clear the value labels for all selections after the point where the draft
+        # history changes because they are no longer valid. The value label for the
+        # selection where a change first occurred is still valid because it depends
+        # only on the history before its selection.
+        for hero_box in self.hero_boxes[change_stage + 1:]:
+            hero_box.value_label.clear()
+
+        # Unable to run search if draft history is full.
+        selection_stage = self.get_history_len()
+        if selection_stage == len(self.draft_format):
+            self.run_search_button.setDisabled(True)
+            self.optimal_hero_boxes[0].clear()
+            self.optimal_hero_boxes[1].clear()
+            return
+
+        # If search has previously been run for the given history then display
+        # optimal results and disable functionality to run search again, else
+        # clear optimal displays and allow search to be run.
+        search_result = self.hero_boxes[selection_stage].value_label.search_result
+        if search_result is not None:
+            self.run_search_button.setDisabled(True)
+            self.optimal_hero_boxes[0].set_hero(search_result[1])
+            if len(search_result) == 3:
+                self.optimal_hero_boxes[1].set_hero(search_result[2])
+            else:
+                self.optimal_hero_boxes[1].clear()
+        else:
+            self.run_search_button.setEnabled(True)
+            self.optimal_hero_boxes[0].clear()
+            self.optimal_hero_boxes[1].clear()
 
     # Changes the colours of the optimal hero selection boxes to reflect which team
     # has the next selection(s) to highlight what the returned heroes from running
@@ -343,6 +376,7 @@ class DraftPage(QWidget):
         # find the selected hero box and set its hero to clicked item
         for hero_box in self.hero_boxes:
             if hero_box.selected:
+                selected_stage = hero_box.index
                 # not using set_hero_from_search_item because the item should
                 # not be disabled if selection stays on this box and if not
                 # then change_selected_box will handle enabling and disabling
@@ -358,7 +392,7 @@ class DraftPage(QWidget):
         if history_len < len(self.draft_format):
             self.change_selected_box(self.hero_boxes[history_len])
 
-        self.history_changed()
+        self.history_changed(selected_stage)
 
     # Clears all hero boxes and sets the first box as the selected box.
     @Slot()
@@ -369,7 +403,7 @@ class DraftPage(QWidget):
             if hasattr(hero_box, "ban_overlay"):
                 hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
         self.change_selected_box(self.hero_boxes[0])  # handles the enabling/disabling of search items
-        self.history_changed()
+        self.history_changed(0)
 
     # Find selected box and remove it and all heroes after it in the
     # draft history as it should not contain gaps.
@@ -385,7 +419,7 @@ class DraftPage(QWidget):
                 if hasattr(hero_box, "ban_overlay"):
                     hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
         self.change_selected_box(selected_box)  # selection is same, but legal search heroes need updated
-        self.history_changed()
+        self.history_changed(selected_box.index)
 
     # Switches the team playing as A, updating the labels and calling
     # to update the draft ai. @Later this will need to check for a
@@ -404,7 +438,8 @@ class DraftPage(QWidget):
             hero_box.value_label.clear()
             hero_box.value_label.update_color()
         self.update_draft_ai()
-        self.history_changed()
+        self.history_changed(-1)  # -1 to indicate that all value labels (including first) are
+                                  # invalid and should be cleared
 
     # Has DraftAI determine current optimal roles for each hero in
     # both teams for the current point in history, sets them to the
@@ -442,7 +477,16 @@ class DraftPage(QWidget):
 
     @Slot()
     def run_search_button_clicked(self):
-        pass
+        history = self.get_history()
+        assert len(history) < len(self.draft_format)
+        search_result = self.draft_ai.run_search(history)
+        # set optimal value for current selection
+        self.hero_boxes[len(history)].value_label.set_search_result(search_result)
+        # display optimal selection(s)
+        self.optimal_hero_boxes[0].set_hero(search_result[1])
+        if len(search_result) == 3:
+            self.optimal_hero_boxes[1].set_hero(search_result[2])
+        self.run_search_button.setDisabled(True)
 
     @Slot()
     def optimal_hero_box_clicked(self, hero_name):
@@ -484,7 +528,8 @@ class ValueLabel(QLabel):
         self.hero_box = hero_box
         self.draft_page = draft_page
         self.side = draft_page.draft_format[hero_box.index][0]
-
+        self.search_result = None  # the optimal value and selection(s) returned from running AI search
+                                   # for the selection that this value label is associated with
         self.setAlignment(Qt.AlignCenter)
         self.setFrameStyle(QFrame.Panel | QFrame.Plain)
         self.setLineWidth(1)
@@ -492,7 +537,13 @@ class ValueLabel(QLabel):
         self.margin = hero_box.frameWidth() * 2  # add margin so it doesn't overlap with hero box frame
         self.update_color()
 
+    def set_search_result(self, search_result):
+        self.search_result = search_result
+        # scale the integer values between 0 and 1000 used by the AI to floats between 0 and 10
+        self.setText(str(search_result[0] / 100))
+
     def clear(self):
+        self.search_result = None
         self.setText(None)
 
     def update_color(self):
