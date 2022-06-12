@@ -509,6 +509,9 @@ class DraftPage(QWidget):
     def run_search_button_clicked(self):
         history = self.get_history()
         assert len(history) < len(self.draft_format)
+        # move user selection to where search is being run from (next draft selection)
+        if not self.hero_boxes[len(history)].selected:
+            self.change_selected_box(self.hero_boxes[len(history)])
         search_result = self.draft_ai.run_search(history)
         # set optimal value for current selection
         self.hero_boxes[len(history)].value_label.set_search_result(search_result)
