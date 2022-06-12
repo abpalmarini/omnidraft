@@ -284,6 +284,13 @@ class DraftPage(QWidget):
             item = self.search_model.item(row)
             item.setEnabled(item.text() in selectable)
 
+        # as users can also select a hero in either optimal hero display,
+        # these should only be enabled if selectable in selected position
+        self.optimal_hero_boxes[0].setDisabled(self.optimal_hero_boxes[0].name != '' and 
+                                               self.optimal_hero_boxes[0].name not in selectable)
+        self.optimal_hero_boxes[1].setDisabled(self.optimal_hero_boxes[1].name != '' and 
+                                               self.optimal_hero_boxes[1].name not in selectable)
+
         # enable remove button if box contains a hero
         if hero_box.name:
             self.remove_button.setEnabled(True)
@@ -415,6 +422,8 @@ class DraftPage(QWidget):
                 break
         self.search_view.clearSelection()
 
+        self.history_changed(selected_stage, search_item.text())
+
         # move selection to next empty stage unless all have been entered
         history_len = self.get_history_len()
         if history_len < len(self.draft_format):
@@ -422,7 +431,6 @@ class DraftPage(QWidget):
         else:
             self.change_selected_box(self.hero_boxes[history_len - 1])  # so remove button becomes enabled
 
-        self.history_changed(selected_stage, search_item.text())
 
     # Clears all hero boxes and sets the first box as the selected box.
     @Slot()
@@ -523,8 +531,24 @@ class DraftPage(QWidget):
 
     @Slot()
     def optimal_hero_box_clicked(self, hero_name):
-        clicked_box = self.sender()
-        pass
+        if not hero_name:
+            return
+        # @CopyPaste
+        # find selected draft hero box and set to hero in clicked optimal display
+        for hero_box in self.hero_boxes:
+            if hero_box.selected:
+                selected_stage = hero_box.index
+                hero_box.set_hero(hero_name)
+                if hasattr(hero_box, "ban_overlay"):
+                    hero_box.ban_overlay.setPixmap(self.ban_icons[1].pixmap(hero_box.size))
+                break
+        self.history_changed(selected_stage, hero_name)
+        # move selection to next empty stage unless all have been entered
+        history_len = self.get_history_len()
+        if history_len < len(self.draft_format):
+            self.change_selected_box(self.hero_boxes[history_len])
+        else:
+            self.change_selected_box(self.hero_boxes[history_len - 1])  # so remove button becomes enabled
 
 
 class BanOverlay(QLabel):
