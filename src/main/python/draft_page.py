@@ -294,7 +294,7 @@ class DraftPage(QWidget):
     # having selected the heroes), passing in the stage where the history is first
     # changed from what it previously was. Handles all the necessary logic for such
     # a change.
-    def history_changed(self, change_stage):
+    def history_changed(self, change_stage, hero=None):
         self.update_optimal_boxes_next_selection_color()
 
         # Clear the value labels for all selections after the point where the draft
@@ -303,6 +303,9 @@ class DraftPage(QWidget):
         # only on the history before its selection.
         for hero_box in self.hero_boxes[change_stage + 1:]:
             hero_box.value_label.clear()
+
+        if hero is not None:
+            self.update_next_value_label(change_stage, hero)
 
         # Unable to run search if draft history is full.
         selection_stage = self.get_history_len()
@@ -351,6 +354,31 @@ class DraftPage(QWidget):
             # single selection
             self.optimal_hero_boxes[1].setStyleSheet(None)
 
+    # Checks if the hero being selected is part of a double selection where the
+    # optimal selections have been saved from running the AI and therefore updates
+    # the optimal value (and selection) of the next selection as search does not
+    # need to be run again.
+    def update_next_value_label(self, stage, selected_hero):
+        search_result = self.hero_boxes[stage].value_label.search_result
+        if search_result is None or len(search_result) == 2:
+            # no saved result or single selection so nothing to update
+            return
+        elif self.draft_format[stage][1] == self.draft_format[stage + 1][1]:
+            # selecting team has two selections of the same type so either hero
+            # could be selected
+            if selected_hero == search_result[1]:
+                next_result = (search_result[0], search_result[2])
+                self.hero_boxes[stage + 1].value_label.set_search_result(next_result)
+            elif selected_hero == search_result[2]:
+                next_result = (search_result[0], search_result[1])
+                self.hero_boxes[stage + 1].value_label.set_search_result(next_result)
+        else:
+            # selecting team has two selections of a different type so must be
+            # selected in order
+            if selected_hero == search_result[1]:
+                next_result = (search_result[0], search_result[2])
+                self.hero_boxes[stage + 1].value_label.set_search_result(next_result)
+
     # Change the selected box so long as it is next one needing entered
     # or one before that.
     @Slot()
@@ -394,7 +422,7 @@ class DraftPage(QWidget):
         else:
             self.change_selected_box(self.hero_boxes[history_len - 1])  # so remove button becomes enabled
 
-        self.history_changed(selected_stage)
+        self.history_changed(selected_stage, search_item.text())
 
     # Clears all hero boxes and sets the first box as the selected box.
     @Slot()
