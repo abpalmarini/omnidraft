@@ -1,13 +1,13 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
                                QGroupBox, QLabel, QPushButton, QHBoxLayout,
-                               QToolTip, QFrame)
+                               QToolTip, QFrame, QMessageBox)
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QCursor, QColor
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
 from reward_models import TEAM_1, TEAM_2, TEAM_1_COLOR, TEAM_2_COLOR
-from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR, A, B, PICK, BAN
+from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR, A, B, PICK, BAN, INF
 
 
 HERO_BOX_SIZE = QSize(100, 100)
@@ -521,6 +521,15 @@ class DraftPage(QWidget):
         if not self.hero_boxes[len(history)].selected:
             self.change_selected_box(self.hero_boxes[len(history)])
         search_result = self.draft_ai.run_search(history)
+        # check for incomplete search
+        if search_result[0] == INF or search_result[0] == -INF:
+            msg_box = QMessageBox(self)
+            msg_box.setText("Insufficient champions for finding the optimal selection(s).")
+            msg_box.setInformativeText("There exists a selection of champions such that (at least) one" \
+                                       " team cannot secure a champion for each role. Try adding more " \
+                                       "role rewards.")
+            msg_box.exec()
+            return
         # set optimal value for current selection
         self.hero_boxes[len(history)].value_label.set_search_result(search_result)
         # display optimal selection(s)
