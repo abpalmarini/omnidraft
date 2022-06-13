@@ -1,7 +1,8 @@
 from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
                                QGroupBox, QLabel, QPushButton, QHBoxLayout,
-                               QToolTip, QFrame, QMessageBox)
+                               QToolTip, QFrame, QMessageBox, QDialog,
+                               QLCDNumber)
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QCursor, QColor
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
@@ -61,6 +62,8 @@ class DraftPage(QWidget):
                                    HeroBox(hero_icons, HERO_BOX_SIZE)) 
         self.optimal_hero_boxes[0].clicked.connect(self.optimal_hero_box_clicked)
         self.optimal_hero_boxes[1].clicked.connect(self.optimal_hero_box_clicked)
+
+        self.summary_dialog = SummaryDialog(self)
 
         self.init_layout()
 
@@ -560,6 +563,131 @@ class DraftPage(QWidget):
             self.change_selected_box(self.hero_boxes[history_len - 1])  # so remove button becomes enabled
 
 
+class SummaryDialog(QDialog):
+    """
+    A dialog displaying the optimal value and selection(s) returned form
+    an AI search for a given draft history.
+    """
+
+    def __init__(self, draft_page):
+        super().__init__()
+
+        self.draft_page = draft_page
+
+        self.hero_boxes = []
+        for i in range(len(draft_page.draft_format)):
+            hero_box = HeroBox(draft_page.hero_icons, HERO_BOX_SIZE * 0.5)
+            self.hero_boxes.append(hero_box)
+            hero_box.index = i
+
+        # @CopyPaste
+        # separate hero boxes by selection type and initialise a BanOverlay for all bans
+        boxes = {(A, PICK): [], (B, PICK): [], (A, BAN): [], (B, BAN): []}
+        for hero_box, selection in zip(self.hero_boxes, draft_page.draft_format):
+            if selection[1] == BAN:
+                hero_box.ban_overlay = BanOverlay(hero_box)
+                hero_box.ban_overlay.setPixmap(draft_page.ban_icons[0].pixmap(hero_box.size))
+            boxes[selection].append(hero_box)
+
+        self.description = "Optimal selection(s) for {} in the current draft that will secure " \
+                           "the most reward in the worst case scenario (that is, no matter how" \
+                           " the opponents responsd):" 
+        self.description_label = QLabel()
+        self.description_label.setWordWrap(True)
+        self.value_lcd = QLCDNumber(6)
+        self.optimal_hero_boxes = (HeroBox(draft_page.hero_icons, HERO_BOX_SIZE), 
+                                   HeroBox(draft_page.hero_icons, HERO_BOX_SIZE)) 
+
+        layout = QGridLayout(self)
+        # add grouped selection type boxes to layout
+        layout.addWidget(self.group_hero_boxes(boxes[(A, PICK)]), 1, 0)
+        layout.addWidget(self.group_hero_boxes(boxes[(B, PICK)]), 1, 1)
+        layout.addWidget(self.group_hero_boxes(boxes[(A, BAN)]), 2, 0)
+        layout.addWidget(self.group_hero_boxes(boxes[(B, BAN)]), 2, 1)
+        summary_layout = QHBoxLayout()
+        summary_layout.addWidget(self.description_label)
+        summary_layout.addWidget(self.value_lcd)
+        summary_layout.addWidget(self.optimal_hero_boxes[0])
+        summary_layout.addWidget(self.optimal_hero_boxes[1])
+        summary_layout.setStretch(0, 4)
+        summary_layout.setStretch(1, 5)
+        summary_layout.setStretch(2, 2)
+        summary_layout.setStretch(3, 2)
+        layout.addLayout(summary_layout, 3, 0, 1, 2)
+
+        self.setWindowFlags(Qt.Popup)
+
+    def group_hero_boxes(self, hero_boxes):
+        groupbox = QGroupBox()
+        layout = QGridLayout(groupbox)
+        for i, hero_box in enumerate(hero_boxes):
+            layout.addWidget(hero_box, 0, i, Qt.AlignCenter)
+            # add ban overlay for all bans
+            if hasattr(hero_box, "ban_overlay"):
+                layout.addWidget(hero_box.ban_overlay, 0, i, Qt.AlignCenter)
+        groupbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        return groupbox
+
+    # Set the desired information and then show dialog to display summary.
+    def display(self, stage, search_result):
+        # Find selecting team's colour and tag.
+        selecting_side = self.draft_page.draft_format[stage][0]
+        if self.draft_page.curr_team_A == TEAM_1:
+            if selecting_side == A:
+                color = TEAM_1_COLOR
+                tag = self.draft_page.team_tags[0]
+            else:
+                color = TEAM_2_COLOR
+                tag = self.draft_page.team_tags[1]
+        else:
+            if selecting_side == A:
+                color = TEAM_2_COLOR
+                tag = self.draft_page.team_tags[1]
+            else:
+                color = TEAM_1_COLOR
+                tag = self.draft_page.team_tags[0]
+
+        # Copy history up to the stage where search was run.
+        for i, hero_box in enumerate(self.hero_boxes):
+            if i < stage:
+                hero_box.set_hero(self.draft_page.hero_boxes[i].name)
+                if hasattr(hero_box, "ban_overlay"):
+                    ban_pixmap = self.draft_page.ban_icons[1].pixmap(hero_box.size)
+                    hero_box.ban_overlay.setPixmap(ban_pixmap)
+            else:
+                hero_box.clear()
+                if hasattr(hero_box, "ban_overlay"):
+                    ban_pixmap = self.draft_page.ban_icons[0].pixmap(hero_box.size)
+                    hero_box.ban_overlay.setPixmap(ban_pixmap)
+            hero_box.setStyleSheet(None)
+
+        # Set description to include the selecting team's tag.
+        self.description_label.setText(self.description.format(tag))
+
+        # Highlight next selection boxes.
+        self.hero_boxes[stage].setStyleSheet(f"background-color: {color.name()}")
+        if len(search_result) == 3:
+            self.hero_boxes[stage + 1].setStyleSheet(f"background-color: {color.name()}")
+
+        # Set optimal value.
+        self.value_lcd.display(search_result[0] / 100) 
+        palette = self.value_lcd.palette()
+        palette.setColor(palette.WindowText, color)
+        self.value_lcd.setPalette(palette)
+
+        # Set optimal selection(s).
+        self.optimal_hero_boxes[0].set_hero(search_result[1])
+        self.optimal_hero_boxes[0].setStyleSheet(f"background-color: {color.name()}")
+        if len(search_result) == 3:
+            self.optimal_hero_boxes[1].set_hero(search_result[2])
+            self.optimal_hero_boxes[1].setStyleSheet(f"background-color: {color.name()}")
+        else:
+            self.optimal_hero_boxes[1].clear()
+            self.optimal_hero_boxes[1].setStyleSheet(None)
+
+        self.show()
+
+
 class BanOverlay(QLabel):
     """
     Used to display a ban indicator on top of a hero box where all clicks
@@ -620,5 +748,5 @@ class ValueLabel(QLabel):
         self.setStyleSheet(f"background-color: {color.name()}; margin: {self.margin}px")
 
     def mousePressEvent(self, event):
-        # TODO: if storing a value then present display of optimal actions to achieve the value
-        pass
+        if self.search_result is not None:
+            self.draft_page.summary_dialog.display(self.hero_box.index, self.search_result)
