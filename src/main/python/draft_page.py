@@ -538,12 +538,15 @@ class DraftPage(QWidget):
                                        "role rewards.")
             msg_box.exec()
             return
+        # scale the integer values between 0 and 1000 used by the AI to floats between 0 and 10
+        updated_search_result = (search_result[0] / 100, search_result[1])
+        updated_search_result += () if len(search_result) == 2 else (search_result[2],)
         # set optimal value for current selection
-        self.hero_boxes[len(history)].value_label.set_search_result(search_result)
+        self.hero_boxes[len(history)].value_label.set_search_result(updated_search_result)
         # display optimal selection(s)
-        self.optimal_hero_boxes[0].set_hero(search_result[1])
-        if len(search_result) == 3:
-            self.optimal_hero_boxes[1].set_hero(search_result[2])
+        self.optimal_hero_boxes[0].set_hero(updated_search_result[1])
+        if len(updated_search_result) == 3:
+            self.optimal_hero_boxes[1].set_hero(updated_search_result[2])
         self.run_search_button.setDisabled(True)
 
     @Slot()
@@ -668,7 +671,7 @@ class SummaryDialog(QDialog):
             self.hero_boxes[stage + 1].setStyleSheet(f"background-color: {color.name()}")
 
         # Set optimal value.
-        self.value_lcd.display(search_result[0] / 100) 
+        self.value_lcd.display(search_result[0]) 
         palette = self.value_lcd.palette()
         palette.setColor(palette.WindowText, color)
         self.value_lcd.setPalette(palette)
@@ -731,8 +734,7 @@ class ValueLabel(QLabel):
 
     def set_search_result(self, search_result):
         self.search_result = search_result
-        # scale the integer values between 0 and 1000 used by the AI to floats between 0 and 10
-        self.setText(str(search_result[0] / 100))
+        self.setText(str(search_result[0]))
 
     def clear(self):
         self.search_result = None
