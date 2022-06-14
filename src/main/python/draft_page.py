@@ -584,7 +584,6 @@ class SummaryDialog(QDialog):
             self.hero_boxes.append(hero_box)
             hero_box.index = i
 
-        # @CopyPaste
         # separate hero boxes by selection type and initialise a BanOverlay for all bans
         boxes = {(A, PICK): [], (B, PICK): [], (A, BAN): [], (B, BAN): []}
         for hero_box, selection in zip(self.hero_boxes, draft_page.draft_format):
@@ -603,10 +602,10 @@ class SummaryDialog(QDialog):
                                    HeroBox(draft_page.hero_icons, HERO_BOX_SIZE)) 
 
         layout = QGridLayout(self)
-        layout.addWidget(self.group_hero_boxes(boxes[(A, PICK)]), 1, 0)
-        layout.addWidget(self.group_hero_boxes(boxes[(B, PICK)]), 1, 1)
-        layout.addWidget(self.group_hero_boxes(boxes[(A, BAN)]), 2, 0)
-        layout.addWidget(self.group_hero_boxes(boxes[(B, BAN)]), 2, 1)
+        layout.addWidget(self.group_display_hero_boxes(boxes[(A, PICK)]), 1, 0)
+        layout.addWidget(self.group_display_hero_boxes(boxes[(B, PICK)]), 1, 1)
+        layout.addWidget(self.group_display_hero_boxes(boxes[(A, BAN)]), 2, 0)
+        layout.addWidget(self.group_display_hero_boxes(boxes[(B, BAN)]), 2, 1)
         summary_layout = QHBoxLayout()
         summary_layout.addWidget(self.description_label)
         summary_layout.addWidget(self.value_lcd)
@@ -620,7 +619,7 @@ class SummaryDialog(QDialog):
 
         self.setWindowFlags(Qt.Popup)
 
-    def group_hero_boxes(self, hero_boxes):
+    def group_display_hero_boxes(self, hero_boxes):
         groupbox = QGroupBox()
         layout = QGridLayout(groupbox)
         for i, hero_box in enumerate(hero_boxes):
