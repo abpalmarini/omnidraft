@@ -750,3 +750,10 @@ class ValueLabel(QLabel):
     def mousePressEvent(self, event):
         if self.search_result is not None:
             self.draft_page.summary_dialog.display(self.hero_box.index, self.search_result)
+        else:
+            # display tool tip describing the purpose of the value label
+            QToolTip.showText(
+                QCursor.pos(),
+                "After search is run from the current position this will store the minimum " \
+                "guaranteed reward for the selecting team if selecting optimally.",
+            )
