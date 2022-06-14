@@ -3,7 +3,8 @@ from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
                                QGroupBox, QLabel, QPushButton, QHBoxLayout,
                                QToolTip, QFrame, QMessageBox, QDialog,
                                QLCDNumber, QVBoxLayout)
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QCursor, QColor
+from PySide6.QtGui import (QStandardItemModel, QStandardItem, QCursor,
+                           QColor, QFont)
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
@@ -742,6 +743,7 @@ class ValueLabel(QLabel):
         self.setFrameStyle(QFrame.Panel | QFrame.Plain)
         self.setLineWidth(1)
         self.setFixedSize(HERO_BOX_SIZE * 0.40)
+        self.setFont(QFont("Times", 10))
         self.margin = hero_box.frameWidth() * 2  # add margin so it doesn't overlap with hero box frame
         self.update_color()
 
