@@ -2,7 +2,7 @@ from PySide6.QtCore import QSortFilterProxyModel, Slot, Qt, QSize
 from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
                                QGroupBox, QLabel, QPushButton, QHBoxLayout,
                                QToolTip, QFrame, QMessageBox, QDialog,
-                               QLCDNumber)
+                               QLCDNumber, QVBoxLayout)
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QCursor, QColor
 
 from hero_box import HeroBox, set_hero_box_layout_sizes
@@ -68,6 +68,7 @@ class DraftPage(QWidget):
         # features for running AI
         self.run_search_button = QPushButton("Find optimal selection(s)")
         self.run_search_button.clicked.connect(self.run_search_button_clicked)
+        self.value_lcd = QLCDNumber(6)
         self.optimal_hero_boxes = (HeroBox(hero_icons, HERO_BOX_SIZE), 
                                    HeroBox(hero_icons, HERO_BOX_SIZE)) 
         self.optimal_hero_boxes[0].clicked.connect(self.optimal_hero_box_clicked)
@@ -160,9 +161,12 @@ class DraftPage(QWidget):
     def init_ai_groupbox(self):
         ai_groupbox = QGroupBox()
         layout = QGridLayout(ai_groupbox)
-        layout.addWidget(self.run_search_button, 0, 0, 1, 2, Qt.AlignTop | Qt.AlignHCenter)
-        layout.addWidget(self.optimal_hero_boxes[0], 1, 0, 10, 1, Qt.AlignCenter)
-        layout.addWidget(self.optimal_hero_boxes[1], 1, 1, 10, 1, Qt.AlignCenter)
+        sub_layout = QVBoxLayout()
+        sub_layout.addWidget(self.run_search_button)
+        sub_layout.addWidget(self.value_lcd)
+        layout.addLayout(sub_layout, 0, 0, 1, 2)
+        layout.addWidget(self.optimal_hero_boxes[0], 1, 0, Qt.AlignCenter)
+        layout.addWidget(self.optimal_hero_boxes[1], 1, 1, Qt.AlignCenter)
         return ai_groupbox
 
     # Updates the DraftAI object used for creating histories and
@@ -315,7 +319,7 @@ class DraftPage(QWidget):
     # changed from what it previously was. Handles all the necessary logic for such
     # a change.
     def history_changed(self, change_stage, hero=None):
-        self.update_optimal_boxes_next_selection_color()
+        self.update_search_results_next_selection_color()
 
         # Clear the value labels for all selections after the point where the draft
         # history changes because they are no longer valid. The value label for the
@@ -331,6 +335,7 @@ class DraftPage(QWidget):
         selection_stage = self.get_history_len()
         if selection_stage == len(self.draft_format):
             self.run_search_button.setDisabled(True)
+            self.value_lcd.display(None)
             self.optimal_hero_boxes[0].clear()
             self.optimal_hero_boxes[1].clear()
             return
@@ -341,6 +346,7 @@ class DraftPage(QWidget):
         search_result = self.hero_boxes[selection_stage].value_label.search_result
         if search_result is not None:
             self.run_search_button.setDisabled(True)
+            self.value_lcd.display(search_result[0])
             self.optimal_hero_boxes[0].set_hero(search_result[1])
             if len(search_result) == 3:
                 self.optimal_hero_boxes[1].set_hero(search_result[2])
@@ -348,13 +354,14 @@ class DraftPage(QWidget):
                 self.optimal_hero_boxes[1].clear()
         else:
             self.run_search_button.setEnabled(True)
+            self.value_lcd.display(None)
             self.optimal_hero_boxes[0].clear()
             self.optimal_hero_boxes[1].clear()
 
     # Changes the colours of the optimal hero selection boxes to reflect which team
     # has the next selection(s) to highlight what the returned heroes from running
     # the AI would represent.
-    def update_optimal_boxes_next_selection_color(self):
+    def update_search_results_next_selection_color(self):
         stage = self.get_history_len()
         if stage == len(self.draft_format):
             # no more selections for either team 
@@ -366,6 +373,11 @@ class DraftPage(QWidget):
             team_color = TEAM_1_COLOR if side == A else TEAM_2_COLOR
         else:
             team_color = TEAM_2_COLOR if side == A else TEAM_1_COLOR
+        # update optimal value colour
+        palette = self.value_lcd.palette()
+        palette.setColor(palette.WindowText, team_color)
+        self.value_lcd.setPalette(palette)
+        # update optimal selection box colours
         self.optimal_hero_boxes[0].setStyleSheet(f"background-color: {team_color.name()}")
         if side == self.draft_format[(stage + 1) % len(self.draft_format)][0]:
             # double selection
@@ -543,7 +555,8 @@ class DraftPage(QWidget):
         updated_search_result += () if len(search_result) == 2 else (search_result[2],)
         # set optimal value for current selection
         self.hero_boxes[len(history)].value_label.set_search_result(updated_search_result)
-        # display optimal selection(s)
+        # display optimal value and selection(s)
+        self.value_lcd.display(updated_search_result[0])
         self.optimal_hero_boxes[0].set_hero(updated_search_result[1])
         if len(updated_search_result) == 3:
             self.optimal_hero_boxes[1].set_hero(updated_search_result[2])
