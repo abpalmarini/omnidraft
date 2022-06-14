@@ -14,6 +14,16 @@ from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR, A, B, PICK, BAN, INF
 HERO_BOX_SIZE = QSize(100, 100)
 
 
+# Changes the icon of the ban overlay for any hero box representing a ban
+# based on whether it contains a hero or not.
+def update_ban_icon(hero_box, ban_icons):
+    if hasattr(hero_box, "ban_overlay"):
+        if hero_box.name:
+            hero_box.ban_overlay.setPixmap(ban_icons[1].pixmap(hero_box.size))
+        else:
+            hero_box.ban_overlay.setPixmap(ban_icons[0].pixmap(hero_box.size))
+
+
 class DraftPage(QWidget):
 
     def __init__(self, hero_icons, ban_icons, roles, draft_format, team_tags, team_builder):
@@ -105,7 +115,7 @@ class DraftPage(QWidget):
         for hero_box, selection in zip(self.hero_boxes, self.draft_format):
             if selection[1] == BAN:
                 hero_box.ban_overlay = BanOverlay(hero_box)
-                hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
+                update_ban_icon(hero_box, self.ban_icons)
             boxes[selection].append(hero_box)
 
         # add grouped selection type boxes to layout
@@ -419,9 +429,7 @@ class DraftPage(QWidget):
                 # not be disabled if selection stays on this box and if not
                 # then change_selected_box will handle enabling and disabling
                 hero_box.set_hero(search_item.text())
-                # update ban overlay to the selected image if necessary
-                if hasattr(hero_box, "ban_overlay"):
-                    hero_box.ban_overlay.setPixmap(self.ban_icons[1].pixmap(hero_box.size))
+                update_ban_icon(hero_box, self.ban_icons)
                 break
         self.search_view.clearSelection()
 
@@ -440,9 +448,7 @@ class DraftPage(QWidget):
     def clear_button_clicked(self):
         for hero_box in self.hero_boxes:
             hero_box.clear()
-            # update ban overlay to the non-selected image if necessary
-            if hasattr(hero_box, "ban_overlay"):
-                hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
+            update_ban_icon(hero_box, self.ban_icons)
         self.change_selected_box(self.hero_boxes[0])  # handles the enabling/disabling of search items
         self.history_changed(0)
 
@@ -457,8 +463,7 @@ class DraftPage(QWidget):
                 remove = True
             if remove:
                 hero_box.clear()
-                if hasattr(hero_box, "ban_overlay"):
-                    hero_box.ban_overlay.setPixmap(self.ban_icons[0].pixmap(hero_box.size))
+                update_ban_icon(hero_box, self.ban_icons)
         self.change_selected_box(selected_box)  # selection is same, but legal search heroes need updated
         self.history_changed(selected_box.index)
 
@@ -551,8 +556,7 @@ class DraftPage(QWidget):
             if hero_box.selected:
                 selected_stage = hero_box.index
                 hero_box.set_hero(hero_name)
-                if hasattr(hero_box, "ban_overlay"):
-                    hero_box.ban_overlay.setPixmap(self.ban_icons[1].pixmap(hero_box.size))
+                update_ban_icon(hero_box, self.ban_icons)
                 break
         self.history_changed(selected_stage, hero_name)
         # move selection to next empty stage unless all have been entered
@@ -586,7 +590,7 @@ class SummaryDialog(QDialog):
         for hero_box, selection in zip(self.hero_boxes, draft_page.draft_format):
             if selection[1] == BAN:
                 hero_box.ban_overlay = BanOverlay(hero_box)
-                hero_box.ban_overlay.setPixmap(draft_page.ban_icons[0].pixmap(hero_box.size))
+                update_ban_icon(hero_box, draft_page.ban_icons)
             boxes[selection].append(hero_box)
 
         self.description = "Optimal selection(s) for {} in the current draft that will secure " \
@@ -599,7 +603,6 @@ class SummaryDialog(QDialog):
                                    HeroBox(draft_page.hero_icons, HERO_BOX_SIZE)) 
 
         layout = QGridLayout(self)
-        # add grouped selection type boxes to layout
         layout.addWidget(self.group_hero_boxes(boxes[(A, PICK)]), 1, 0)
         layout.addWidget(self.group_hero_boxes(boxes[(B, PICK)]), 1, 1)
         layout.addWidget(self.group_hero_boxes(boxes[(A, BAN)]), 2, 0)
@@ -651,14 +654,10 @@ class SummaryDialog(QDialog):
         for i, hero_box in enumerate(self.hero_boxes):
             if i < stage:
                 hero_box.set_hero(self.draft_page.hero_boxes[i].name)
-                if hasattr(hero_box, "ban_overlay"):
-                    ban_pixmap = self.draft_page.ban_icons[1].pixmap(hero_box.size)
-                    hero_box.ban_overlay.setPixmap(ban_pixmap)
+                update_ban_icon(hero_box, self.draft_page.ban_icons)
             else:
                 hero_box.clear()
-                if hasattr(hero_box, "ban_overlay"):
-                    ban_pixmap = self.draft_page.ban_icons[0].pixmap(hero_box.size)
-                    hero_box.ban_overlay.setPixmap(ban_pixmap)
+                update_ban_icon(hero_box, self.draft_page.ban_icons)
             hero_box.setStyleSheet(None)
 
         # Set description to include the selecting team's tag.
