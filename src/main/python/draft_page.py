@@ -69,6 +69,8 @@ class DraftPage(QWidget):
         # features for running AI
         self.run_search_button = QPushButton("Find optimal selection(s)")
         self.run_search_button.clicked.connect(self.run_search_button_clicked)
+        self.num_states_label = QLabel("Future draft permutations:")
+        self.num_states = QLabel()
         self.value_lcd = QLCDNumber(6)
         self.optimal_hero_boxes = (HeroBox(hero_icons, HERO_BOX_SIZE), 
                                    HeroBox(hero_icons, HERO_BOX_SIZE)) 
@@ -78,8 +80,6 @@ class DraftPage(QWidget):
         self.summary_dialog = SummaryDialog(self)
 
         self.init_layout()
-
-        self.history_changed(-1)
 
     # @CopyPaste from reward_dialogs.py
     def setup_hero_search(self):
@@ -162,9 +162,15 @@ class DraftPage(QWidget):
     def init_ai_groupbox(self):
         ai_groupbox = QGroupBox()
         layout = QGridLayout(ai_groupbox)
+        num_states_layout = QHBoxLayout()
+        num_states_layout.addWidget(self.num_states_label)
+        self.num_states.setAlignment(Qt.AlignCenter)
+        num_states_layout.addWidget(self.num_states)
         sub_layout = QVBoxLayout()
+        sub_layout.addLayout(num_states_layout)
         sub_layout.addWidget(self.run_search_button)
         sub_layout.addWidget(self.value_lcd)
+        sub_layout.setStretchFactor(self.value_lcd, 2)
         layout.addLayout(sub_layout, 0, 0, 1, 2)
         layout.addWidget(self.optimal_hero_boxes[0], 1, 0, Qt.AlignCenter)
         layout.addWidget(self.optimal_hero_boxes[1], 1, 1, Qt.AlignCenter)
@@ -262,6 +268,8 @@ class DraftPage(QWidget):
         self.counter_rs = counter_rs
 
         self.update_draft_ai()
+        self.history_changed(-1)  # -1 to indicate that all value labels (including first) are
+                                  # invalid and should be cleared
 
     # Returns the history as a list of hero names based on the heroes
     # input into the hero boxes.
@@ -332,8 +340,13 @@ class DraftPage(QWidget):
         if hero is not None:
             self.update_next_value_label(change_stage, hero)
 
+        # Display future possible draft scenarios.
+        history = self.get_history()
+        unique_drafts = self.draft_ai.num_unique_drafts(history)
+        self.num_states.setText("<b>{:.2e}</b>".format(unique_drafts))
+
         # Unable to run search if draft history is full.
-        selection_stage = self.get_history_len()
+        selection_stage = len(history)
         if selection_stage == len(self.draft_format):
             self.run_search_button.setDisabled(True)
             self.value_lcd.display(None)
