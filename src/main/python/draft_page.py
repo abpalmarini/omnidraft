@@ -622,9 +622,9 @@ class SummaryDialog(QDialog):
                 update_ban_icon(hero_box, draft_page.ban_icons)
             boxes[selection].append(hero_box)
 
-        self.description = "Optimal selection(s) for {} in the current draft that will secure " \
+        self.description = "Optimal selection(s) for <b>{}</b> in the current draft that will secure " \
                            "the most reward in the worst case scenario (that is, no matter how" \
-                           " the opponents responsd):" 
+                           " the opponents responsd in any of the <b>{:.2e}</b> possible drafts):" 
         self.description_label = QLabel()
         self.description_label.setWordWrap(True)
         self.value_lcd = QLCDNumber(6)
@@ -689,8 +689,10 @@ class SummaryDialog(QDialog):
                 update_ban_icon(hero_box, self.draft_page.ban_icons)
             hero_box.setStyleSheet(None)
 
-        # Set description to include the selecting team's tag.
-        self.description_label.setText(self.description.format(tag))
+        # Set description to include the selecting team's tag and future drafts.
+        dummy_history = tuple(None for _ in range(stage))  # only the length of history is needed
+        unique_drafts = self.draft_page.draft_ai.num_unique_drafts(dummy_history)
+        self.description_label.setText(self.description.format(tag, unique_drafts))
 
         # Highlight next selection boxes.
         self.hero_boxes[stage].setStyleSheet(f"background-color: {color.name()}")
