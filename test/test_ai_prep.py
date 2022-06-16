@@ -418,6 +418,39 @@ class TestAIPrep(unittest.TestCase):
         # so Lyra should be selectable)
         self.assertEqual({'Lyra', 'Gwen'}, draft_ai.selectable_heroes(history))
 
+    def test_num_unique_drafts(self):
+        draft_format = [
+            (A, BAN),
+            (B, BAN),
+            (A, PICK),
+            (B, PICK),
+            (B, PICK),
+            (A, PICK),
+            (A, PICK),
+            (B, PICK),
+        ]
+        role_rs = [
+            RoleR('Taka', 0, 0, 0),
+            RoleR('Krul', 1, 0, 0),
+            RoleR('Rona', 2, 0, 0),
+            RoleR('Skye', 3, 0, 0),
+            RoleR('Gwen', 3, 0, 0),
+            RoleR('Reza', 2, 0, 0),
+            RoleR('Lyra', 2, 0, 0),
+            RoleR('Reim', 2, 0, 0),
+            RoleR('Vox', 2, 0, 0),
+            RoleR('SAW', 3, 0, 0),
+            RoleR('Taka', 1, 0, 0),
+            RoleR('Krul', 2, 0, 0),
+            RoleR('Rona', 3, 0, 0),
+        ]
+        draft_ai = DraftAI(draft_format, role_rs, [], [])
+
+        # 10 unique heroes, 3 have been picked, so 5 remaining selections which
+        # means 7 * 6 * 5 * 4 * 3 = 2520 unique future drafts.
+        history = ['Taka', 'Krul', 'SAW']
+        self.assertEqual(2520, draft_ai.num_unique_drafts(history))
+
 
 if __name__ == '__main__':
     unittest.main()

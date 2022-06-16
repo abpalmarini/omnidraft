@@ -618,3 +618,13 @@ class DraftAI:
                 value -= B_value
 
         return value
+
+    # Return the total number of unique possible drafts from the given history
+    # for the instantiated draft format and heroes used in the role rewards.
+    def num_unique_drafts(self, history):
+        available_heroes = len(self.hero_roles) - len(history)
+        num_remaining_selections = len(self.draft_format) - len(history)
+        drafts = 1
+        for i in range(num_remaining_selections):
+            drafts *= (available_heroes - i)
+        return drafts
