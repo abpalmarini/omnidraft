@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <omp.h>
 
 #include "draft_ai.h"
@@ -1589,6 +1590,29 @@ void clear_tt()
     }
 }
 
+//
+// Save the transposition table, and the zobrist keys used to access it,
+// to the given file for later reuse.
+//
+void write_tt_and_zobrist_keys(const char *filename)
+{
+    FILE *f = fopen(filename, "wb");
+    fwrite(zobrist_keys, sizeof(u64), 3 * MAX_NUM_HEROES, f);
+    fwrite(tt, sizeof(struct tt_entry), TT_IDX_BITS + 1, f);
+    fclose(f);
+}
+
+// 
+// Load a previously saved transposition table, and the zobrist keys used
+// to access it, from the given file, ready to be used for running search.
+//
+void read_tt_and_zobrist_keys(const char *filename)
+{
+    FILE *f = fopen(filename, "rb");
+    fread(zobrist_keys, sizeof(u64), 3 * MAX_NUM_HEROES, f);
+    fread(tt, sizeof(struct tt_entry), TT_IDX_BITS + 1, f);
+    fclose(f);
+}
 
 //
 // Gets all constants defined in draft_ai.h to ensure that the python

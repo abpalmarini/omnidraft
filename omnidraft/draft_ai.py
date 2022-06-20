@@ -275,6 +275,24 @@ class DraftAI:
 
         return pick_keys_A, pick_keys_B, ban_keys
 
+    # Saves the transposition table (and the zobrist keys used to represent
+    # states inside the transposition table) to the specified file so that
+    # it can be loaded for reuse at a later point. 
+    def save_tt(self, filename):
+        c_filename = ffi.new("char[]", filename.encode("ascii"))
+        lib.write_tt_and_zobrist_keys(c_filename)
+
+    # Load a transposition table (and the zobrist keys used to represent
+    # states inside the transposition table) into memory, ready to be used
+    # for running search.
+    #
+    # @Important: A TT is only valid if being used with the exact same
+    # rewards that were used to populate it. There is currently no check for
+    # this so it is up to the caller to ensure correctness.
+    def load_tt(self, filename):
+        c_filename = ffi.new("char[]", filename.encode("ascii"))
+        lib.read_tt_and_zobrist_keys(c_filename)
+
     # Set the C global memory with all information required by the
     # engine for running searches on a new set of rewards/draft format.
     def _set_C_globals(self, synergy_rs, counter_rs):
