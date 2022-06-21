@@ -4,6 +4,7 @@ dir_path = os.path.join(os.path.realpath(''), 'src', 'main', 'python')
 sys.path.insert(0, dir_path)
 
 import unittest 
+from random import Random
 from collections import namedtuple
 
 from ai.draft_ai import *
@@ -455,6 +456,57 @@ class TestAIPrep(unittest.TestCase):
         # means 7 * 6 * 5 * 4 * 3 = 2520 unique future drafts.
         history = ['Taka', 'Krul', 'SAW']
         self.assertEqual(2520, draft_ai.num_unique_drafts(history))
+
+    def test_save_and_load_tt(self):
+        draft_format = [
+            (A, BAN),
+            (B, BAN),
+            (A, BAN),
+            (B, BAN),
+            (A, PICK),
+            (B, PICK),
+            (B, PICK),
+            (A, PICK),
+            (A, PICK),
+            (B, PICK),
+            (B, PICK),
+            (A, PICK),
+            (A, PICK),
+            (B, PICK),
+        ]
+        # Create random set of role rewards.
+        random = Random(10)
+        random_role_rs = []
+        for hero in range(40):
+            for role in range(5):
+                role_r = RoleR(str(hero), role, random.randint(0, 1000), random.randint(0, 1000))
+                random_role_rs.append(role_r)
+
+        # Select subset for actual role rewards.
+        random.shuffle(random_role_rs)
+        role_rs = random_role_rs[:50]
+
+        filename = "test/test_save_and_load_tt.bin"
+
+        # Ran the following commented out code once and it took 34s,
+        # returning optimal value -233 and action "25"
+        """
+        draft_ai = DraftAI(draft_format, role_rs, [], [])
+        value, action = draft_ai.run_search([])
+        print(value, action)
+
+        # Save the transpostion table used for these rewards.
+        draft_ai.save_tt(filename)
+        """
+
+        # We can now load in the TT and test that we get same results much quicker
+        # thanks to the TT if it was loaded correctly.
+        draft_ai = DraftAI(draft_format, role_rs, [], [])
+        load_succeeded = draft_ai.load_tt(filename)
+        self.assertTrue(load_succeeded)
+        value, action = draft_ai.run_search([])
+        self.assertEqual(value, -233)
+        self.assertEqual(action, "25")
 
 
 if __name__ == '__main__':
