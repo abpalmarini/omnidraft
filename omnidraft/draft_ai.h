@@ -218,6 +218,6 @@ void set_zobrist_key(int team_or_ban, int hero_num, u64 key);
 
 
 void clear_tt();
-void write_tt_and_zobrist_keys(const char *filename);
-void read_tt_and_zobrist_keys(const char *filename);
+int write_tt_and_zobrist_keys(const char *filename);
+int read_tt_and_zobrist_keys(const char *filename);
 struct constants_s get_constants();

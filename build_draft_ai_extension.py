@@ -60,8 +60,8 @@ ffibuilder.cdef(
 
     // utils
     void clear_tt();
-    void write_tt_and_zobrist_keys(const char *filename);
-    void read_tt_and_zobrist_keys(const char *filename);
+    int write_tt_and_zobrist_keys(const char *filename);
+    int read_tt_and_zobrist_keys(const char *filename);
     """
 )
 

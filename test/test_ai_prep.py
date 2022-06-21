@@ -497,7 +497,8 @@ class TestAIPrep(unittest.TestCase):
         # We can now load in the TT and test that we get same results much quicker
         # thanks to the TT if it was loaded correctly.
         draft_ai = DraftAI(draft_format, role_rs, [], [])
-        draft_ai.load_tt(filename)
+        load_succeeded = draft_ai.load_tt(filename)
+        self.assertTrue(load_succeeded)
         value, action = draft_ai.run_search([])
         self.assertEqual(value, -233)
         self.assertEqual(action, "25")

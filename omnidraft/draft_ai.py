@@ -280,7 +280,8 @@ class DraftAI:
     # it can be loaded for reuse at a later point. 
     def save_tt(self, filename):
         c_filename = ffi.new("char[]", filename.encode("ascii"))
-        lib.write_tt_and_zobrist_keys(c_filename)
+        ret = lib.write_tt_and_zobrist_keys(c_filename)
+        return bool(ret)
 
     # Load a transposition table (and the zobrist keys used to represent
     # states inside the transposition table) into memory, ready to be used
@@ -291,7 +292,8 @@ class DraftAI:
     # this so it is up to the caller to ensure correctness.
     def load_tt(self, filename):
         c_filename = ffi.new("char[]", filename.encode("ascii"))
-        lib.read_tt_and_zobrist_keys(c_filename)
+        ret = lib.read_tt_and_zobrist_keys(c_filename)
+        return bool(ret)
 
     # Set the C global memory with all information required by the
     # engine for running searches on a new set of rewards/draft format.

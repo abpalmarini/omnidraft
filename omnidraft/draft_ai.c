@@ -1594,24 +1594,30 @@ void clear_tt()
 // Save the transposition table, and the zobrist keys used to access it,
 // to the given file for later reuse.
 //
-void write_tt_and_zobrist_keys(const char *filename)
+int write_tt_and_zobrist_keys(const char *filename)
 {
+    int num_keys = 3 * MAX_NUM_HEROES;
+    int num_tt_entries = TT_IDX_BITS + 1;
     FILE *f = fopen(filename, "wb");
-    fwrite(zobrist_keys, sizeof(u64), 3 * MAX_NUM_HEROES, f);
-    fwrite(tt, sizeof(struct tt_entry), TT_IDX_BITS + 1, f);
+    int keys_w = fwrite(zobrist_keys, sizeof(u64), num_keys, f);
+    int tt_entries_w = fwrite(tt, sizeof(struct tt_entry), num_tt_entries, f);
     fclose(f);
+    return keys_w == num_keys && tt_entries_w == num_tt_entries;
 }
 
 // 
 // Load a previously saved transposition table, and the zobrist keys used
 // to access it, from the given file, ready to be used for running search.
 //
-void read_tt_and_zobrist_keys(const char *filename)
+int read_tt_and_zobrist_keys(const char *filename)
 {
+    int num_keys = 3 * MAX_NUM_HEROES;
+    int num_tt_entries = TT_IDX_BITS + 1;
     FILE *f = fopen(filename, "rb");
-    fread(zobrist_keys, sizeof(u64), 3 * MAX_NUM_HEROES, f);
-    fread(tt, sizeof(struct tt_entry), TT_IDX_BITS + 1, f);
+    int keys_r = fread(zobrist_keys, sizeof(u64), num_keys, f);
+    int tt_entries_r = fread(tt, sizeof(struct tt_entry), num_tt_entries, f);
     fclose(f);
+    return keys_r == num_keys && tt_entries_r == num_tt_entries;
 }
 
 //
