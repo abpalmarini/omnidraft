@@ -13,13 +13,11 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 from ai import draft_ai
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_models import RoleReward, SynergyReward, CounterReward
+from game_constants import ROLES
 
 
 SEARCH_ICON_SIZE = QSize(64, 64)
 HERO_BOX_SIZE = QSize(64, 64)
-
-
-roles = ("Top Laner", "Jungler", "Mid Laner", "Bot Laner", "Support")
 
 
 def init_value_spinbox():
@@ -73,7 +71,7 @@ class RoleRewardDialog(QDialog):
 
         self.role_label = QLabel("Role:")
         self.role_combobox = QComboBox()
-        self.role_combobox.addItems(roles)
+        self.role_combobox.addItems(ROLES)
         self.update_role_combobox()
 
         self.v_1_label = QLabel(team_tags[0] + " value:")
@@ -130,12 +128,12 @@ class RoleRewardDialog(QDialog):
         combobox_model = self.role_combobox.model()
         if not hero_name:
             # disable all selections
-            for i in range(len(roles)):
+            for i in range(len(ROLES)):
                 combobox_model.item(i).setEnabled(False)
         else:
             # ensure duplicates can not be created
             used_roles = self.reward_model.get_hero_roles(hero_name)
-            for i, role in enumerate(roles):
+            for i, role in enumerate(ROLES):
                 combobox_model.item(i).setEnabled(role not in used_roles)
 
     def clear_inputs(self):
@@ -300,7 +298,7 @@ class SynergyRewardDialog(QDialog):
 
         self.heroes_label = QLabel("Champions:") 
         self.hero_boxes = []
-        for i in range(len(roles)):
+        for i in range(len(ROLES)):
             hero_box = HeroBox(hero_icons, HERO_BOX_SIZE)
             self.hero_boxes.append(hero_box)
             hero_box.clicked.connect(self.hero_box_clicked)
@@ -308,7 +306,7 @@ class SynergyRewardDialog(QDialog):
 
         self.hero_role_checkboxes = []
         for _ in range(len(self.hero_boxes)):
-            role_checkboxes = [QCheckBox() for _ in range(len(roles))]
+            role_checkboxes = [QCheckBox() for _ in range(len(ROLES))]
             self.hero_role_checkboxes.append(role_checkboxes)
 
         self.remove_hero_button = QPushButton("Remove")
@@ -353,13 +351,13 @@ class SynergyRewardDialog(QDialog):
 
         # hero boxes
         self.layout.addWidget(self.heroes_label, 0, 0)
-        for i in range(len(roles)):
+        for i in range(len(ROLES)):
             self.layout.addWidget(self.hero_boxes[i], 0, i + 1, Qt.AlignCenter)
 
             # role checkboxes
-            self.layout.addWidget(QLabel(roles[i] + ":"), i + 1, 0)
+            self.layout.addWidget(QLabel(ROLES[i] + ":"), i + 1, 0)
             role_checkboxes = self.hero_role_checkboxes[i]
-            for j in range(len(roles)):
+            for j in range(len(ROLES)):
                 # checkboxes for hero box i are placed in the rows underneath
                 self.layout.addWidget(role_checkboxes[j], j + 1, i + 1, Qt.AlignCenter)
         set_hero_box_layout_sizes(HERO_BOX_SIZE, self.layout, [0], [1, 2, 3, 4, 5])
@@ -451,14 +449,14 @@ class SynergyRewardDialog(QDialog):
     # Hides all checkboxes corresponding to roles that the hero in a
     # box has no role reward for. Default is to have all non hidden
     # checkboxes checked or you can proivde optional reduced set.
-    def update_role_checkboxes(self, hero_box, check_if_allowed=roles):
+    def update_role_checkboxes(self, hero_box, check_if_allowed=ROLES):
         role_checkboxes = self.hero_role_checkboxes[hero_box.index]
         if not hero_box.name:
             for checkbox in role_checkboxes:
                 checkbox.hide()
                 checkbox.setChecked(False)
         else:
-            for checkbox, role in zip(role_checkboxes, roles):
+            for checkbox, role in zip(role_checkboxes, ROLES):
                 if role in self.hero_roles[hero_box.name]:
                     checkbox.show()
                     checkbox.setChecked(role in check_if_allowed)
@@ -469,7 +467,7 @@ class SynergyRewardDialog(QDialog):
     def get_checked_roles(self, hero_box):
         checked_roles = []
         role_checkboxes = self.hero_role_checkboxes[hero_box.index]
-        for checkbox, role in zip(role_checkboxes, roles):
+        for checkbox, role in zip(role_checkboxes, ROLES):
             if checkbox.isChecked():
                 checked_roles.append(role)
         return checked_roles
@@ -617,24 +615,24 @@ class CounterRewardDialog(SynergyRewardDialog):
         # add 5 hero boxes and sets of role checkboxes for the foes
         # (same lists are used to allow updating methods in synergy
         # dialog to still work)
-        for i in range(len(roles)):
+        for i in range(len(ROLES)):
             hero_box = HeroBox(hero_icons, HERO_BOX_SIZE)
             self.hero_boxes.append(hero_box)
             hero_box.clicked.connect(self.hero_box_clicked)
-            hero_box.index = len(roles) + i
-            role_checkboxes = [QCheckBox() for _ in range(len(roles))]
+            hero_box.index = len(ROLES) + i
+            role_checkboxes = [QCheckBox() for _ in range(len(ROLES))]
             self.hero_role_checkboxes.append(role_checkboxes)
 
         # add foe boxes to layout
         self.layout.addWidget(self.foes_label, 6, 0)
-        for i in range(len(roles)):
-            hero_box = self.hero_boxes[len(roles) + i]
+        for i in range(len(ROLES)):
+            hero_box = self.hero_boxes[len(ROLES) + i]
             self.layout.addWidget(hero_box, 6, i + 1, Qt.AlignCenter)
 
             # role checkboxes
-            self.layout.addWidget(QLabel(roles[i] + ":"), i + 7, 0)
-            role_checkboxes = self.hero_role_checkboxes[len(roles) + i]
-            for j in range(len(roles)):
+            self.layout.addWidget(QLabel(ROLES[i] + ":"), i + 7, 0)
+            role_checkboxes = self.hero_role_checkboxes[len(ROLES) + i]
+            for j in range(len(ROLES)):
                 # checkboxes for hero box i are placed in the rows underneath
                 self.layout.addWidget(role_checkboxes[j], j + 7, i + 1, Qt.AlignCenter)
         set_hero_box_layout_sizes(HERO_BOX_SIZE, self.layout, [6], [1, 2, 3, 4, 5])
@@ -644,7 +642,7 @@ class CounterRewardDialog(SynergyRewardDialog):
     # is set the foe heroes.
     def set_inputs(self, reward):
         SynergyRewardDialog.set_inputs(self, reward)
-        for foe, hero_box in zip(reward.foes, self.hero_boxes[len(roles):]):
+        for foe, hero_box in zip(reward.foes, self.hero_boxes[len(ROLES):]):
             name, used_roles = foe
             hero_box.set_hero(name)  # box has already been deselected
             self.update_role_checkboxes(hero_box, used_roles)
@@ -654,7 +652,7 @@ class CounterRewardDialog(SynergyRewardDialog):
     @Slot()
     def accept(self):
         heroes = {}
-        for hero_box in self.hero_boxes[:len(roles)]:
+        for hero_box in self.hero_boxes[:len(ROLES)]:
             if hero_box.name:
                 checked_roles = self.get_checked_roles(hero_box)
                 if not checked_roles:
@@ -664,7 +662,7 @@ class CounterRewardDialog(SynergyRewardDialog):
             return  # must be at least one chosen team hero
 
         foes = {}
-        for hero_box in self.hero_boxes[len(roles):]:
+        for hero_box in self.hero_boxes[len(ROLES):]:
             if hero_box.name:
                 checked_roles = self.get_checked_roles(hero_box)
                 if not checked_roles:

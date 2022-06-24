@@ -6,7 +6,7 @@ from rewards_page import RewardsPage
 from reward_models import RoleReward
 from draft_page import DraftPage
 from ai.draft_ai import A, B, PICK, BAN
-
+from game_constants import ROLES
 
 # @Temp heroes and draft format while I focus on building the main
 # structure. Need a way to select game and load in all heroes @Later.
@@ -21,7 +21,6 @@ all_heroes = [
     "Fiddlesticks", "Fiora", "Fizz", "Galio",
     "Gangplank", "Garen",
 ]
-all_roles = ("Top Laner", "Jungler", "Mid Laner", "Bot Laner", "Support")
 team_tags = ('FNC', 'G2')
 draft_format = [
     (A, BAN),
@@ -48,7 +47,7 @@ class MainWindow(QMainWindow):
 
         # @Later I'll want to place files in a more organised structure
         hero_icons = {h: QIcon(appctxt.get_resource(h + '.png')) for h in all_heroes}
-        role_icons = {r: QIcon(appctxt.get_resource(r + '.png')) for r in all_roles}
+        role_icons = {r: QIcon(appctxt.get_resource(r + '.png')) for r in ROLES}
         arrow_icon = QIcon(appctxt.get_resource("right-arrow.png"))
         ban_icons = (
             QIcon(appctxt.get_resource("ban-0.png")),
@@ -60,7 +59,7 @@ class MainWindow(QMainWindow):
         self.draft_page = DraftPage(
             hero_icons,
             ban_icons,
-            all_roles,
+            ROLES,
             draft_format,
             team_tags,
             self.rewards_page.team_builder,
@@ -83,23 +82,23 @@ class MainWindow(QMainWindow):
     # other features.
     def add_test_rewards(self):
         role_model = self.rewards_page.reward_types[0].model
-        role_model.add_reward(RoleReward(all_heroes[0], all_roles[0], 10, 10))
-        role_model.add_reward(RoleReward(all_heroes[1], all_roles[1], 10, 0))
-        role_model.add_reward(RoleReward(all_heroes[2], all_roles[2], 0, 10))
-        role_model.add_reward(RoleReward(all_heroes[3], all_roles[3], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[4], all_roles[4], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[5], all_roles[0], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[6], all_roles[1], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[7], all_roles[2], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[8], all_roles[3], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[9], all_roles[4], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[10], all_roles[0], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[11], all_roles[1], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[12], all_roles[2], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[13], all_roles[3], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[14], all_roles[4], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[15], all_roles[0], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[16], all_roles[1], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[17], all_roles[2], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[18], all_roles[3], 1, 1))
-        role_model.add_reward(RoleReward(all_heroes[19], all_roles[4], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[0], ROLES[0], 10, 10))
+        role_model.add_reward(RoleReward(all_heroes[1], ROLES[1], 10, 0))
+        role_model.add_reward(RoleReward(all_heroes[2], ROLES[2], 0, 10))
+        role_model.add_reward(RoleReward(all_heroes[3], ROLES[3], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[4], ROLES[4], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[5], ROLES[0], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[6], ROLES[1], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[7], ROLES[2], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[8], ROLES[3], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[9], ROLES[4], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[10], ROLES[0], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[11], ROLES[1], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[12], ROLES[2], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[13], ROLES[3], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[14], ROLES[4], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[15], ROLES[0], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[16], ROLES[1], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[17], ROLES[2], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[18], ROLES[3], 1, 1))
+        role_model.add_reward(RoleReward(all_heroes[19], ROLES[4], 1, 1))
