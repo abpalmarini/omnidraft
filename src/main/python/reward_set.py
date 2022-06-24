@@ -2,6 +2,9 @@ import pickle
 import re
 from pathlib import Path
 
+from game_constants import ROLES
+from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR
+
 
 class RewardSet:
     """
@@ -10,6 +13,7 @@ class RewardSet:
     """
 
     data_filename = "data.p"
+    ai_roles = {role: i for i, role in enumerate(ROLES)}
 
     def __init__(self, name):
         """
@@ -62,3 +66,54 @@ class RewardSet:
         with open(path / cls.data_filename, 'wb') as data_file:
             pickle.dump(reward_set_data, data_file)
         return RewardSet(name)
+
+    def save_rewards(self, role_rs, synergy_rs, counter_rs):
+        """Save the given rewards to the instantiated reward set."""
+        role_rs = sorted(self.ai_reward_format(r, 'role') for r in role_rs)
+        synergy_rs = sorted(self.ai_reward_format(r, 'synergy') for r in synergy_rs)
+        counter_rs = sorted(self.ai_reward_format(r, 'counter') for r in counter_rs)
+
+        if (role_rs == self.data['role_rs'] and
+            synergy_rs == self.data['synergy_rs'] and
+            counter_rs == self.data['counter_rs']):
+            # Nothing to do as rewards are already saved.
+            return
+        # Save new rewards and remove any (now invalid) transposition tables.
+        self.data["role_rs"] = role_rs
+        self.data["synergy_rs"] = synergy_rs
+        self.data["counter_rs"] = counter_rs
+        self.data["team_1_A_tt"] = None
+        self.data["team_2_A_tt"] = None
+        with open(self.path / self.data_filename, 'wb') as data_file:
+            pickle.dump(self.data, data_file)
+
+    def ai_reward_format(self, reward, reward_type):
+        """
+        Convert the reward classes used by the reward models to tuples ready to
+        instantiate a DraftAI with.
+        """
+        # Scaled by 100 because users use 2 decimal places.
+        def ai_value(value): 
+            return int(value * 100)
+        # Maps applicable roles to AI roles for heroes in a combo reward.
+        def ai_heroes(heroes):
+            _ai_heroes = []
+            for hero_name, appl_roles in heroes:
+                ai_appl_roles = [self.ai_roles[role] for role in appl_roles]
+                _ai_heroes.append((hero_name, ai_appl_roles))
+            return _ai_heroes
+        # Team 1 set to team A for saved rewards
+        A_value = ai_value(reward.team_1_value)
+        B_value = ai_value(reward.team_2_value)
+        if reward_type == 'role':
+            role = self.ai_roles[reward.role]
+            return RoleR(reward.name, role, A_value, B_value)
+        elif reward_type == 'synergy':
+            heroes = ai_heroes(reward.heroes)
+            return SynergyR(heroes, A_value, B_value)
+        elif reward_type == 'counter':
+            heroes = ai_heroes(reward.heroes)
+            foes = ai_heroes(reward.foes)
+            return CounterR(heroes, foes, A_value, B_value)
+        else:
+            raise ValueError
