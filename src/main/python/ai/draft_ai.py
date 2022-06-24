@@ -89,7 +89,7 @@ class DraftAI:
     and action(s).
     """
 
-    def __init__(self, draft_format, role_rs, synergy_rs, counter_rs):
+    def __init__(self, draft_format, role_rs, synergy_rs, counter_rs, tt_file=None):
         """
         Construct a DraftAI (defining the draft format and rewards it
         will operate on for all future searches).
@@ -114,7 +114,7 @@ class DraftAI:
 
         self.draft_format = self.get_ai_draft_format(draft_format)
         self.init_ordered_heroes(role_rs, synergy_rs, counter_rs)
-        self._set_C_globals(synergy_rs, counter_rs)
+        self._set_C_globals(synergy_rs, counter_rs, tt_file)
 
     # Creates a unique 'hero' for each real hero-role combination and
     # orders them by most potential.
@@ -297,7 +297,7 @@ class DraftAI:
 
     # Set the C global memory with all information required by the
     # engine for running searches on a new set of rewards/draft format.
-    def _set_C_globals(self, synergy_rs, counter_rs):
+    def _set_C_globals(self, synergy_rs, counter_rs, tt_file):
 
         # role rewards
         for hero_num, hero in enumerate(self.ordered_heroes):
@@ -350,15 +350,18 @@ class DraftAI:
             len(self.draft_format),
         )
 
-        # zobrist keys
-        keys = self.generate_zobrist_keys()
-        pick_keys_A, pick_keys_B, ban_keys = keys
-        for h in range(len(self.ordered_heroes)):
-            lib.set_zobrist_key(A, h, pick_keys_A[h])
-            lib.set_zobrist_key(B, h, pick_keys_B[h])
-            lib.set_zobrist_key(BAN_KEYS, h, ban_keys[h])
+        if tt_file is None:
+            # zobrist keys
+            keys = self.generate_zobrist_keys()
+            pick_keys_A, pick_keys_B, ban_keys = keys
+            for h in range(len(self.ordered_heroes)):
+                lib.set_zobrist_key(A, h, pick_keys_A[h])
+                lib.set_zobrist_key(B, h, pick_keys_B[h])
+                lib.set_zobrist_key(BAN_KEYS, h, ban_keys[h])
 
-        lib.clear_tt()  # ensure state values for old drafts aren't used
+            lib.clear_tt()  # ensure state values for old drafts aren't used
+        else:
+            self.load_tt(tt_file)
 
     # Group all bans, team A selections and team B selections into
     # separate lists.
