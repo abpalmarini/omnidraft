@@ -503,6 +503,11 @@ class TestAIPrep(unittest.TestCase):
         self.assertEqual(value, -233)
         self.assertEqual(action, "25")
 
+        draft_ai = DraftAI(draft_format, role_rs, [], [], filename)
+        value, action = draft_ai.run_search([])
+        self.assertEqual(value, -233)
+        self.assertEqual(action, "25")
+
 
 if __name__ == '__main__':
     unittest.main()
