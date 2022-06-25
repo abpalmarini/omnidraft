@@ -121,7 +121,18 @@ class RewardSet:
         else:
             raise ValueError
 
+    def tt_is_available(self, side_A_team):
+        """Returns True if a TT is saved for the given team playing as side A."""
+        if side_A_team == TEAM_1:
+            return self.data["team_1_A_tt"] is not None
+        else:
+            return self.data["team_2_A_tt"] is not None
+
     def get_draft_ai(self, side_A_team):
+        """
+        Return a DraftAI with the saved rewards and any saved TT for the
+        instantiated reward set with the given team playing as side A.
+        """
         if side_A_team == TEAM_1:
             role_rs = self.data["role_rs"]
             synergy_rs = self.data["synergy_rs"]
