@@ -70,6 +70,12 @@ class RewardSet:
             pickle.dump(reward_set_data, data_file)
         return RewardSet(name)
 
+    def get_team_tags(self):
+        return self.data["team_tags"]
+
+    def get_draft_format(self):
+        return self.data["draft_format"]
+
     def save_rewards(self, role_rs, synergy_rs, counter_rs):
         """Save the given rewards to the instantiated reward set."""
         role_rs = sorted(self.ai_reward_format(r, 'role') for r in role_rs)
