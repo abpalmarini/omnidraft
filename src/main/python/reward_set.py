@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 from game_constants import ROLES
+from reward_models import TEAM_1, TEAM_2
 from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR
 
 
@@ -13,6 +14,8 @@ class RewardSet:
     """
 
     data_filename = "data.p"
+    team_1_A_tt_filename = "team_1_A_tt.bin"
+    team_2_A_tt_filename = "team_2_A_tt.bin"
     ai_roles = {role: i for i, role in enumerate(ROLES)}
 
     def __init__(self, name):
@@ -117,3 +120,37 @@ class RewardSet:
             return CounterR(heroes, foes, A_value, B_value)
         else:
             raise ValueError
+
+    def get_draft_ai(self, side_A_team):
+        if side_A_team == TEAM_1:
+            role_rs = self.data["role_rs"]
+            synergy_rs = self.data["synergy_rs"]
+            counter_rs = self.data["counter_rs"]
+            if self.data["team_1_A_tt"] is None:
+                tt_file = None
+            else:
+                tt_file = str(self.path / self.team_1_A_tt_filename)
+        else:
+            def switch_values(r):
+                if isinstance(r, RoleR):
+                    return RoleR(r.hero_name, r.role, r.B_value, r.A_value)
+                elif isinstance(r, SynergyR):
+                    return SynergyR(r.heroes, r.B_value, r.A_value)
+                elif isinstance(r, CounterR):
+                    return CounterR(r.heroes, r.foes, r.B_value, r.A_value)
+                else:
+                    raise ValueError
+            role_rs = [switch_values(r) for r in self.data["role_rs"]]
+            synergy_rs = [switch_values(r) for r in self.data["synergy_rs"]]
+            counter_rs = [switch_values(r) for r in self.data["counter_rs"]]
+            if self.data["team_2_A_tt"] is None:
+                tt_file = None
+            else:
+                tt_file = str(self.path / self.team_2_A_tt_filename)
+        return DraftAI(
+            self.data["draft_format"],
+            role_rs,
+            synergy_rs,
+            counter_rs,
+            tt_file,
+        )
