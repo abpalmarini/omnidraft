@@ -2,6 +2,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMainWindow, QTabWidget
 from PySide6.QtGui import QIcon
 
+from reward_set import RewardSet
 from rewards_page import RewardsPage
 from reward_models import RoleReward
 from draft_page import DraftPage
@@ -45,23 +46,28 @@ class MainWindow(QMainWindow):
     def __init__(self, appctxt):
         super().__init__()
 
-        # @Later I'll want to place files in a more organised structure
-        hero_icons = {h: QIcon(appctxt.get_resource(h + '.png')) for h in all_heroes}
-        role_icons = {r: QIcon(appctxt.get_resource(r + '.png')) for r in ROLES}
-        arrow_icon = QIcon(appctxt.get_resource("right-arrow.png"))
-        ban_icons = (
-            QIcon(appctxt.get_resource("ban-0.png")),
-            QIcon(appctxt.get_resource("ban-1.png")),
-        )
+        # Hardcoding the reward set for now. @Later this will be initialsed
+        # with the details returned from a dialog that will be opened here:
+        # either info for a new reward set or the name of an existing one.
+        # This will include what heroes are being used so that the correct
+        # icons can be initialised.
+        self.reward_set = RewardSet("Temp")
 
-        self.rewards_page = RewardsPage(hero_icons, role_icons, arrow_icon, team_tags)
-        self.add_test_rewards()
+        self.icons = self.init_icons(appctxt, self.reward_set)
+
+        self.rewards_page = RewardsPage(
+            self.icons["heroes"],
+            self.icons["roles"],
+            self.icons["arrow"],
+            self.reward_set.get_team_tags(),
+        )
+        self.add_test_rewards()  # TODO: Load rewards from reward set into the rewards page.
         self.draft_page = DraftPage(
-            hero_icons,
-            ban_icons,
+            self.icons["heroes"],
+            self.icons["bans"],
             ROLES,
-            draft_format,
-            team_tags,
+            self.reward_set.get_draft_format(),
+            self.reward_set.get_team_tags(),
             self.rewards_page.team_builder,
         )
 
@@ -71,6 +77,22 @@ class MainWindow(QMainWindow):
         self.tab_widget.currentChanged.connect(self.tab_changed)
 
         self.setCentralWidget(self.tab_widget)
+
+    # @Later: Hero icons will be created based on what is defined in the reward set.
+    # It will likely define a flag in game_constants so that the correct folder can
+    # be identified and icons loaded. I will probably want functions for getting
+    # the correct mapping between accurate hero names with extra characters and
+    # their file names.
+    def init_icons(self, appctxt, reward_set):
+        icons = {}
+        icons["heroes"] = {h: QIcon(appctxt.get_resource(h + '.png')) for h in all_heroes}
+        icons["roles"] = {r: QIcon(appctxt.get_resource(r + '.png')) for r in ROLES}
+        icons["arrow"] = QIcon(appctxt.get_resource("right-arrow.png"))
+        icons["bans"] = (
+            QIcon(appctxt.get_resource("ban-0.png")),
+            QIcon(appctxt.get_resource("ban-1.png")),
+        )
+        return icons
 
     @Slot()
     def tab_changed(self, index):
