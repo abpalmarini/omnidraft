@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QWidget, QLineEdit, QGridLayout, QSizePolicy,
 from PySide6.QtGui import (QStandardItemModel, QStandardItem, QCursor,
                            QColor, QFont)
 
+from game_constants import ROLES
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
 from reward_models import TEAM_1, TEAM_2, TEAM_1_COLOR, TEAM_2_COLOR
@@ -27,13 +28,11 @@ def update_ban_icon(hero_box, ban_icons):
 
 class DraftPage(QWidget):
 
-    def __init__(self, hero_icons, ban_icons, roles, draft_format, team_tags, team_builder):
+    def __init__(self, hero_icons, ban_icons, draft_format, team_tags, team_builder):
         super().__init__()
         
         self.hero_icons = hero_icons
         self.ban_icons = ban_icons
-        self.roles = roles
-        self.ai_roles = {role: i for i, role in enumerate(roles)}
         self.draft_format = draft_format
         self.team_tags = team_tags
         self.team_builder = team_builder
@@ -176,20 +175,27 @@ class DraftPage(QWidget):
         layout.addWidget(self.optimal_hero_boxes[1], 1, 1, Qt.AlignCenter)
         return ai_groupbox
 
-    # Updates the DraftAI object used for creating histories and
-    # running searches using the reward attributes and the team A flag
-    # attibute. (Should be called after any of these change). Method
-    # also ensures that any existing history is compatible with the new
-    # DraftAI object.
-    def update_draft_ai(self):
-        self.draft_ai = DraftAI(
-            self.draft_format,
-            [self.ai_reward(r, 'role') for r in self.role_rs],
-            [self.ai_reward(r, 'synergy') for r in self.synergy_rs],
-            [self.ai_reward(r, 'counter') for r in self.counter_rs],
-        )
+    # Set a new reward set, whose saved rewards will be used for determining
+    # what heroes can be used to enter draft histories and wha the AI will
+    # use for finding the otpimal selection(s) for those histories.
+    def set_reward_set(self, reward_set):
+        assert reward_set.get_draft_format() == self.draft_format
+        self.reward_set = reward_set
+        valid_heroes = sorted(self.reward_set.unique_heroes_used())
+        self.search_model.clear()
+        for name in valid_heroes:
+            item = QStandardItem(self.hero_icons[name], name)
+            self.search_model.appendRow(item)
+        self.update_draft_ai()
 
-        # validate history with new rewards
+    # Updates the DraftAI object (used for creating hisories and running
+    # searches) to that returned from the RewardSet based on the team A
+    # flag attribute. After the DraftAI object is changed, everything
+    # else that was dependent on the old DraftAI object is also updated.
+    def update_draft_ai(self):
+        self.draft_ai = self.reward_set.get_draft_ai(self.curr_team_A)
+
+        # Validate history with (new) rewards in the new DraftAI.
         history = self.get_history()
         for hero_box in self.hero_boxes:
             hero_box.clear()
@@ -203,73 +209,16 @@ class DraftPage(QWidget):
                 break
             self.hero_boxes[stage].set_hero(hero)
             stage += 1
-        # keep users old selection so long as it's either next one
-        # needing entered or before that
+
+        # Entire history has changed as different rewards are used for it.
+        self.history_changed(-1)  # -1 to indicate that all value labels are invalid
+
+        # Keep users old selection so long as it's either next one
+        # needing entered or before that.
         if selected_index <= stage:
             self.change_selected_box(self.hero_boxes[selected_index])
         else:
             self.change_selected_box(self.hero_boxes[stage])
-
-    # Rewards constructed by the user are not directly useable with the
-    # engine and must be adjusted. Firstly, the user creates values for
-    # specific teams that could play as either A or B. The AI expects
-    # values for A and B and so uses the team_A flag to create the
-    # correct reward. Secondly, the values are expected to be integers
-    # not floats. Lastly, the AI expects each role to be an integer
-    # between 0 and 4.
-    def ai_reward(self, reward, reward_type):
-
-        # scaled by 100 because users use 2 decimal places
-        def ai_value(value): 
-            return int(value * 100)
-
-        # maps applicable roles to ai ones for heroes in a combo reward
-        def ai_heroes(heroes):
-            _ai_heroes = []
-            for hero_name, appl_roles in heroes:
-                ai_appl_roles = [self.ai_roles[role] for role in appl_roles]
-                _ai_heroes.append((hero_name, ai_appl_roles))
-            return _ai_heroes
-
-        # find A/B values
-        if self.curr_team_A == TEAM_1:
-            A_value = ai_value(reward.team_1_value)
-            B_value = ai_value(reward.team_2_value)
-        else:
-            A_value = ai_value(reward.team_2_value)
-            B_value = ai_value(reward.team_1_value)
-
-        if reward_type == 'role':
-            role = self.ai_roles[reward.role]
-            return RoleR(reward.name, role, A_value, B_value)
-        elif reward_type == 'synergy':
-            heroes = ai_heroes(reward.heroes)
-            return SynergyR(heroes, A_value, B_value)
-        elif reward_type == 'counter':
-            heroes = ai_heroes(reward.heroes)
-            foes = ai_heroes(reward.foes)
-            return CounterR(heroes, foes, A_value, B_value)
-        else:
-            raise ValueError
-
-    # Updates the search model to only include heroes that have a
-    # defined role reward, sets the reward attributes, then calls
-    # to have the draft ai updated.
-    def set_rewards(self, role_rs, synergy_rs, counter_rs):
-        # set search heroes
-        valid_heroes = sorted({role_r.name for role_r in role_rs})
-        self.search_model.clear()
-        for name in valid_heroes:
-            item = QStandardItem(self.hero_icons[name], name)
-            self.search_model.appendRow(item)
-
-        self.role_rs = role_rs
-        self.synergy_rs = synergy_rs
-        self.counter_rs = counter_rs
-
-        self.update_draft_ai()
-        self.history_changed(-1)  # -1 to indicate that all value labels (including first) are
-                                  # invalid and should be cleared
 
     # Returns the history as a list of hero names based on the heroes
     # input into the hero boxes.
@@ -494,8 +443,7 @@ class DraftPage(QWidget):
         self.history_changed(selected_box.index)
 
     # Switches the team playing as A, updating the labels and calling
-    # to update the draft ai. @Later this will need to check for a
-    # saved TT to load the new draft ai with.
+    # to update the draft ai.
     @Slot()
     def switch_sides_button_clicked(self):
         if self.curr_team_A == TEAM_1:
@@ -507,11 +455,8 @@ class DraftPage(QWidget):
             self.team_A_label.setText(self.team_tags[0])
             self.team_B_label.setText(self.team_tags[1])
         for hero_box in self.hero_boxes:
-            hero_box.value_label.clear()
             hero_box.value_label.update_color()
         self.update_draft_ai()
-        self.history_changed(-1)  # -1 to indicate that all value labels (including first) are
-                                  # invalid and should be cleared
 
     # Has DraftAI determine current optimal roles for each hero in
     # both teams for the current point in history, sets them to the
@@ -535,7 +480,7 @@ class DraftPage(QWidget):
             def switch_ai_roles(asgmt):
                 ui_asgmt = []
                 for name, ai_role in asgmt:
-                    ui_asgmt.append((name, self.roles[ai_role]))
+                    ui_asgmt.append((name, ROLES[ai_role]))
                 return ui_asgmt
 
             if self.curr_team_A == TEAM_1:

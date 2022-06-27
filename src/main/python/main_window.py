@@ -65,7 +65,6 @@ class MainWindow(QMainWindow):
         self.draft_page = DraftPage(
             self.icons["heroes"],
             self.icons["bans"],
-            ROLES,
             self.reward_set.get_draft_format(),
             self.reward_set.get_team_tags(),
             self.rewards_page.team_builder,
@@ -98,7 +97,8 @@ class MainWindow(QMainWindow):
     def tab_changed(self, index):
         if index == 1:
             rewards = self.rewards_page.get_rewards()
-            self.draft_page.set_rewards(*rewards)
+            self.reward_set.save_rewards(*rewards)
+            self.draft_page.set_reward_set(self.reward_set)
 
     # @Temp method to add in some test rewards to help with implementing
     # other features.

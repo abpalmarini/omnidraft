@@ -76,6 +76,9 @@ class RewardSet:
     def get_draft_format(self):
         return self.data["draft_format"]
 
+    def unique_heroes_used(self):
+        return {role_r.hero_name for role_r in self.data["role_rs"]}
+
     def save_rewards(self, role_rs, synergy_rs, counter_rs):
         """Save the given rewards to the instantiated reward set."""
         role_rs = sorted(self.ai_reward_format(r, 'role') for r in role_rs)
