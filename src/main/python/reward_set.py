@@ -4,7 +4,7 @@ from pathlib import Path
 
 from game_constants import ROLES
 from reward_models import TEAM_1, TEAM_2
-from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR
+from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR, MAX_TT_STAGE
 
 
 class RewardSet:
@@ -79,6 +79,10 @@ class RewardSet:
     def unique_heroes_used(self):
         return {role_r.hero_name for role_r in self.data["role_rs"]}
 
+    def _save_data(self):
+        with open(self.path / self.data_filename, 'wb') as data_file:
+            pickle.dump(self.data, data_file)
+
     def save_rewards(self, role_rs, synergy_rs, counter_rs):
         """Save the given rewards to the instantiated reward set."""
         role_rs = sorted(self.ai_reward_format(r, 'role') for r in role_rs)
@@ -96,8 +100,7 @@ class RewardSet:
         self.data["counter_rs"] = counter_rs
         self.data["team_1_A_tt"] = None
         self.data["team_2_A_tt"] = None
-        with open(self.path / self.data_filename, 'wb') as data_file:
-            pickle.dump(self.data, data_file)
+        self._save_data()
 
     def ai_reward_format(self, reward, reward_type):
         """
@@ -129,6 +132,35 @@ class RewardSet:
             return CounterR(heroes, foes, A_value, B_value)
         else:
             raise ValueError
+
+    def save_tt_if_best(self, draft_ai, side_A_team, search_stage):
+        """
+        Save the transposition table cached by the given DraftAI object from
+        running a search at the given stage in the draft format with the given
+        team as side A so long as there is not a more useful transposition 
+        table already saved: that is, a TT with saved states from an earlier
+        stage.
+        """
+        # TT entries only get cached for states with stages after the stage
+        # search is run from so long as they are less than the MAX_TT_STAGE.
+        # So, if (search_stage + 1) >= MAX_TT_STAGE then no TT entries were
+        # cached so the TT shouldn't be saved.
+        if (search_stage + 1) >= MAX_TT_STAGE:
+            return
+        if side_A_team == TEAM_1:
+            saved_tt_stage = self.data["team_1_A_tt"]
+            if saved_tt_stage is None or search_stage < saved_tt_stage:
+                tt_file = str(self.path / self.team_1_A_tt_filename)
+                if draft_ai.save_tt(tt_file):
+                    self.data["team_1_A_tt"] = search_stage
+                    self._save_data()
+        else:
+            saved_tt_stage = self.data["team_2_A_tt"]
+            if saved_tt_stage is None or search_stage < saved_tt_stage:
+                tt_file = str(self.path / self.team_2_A_tt_filename)
+                if draft_ai.save_tt(tt_file):
+                    self.data["team_2_A_tt"] = search_stage
+                    self._save_data()
 
     def tt_is_available(self, side_A_team):
         """Returns True if a TT is saved for the given team playing as side A."""

@@ -509,6 +509,7 @@ class DraftPage(QWidget):
                                        "role rewards.")
             msg_box.exec()
             return
+        self.reward_set.save_tt_if_best(self.draft_ai, self.side_A_team, len(history))
         # scale the integer values between 0 and 1000 used by the AI to floats between 0 and 10
         updated_search_result = (search_result[0] / 100, search_result[1])
         updated_search_result += () if len(search_result) == 2 else (search_result[2],)
