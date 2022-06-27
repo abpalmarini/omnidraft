@@ -10,7 +10,7 @@ from game_constants import ROLES
 from hero_box import HeroBox, set_hero_box_layout_sizes
 from reward_dialogs import init_search_list_view
 from reward_models import TEAM_1, TEAM_2, TEAM_1_COLOR, TEAM_2_COLOR
-from ai.draft_ai import DraftAI, RoleR, SynergyR, CounterR, A, B, PICK, BAN, INF
+from ai.draft_ai import A, B, PICK, BAN, INF
 
 
 HERO_BOX_SIZE = QSize(100, 100)
@@ -37,7 +37,7 @@ class DraftPage(QWidget):
         self.team_tags = team_tags
         self.team_builder = team_builder
 
-        self.curr_team_A = TEAM_1
+        self.side_A_team = TEAM_1
         self.team_A_label = QLabel(team_tags[0])
         self.team_B_label = QLabel(team_tags[1])
 
@@ -193,7 +193,7 @@ class DraftPage(QWidget):
     # flag attribute. After the DraftAI object is changed, everything
     # else that was dependent on the old DraftAI object is also updated.
     def update_draft_ai(self):
-        self.draft_ai = self.reward_set.get_draft_ai(self.curr_team_A)
+        self.draft_ai = self.reward_set.get_draft_ai(self.side_A_team)
 
         # Validate history with (new) rewards in the new DraftAI.
         history = self.get_history()
@@ -332,7 +332,7 @@ class DraftPage(QWidget):
             self.optimal_hero_boxes[1].setStyleSheet(None)
             return
         side = self.draft_format[stage][0]
-        if self.curr_team_A == TEAM_1:
+        if self.side_A_team == TEAM_1:
             team_color = TEAM_1_COLOR if side == A else TEAM_2_COLOR
         else:
             team_color = TEAM_2_COLOR if side == A else TEAM_1_COLOR
@@ -446,12 +446,12 @@ class DraftPage(QWidget):
     # to update the draft ai.
     @Slot()
     def switch_sides_button_clicked(self):
-        if self.curr_team_A == TEAM_1:
-            self.curr_team_A = TEAM_2
+        if self.side_A_team == TEAM_1:
+            self.side_A_team = TEAM_2
             self.team_A_label.setText(self.team_tags[1])
             self.team_B_label.setText(self.team_tags[0])
         else:
-            self.curr_team_A = TEAM_1
+            self.side_A_team = TEAM_1
             self.team_A_label.setText(self.team_tags[0])
             self.team_B_label.setText(self.team_tags[1])
         for hero_box in self.hero_boxes:
@@ -483,7 +483,7 @@ class DraftPage(QWidget):
                     ui_asgmt.append((name, ROLES[ai_role]))
                 return ui_asgmt
 
-            if self.curr_team_A == TEAM_1:
+            if self.side_A_team == TEAM_1:
                 team_1 = switch_ai_roles(team_A_asgmt)
                 team_2 = switch_ai_roles(team_B_asgmt)
             else:
@@ -609,7 +609,7 @@ class SummaryDialog(QDialog):
     def display(self, stage, search_result):
         # Find selecting team's colour and tag.
         selecting_side = self.draft_page.draft_format[stage][0]
-        if self.draft_page.curr_team_A == TEAM_1:
+        if self.draft_page.side_A_team == TEAM_1:
             if selecting_side == A:
                 color = TEAM_1_COLOR
                 tag = self.draft_page.team_tags[0]
@@ -716,7 +716,7 @@ class ValueLabel(QLabel):
         self.setText(None)
 
     def update_color(self):
-        if self.draft_page.curr_team_A == TEAM_1:
+        if self.draft_page.side_A_team == TEAM_1:
             color = TEAM_1_COLOR if self.side == A else TEAM_2_COLOR
         else:
             color = TEAM_2_COLOR if self.side == A else TEAM_1_COLOR
