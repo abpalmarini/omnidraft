@@ -124,6 +124,7 @@ struct constants_s
     int ban_pick;
     int ban_ban;
     int inf;
+    int max_tt_stage;
 };
 
 

@@ -1649,5 +1649,7 @@ struct constants_s get_constants()
 
     constants.inf = INF;
 
+    constants.max_tt_stage = MAX_TT_STAGE;
+
     return constants;
 }
