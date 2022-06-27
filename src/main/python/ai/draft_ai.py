@@ -30,6 +30,8 @@ BAN_BAN   = constants.ban_ban
 
 INF = constants.inf
 
+MAX_TT_STAGE = constants.max_tt_stage
+
 PICKS = {PICK, PICK_PICK, PICK_BAN}
 BANS = {BAN, BAN_PICK, BAN_BAN}
 
