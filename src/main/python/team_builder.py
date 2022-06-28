@@ -263,6 +263,7 @@ class RewardInfo(QGroupBox):
         return lcd
 
     # Find relevant info on all granted rewards and update displays.
+    @Slot()
     def update(self):
         team_1_value = 0
         team_2_value = 0
