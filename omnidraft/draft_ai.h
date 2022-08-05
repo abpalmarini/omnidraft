@@ -132,16 +132,15 @@ struct constants_s
 int negamax(
     u64 team,
     u64 e_team,
-    int *team_ptr,
-    int *e_team_ptr,
     u64 legal,
     u64 e_legal,
+    int rr_value,
     u64 hash,
     int stage,
     int alpha,
     int beta
 );
-int terminal_value(u64 team_A, u64 team_B, int *team_A_heroes, int *team_B_heroes);
+int terminal_value(u64 team_A, u64 team_B);
 int flex_negamax(
     int num_teams,
     int num_e_teams,
@@ -149,6 +148,8 @@ int flex_negamax(
     u64 e_teams[],
     u64 legals[],
     u64 e_legals[],
+    int rr_values[],
+    int e_rr_values[],
     u64 hashes[],
     u64 e_hashes[],
     u64 bans_hash,
@@ -163,9 +164,11 @@ int hero_in_team_update(
     int num_teams,
     u64 teams[],
     u64 legals[],
+    int rr_values[],
     u64 hashes[],
     u64 new_teams[],
     u64 new_legals[],
+    int new_rr_values[],
     u64 new_hashes[]
 );
 void hero_out_of_team_update(int hero_num, int num_teams, u64 legals[], u64 new_legals[]);
@@ -176,6 +179,8 @@ struct search_result root_negamax(
     u64 e_teams[],
     u64 legals[],
     u64 e_legals[],
+    int rr_values[],
+    int e_rr_values[],
     u64 hashes[],
     u64 e_hashes[],
     u64 bans_hash,
@@ -204,6 +209,7 @@ u64 legal_bit_repr(
     int banned_nums[]
 );
 u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[]);
+int init_rr_value(int team, int hero_nums_size, int hero_nums[]);
 
 
 // set up functions used to init all global variables required for search

@@ -54,10 +54,9 @@ struct tt_entry tt[TT_IDX_BITS + 1];
 int negamax(
     u64 team,         // selecting team bit string
     u64 e_team,
-    int *team_ptr,    // ptr to next position in selecting team hero num array
-    int *e_team_ptr,
     u64 legal,
     u64 e_legal,
+    int rr_value,
     u64 hash,
     int stage,
     int alpha,
@@ -67,7 +66,7 @@ int negamax(
     if (stage == draft_len)
         // since B has last pick in draft it is always
         // guaranteed that team is A and e_team is B
-        return terminal_value(team, e_team, team_ptr, e_team_ptr);
+        return rr_value + terminal_value(team, e_team);
 
     int original_alpha = alpha;
 
@@ -106,18 +105,14 @@ int negamax(
                 if (!(legal & (1ULL << h)))
                     continue;
 
-                // add hero num to team array
-                *team_ptr = h;
-
                 // switch teams and legal actions around
                 // after updating them for next stage
                 int child_value = -negamax(
                     e_team,
                     team | (1ULL << h),
-                    e_team_ptr,
-                    team_ptr + 1,
                     e_legal & h_infos[h].diff_h,
                     legal & h_infos[h].diff_role_and_h,
+                    rr_value + (draft[stage].team == A ? role_rs[h].A_value : -role_rs[h].B_value),
                     hash ^ zobrist_keys[draft[stage].team][h],
                     stage + 1,
                     -beta,
@@ -145,10 +140,9 @@ int negamax(
                 int child_value = -negamax(
                     e_team,
                     team,
-                    e_team_ptr,
-                    team_ptr,
                     e_legal & h_infos[h].diff_h,
                     legal & h_infos[h].diff_h,
+                    rr_value,
                     hash ^ zobrist_keys[BAN_KEYS][h],
                     stage + 1,
                     -beta,
@@ -174,9 +168,8 @@ int negamax(
                 u64 new_team = team | (1ULL << h);
                 u64 new_legal = legal & h_infos[h].diff_role_and_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
+                int new_rr_value = rr_value + (draft[stage].team == A ? role_rs[h].A_value : -role_rs[h].B_value);
                 u64 new_hash = hash ^ zobrist_keys[draft[stage].team][h];
-
-                *team_ptr = h;
 
                 // order in double pick is irrelevant
                 // so earlier pairs can be skipped
@@ -184,15 +177,12 @@ int negamax(
                     if (!(new_legal & (1ULL << h2)))
                         continue;
 
-                    *(team_ptr + 1) = h2;
-
                     int child_value = -negamax(
                         e_team,
                         new_team | (1ULL << h2),
-                        e_team_ptr,
-                        team_ptr + 2,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_role_and_h,
+                        new_rr_value + (draft[stage].team == A ? role_rs[h2].A_value : -role_rs[h2].B_value),
                         new_hash ^ zobrist_keys[draft[stage].team][h2],
                         stage + 2,
                         -beta,
@@ -219,9 +209,8 @@ int negamax(
                 u64 new_team = team | (1ULL << h);
                 u64 new_legal = legal & h_infos[h].diff_role_and_h;
                 u64 new_e_legal = e_legal & h_infos[h].diff_h;
+                int new_rr_value = rr_value + (draft[stage].team == A ? role_rs[h].A_value : -role_rs[h].B_value);
                 u64 new_hash = hash ^ zobrist_keys[draft[stage].team][h];
-
-                *team_ptr = h;
 
                 // order of selections matter here
                 for (int h2 = 0; h2 < num_heroes; h2++) {
@@ -232,10 +221,9 @@ int negamax(
                     int child_value = -negamax(
                         e_team,
                         new_team,
-                        e_team_ptr,
-                        team_ptr + 1,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_h,
+                        new_rr_value,
                         new_hash ^ zobrist_keys[BAN_KEYS][h2],
                         stage + 2,
                         -beta,
@@ -269,15 +257,12 @@ int negamax(
                     if (!(new_legal & (1ULL << h2)))
                         continue;
 
-                    *team_ptr = h2;
-
                     int child_value = -negamax(
                         e_team,
                         team | (1ULL << h2),
-                        e_team_ptr,
-                        team_ptr + 1,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_role_and_h,
+                        rr_value + (draft[stage].team == A ? role_rs[h2].A_value : -role_rs[h2].B_value),
                         new_hash ^ zobrist_keys[draft[stage].team][h2],
                         stage + 2,
                         -beta,
@@ -313,10 +298,9 @@ int negamax(
                     int child_value = -negamax(
                         e_team,
                         team,
-                        e_team_ptr,
-                        team_ptr,
                         new_e_legal & h_infos[h2].diff_h,
                         new_legal & h_infos[h2].diff_h,
+                        rr_value,
                         new_hash ^ zobrist_keys[BAN_KEYS][h2],
                         stage + 2,
                         -beta,
@@ -355,20 +339,12 @@ cutoff:
 
 
 // 
-// Evaluate rewards from team A's perspective. Team bit strings are
-// used for fast evaluation of synergy and counter rewards, whereas
-// an array of the 5 hero nums are used for fast evaluation of role
-// rewards.
+// Evaluate synergy and counter rewards from team A's perspective. 
+// (Role rewards are tracked as the tree is traversed).
 //
-int terminal_value(u64 team_A, u64 team_B, int *team_A_heroes, int *team_B_heroes)
+int terminal_value(u64 team_A, u64 team_B)
 {
     int value = 0;
-
-    // role rewards
-    for (int i = -1; i > -6; i--) {  // pointers point to 1 location beyond array
-        value += role_rs[team_A_heroes[i]].A_value;
-        value -= role_rs[team_B_heroes[i]].B_value;
-    }
 
     // synergies
     for (int i = 0; i < num_synergy_rs; i++) {
@@ -427,6 +403,8 @@ int flex_negamax(
     u64 e_teams[],
     u64 legals[],
     u64 e_legals[],
+    int rr_values[],
+    int e_rr_values[],
     u64 hashes[],
     u64 e_hashes[],
     u64 bans_hash,
@@ -440,20 +418,13 @@ int flex_negamax(
         // selecting team can achieve with one of its lineups vs it
         int value = -INF;
 
-        // arrays to track the picked hero nums for each team
-        int team_arr[5];
-        int e_team_arr[5];
-
-        int *e_team_ptr = init_team_heroes(e_teams[0], e_team_arr);
-
         for (int i = 0; i < num_teams; i++) {
             int team_value = negamax(    // switch to normal negamax
                 teams[i],
                 e_teams[0],
-                init_team_heroes(teams[i], team_arr),
-                e_team_ptr,
                 legals[i],
                 e_legals[0],
+                rr_values[i] + e_rr_values[0],
                 bans_hash ^ hashes[i] ^ e_hashes[0],    // final hash is XOR of all selections
                 stage,
                 alpha,
@@ -496,24 +467,16 @@ int flex_negamax(
         // without leaving themselves open to counter exploitation. Its
         // impossible for these values to contradict each other.
 
-        // at terminal state its guaranteed that team is A and e_team is B
-        int team_arr[5];
-        int e_team_arr[5];
-
         if (root_selecting_team == A) {
             // find the best (max) value A can get with a lineup where
             // each value is the best (min) value B can get in response
             int value_max = -INF;
 
             for (int i = 0; i < num_teams; i++) {
-                int *team_ptr = init_team_heroes(teams[i], team_arr);
-
                 int value_min = INF;
 
                 for (int j = 0; j < num_e_teams; j++) {
-                    int *e_team_ptr = init_team_heroes(e_teams[j], e_team_arr);
-
-                    int value = terminal_value(teams[i], e_teams[j], team_ptr, e_team_ptr);
+                    int value = rr_values[i] + e_rr_values[j] + terminal_value(teams[i], e_teams[j]);
 
                     if (value < value_min)
                         value_min = value;
@@ -534,14 +497,10 @@ int flex_negamax(
             int value_min = INF;
 
             for (int i = 0; i < num_e_teams; i++) {
-                int *e_team_ptr = init_team_heroes(e_teams[i], e_team_arr);
-
                 int value_max = -INF;
 
                 for (int j = 0; j < num_teams; j++) {
-                    int *team_ptr = init_team_heroes(teams[j], team_arr);
-
-                    int value = terminal_value(teams[j], e_teams[i], team_ptr, e_team_ptr);
+                    int value = rr_values[j] + e_rr_values[i] + terminal_value(teams[j], e_teams[i]);
 
                     if (value > value_max)
                         value_max = value;
@@ -567,6 +526,7 @@ int flex_negamax(
             for (int h = 0; h < num_heroes; h++) {
                 u64 teams_p[num_teams];
                 u64 legals_p[num_teams];
+                int rr_values_p[num_teams];
                 u64 hashes_p[num_teams];
                 int num_teams_p = hero_in_team_update(
                     h,
@@ -574,9 +534,11 @@ int flex_negamax(
                     num_teams,
                     teams,
                     legals,
+                    rr_values,
                     hashes,
                     teams_p,
                     legals_p,
+                    rr_values_p,
                     hashes_p
                 );
 
@@ -595,6 +557,8 @@ int flex_negamax(
                     teams_p,
                     e_legals_p,
                     legals_p,
+                    e_rr_values,
+                    rr_values_p,
                     e_hashes,
                     hashes_p,
                     bans_hash,
@@ -637,6 +601,8 @@ int flex_negamax(
                     teams,
                     e_legals_b,
                     legals_b,
+                    e_rr_values,
+                    rr_values,
                     e_hashes,
                     hashes,
                     bans_hash ^ zobrist_keys[BAN_KEYS][h],
@@ -661,6 +627,7 @@ int flex_negamax(
                 // update lineups for first pick
                 u64 teams_p[num_teams];
                 u64 legals_p[num_teams];
+                int rr_values_p[num_teams];
                 u64 hashes_p[num_teams];
                 int num_teams_p = hero_in_team_update(
                     h,
@@ -668,9 +635,11 @@ int flex_negamax(
                     num_teams,
                     teams,
                     legals,
+                    rr_values,
                     hashes,
                     teams_p,
                     legals_p,
+                    rr_values_p,
                     hashes_p
                 );
 
@@ -684,6 +653,7 @@ int flex_negamax(
                     // update lineups for second pick
                     u64 teams_pp[num_teams_p];
                     u64 legals_pp[num_teams_p];
+                    int rr_values_pp[num_teams_p];
                     u64 hashes_pp[num_teams_p];
                     int num_teams_pp = hero_in_team_update(
                         h2,
@@ -691,9 +661,11 @@ int flex_negamax(
                         num_teams_p,
                         teams_p,
                         legals_p,
+                        rr_values_p,
                         hashes_p,
                         teams_pp,
                         legals_pp,
+                        rr_values_pp,
                         hashes_pp
                     );
 
@@ -710,6 +682,8 @@ int flex_negamax(
                         teams_pp,
                         e_legals_pp,
                         legals_pp,
+                        e_rr_values,
+                        rr_values_pp,
                         e_hashes,
                         hashes_pp,
                         bans_hash,
@@ -735,6 +709,7 @@ int flex_negamax(
                 // update lineups for pick
                 u64 teams_p[num_teams];
                 u64 legals_p[num_teams];
+                int rr_values_p[num_teams];
                 u64 hashes_p[num_teams];
                 int num_teams_p = hero_in_team_update(
                     h,
@@ -742,9 +717,11 @@ int flex_negamax(
                     num_teams,
                     teams,
                     legals,
+                    rr_values,
                     hashes,
                     teams_p,
                     legals_p,
+                    rr_values_p,
                     hashes_p
                 );
 
@@ -771,6 +748,8 @@ int flex_negamax(
                         teams_p,
                         e_legals_pb,
                         legals_pb,
+                        e_rr_values,
+                        rr_values_p,
                         e_hashes,
                         hashes_p,
                         bans_hash ^ zobrist_keys[BAN_KEYS][h2],
@@ -807,6 +786,7 @@ int flex_negamax(
                     // update lineups for pick
                     u64 teams_bp[num_teams];
                     u64 legals_bp[num_teams];
+                    int rr_values_bp[num_teams];
                     u64 hashes_bp[num_teams];
                     int num_teams_bp = hero_in_team_update(
                         h2,
@@ -814,9 +794,11 @@ int flex_negamax(
                         num_teams,
                         teams,
                         legals_b,
+                        rr_values,
                         hashes,
                         teams_bp,
                         legals_bp,
+                        rr_values_bp,
                         hashes_bp
                     );
 
@@ -833,6 +815,8 @@ int flex_negamax(
                         teams_bp,
                         e_legals_bp,
                         legals_bp,
+                        e_rr_values,
+                        rr_values_bp,
                         e_hashes,
                         hashes_bp,
                         bans_hash_b,
@@ -882,6 +866,8 @@ int flex_negamax(
                         teams,
                         e_legals_bb,
                         legals_bb,
+                        e_rr_values,
+                        rr_values,
                         e_hashes,
                         hashes,
                         bans_hash_b ^ zobrist_keys[BAN_KEYS][h2],
@@ -935,9 +921,11 @@ int hero_in_team_update(
     int num_teams,
     u64 teams[],
     u64 legals[],
+    int rr_values[],
     u64 hashes[],
     u64 new_teams[],
     u64 new_legals[],
+    int new_rr_values[],
     u64 new_hashes[]
 )
 {
@@ -949,6 +937,8 @@ int hero_in_team_update(
             // only update state for a lineup where hero is legal
             new_teams[new_num_teams] = teams[i] | hero;
             new_legals[new_num_teams] = legals[i] & h_infos[hero_num].diff_role_and_h;
+            new_rr_values[new_num_teams] = rr_values[i] + (selecting_team == A ? role_rs[hero_num].A_value :
+                                                                                 -role_rs[hero_num].B_value);
             new_hashes[new_num_teams] = hashes[i] ^ zobrist_keys[selecting_team][hero_num];
             new_num_teams += 1;
         }
@@ -1009,6 +999,8 @@ struct search_result root_negamax(
     u64 e_teams[],
     u64 legals[],
     u64 e_legals[],
+    int rr_values[],
+    int e_rr_values[],
     u64 hashes[],
     u64 e_hashes[],
     u64 bans_hash,
@@ -1022,6 +1014,7 @@ struct search_result root_negamax(
             for (int h = 0; h < num_heroes; h++) {
                 u64 teams_p[num_teams];
                 u64 legals_p[num_teams];
+                int rr_values_p[num_teams];
                 u64 hashes_p[num_teams];
                 int num_teams_p = hero_in_team_update(
                     h,
@@ -1029,9 +1022,11 @@ struct search_result root_negamax(
                     num_teams,
                     teams,
                     legals,
+                    rr_values,
                     hashes,
                     teams_p,
                     legals_p,
+                    rr_values_p,
                     hashes_p
                 );
 
@@ -1050,6 +1045,8 @@ struct search_result root_negamax(
                     teams_p,
                     e_legals_p,
                     legals_p,
+                    e_rr_values,
+                    rr_values_p,
                     e_hashes,
                     hashes_p,
                     bans_hash,
@@ -1092,6 +1089,8 @@ struct search_result root_negamax(
                     teams,
                     e_legals_b,
                     legals_b,
+                    e_rr_values,
+                    rr_values,
                     e_hashes,
                     hashes,
                     bans_hash ^ zobrist_keys[BAN_KEYS][h],
@@ -1116,6 +1115,7 @@ struct search_result root_negamax(
                 // update lineups for first pick
                 u64 teams_p[num_teams];
                 u64 legals_p[num_teams];
+                int rr_values_p[num_teams];
                 u64 hashes_p[num_teams];
                 int num_teams_p = hero_in_team_update(
                     h,
@@ -1123,9 +1123,11 @@ struct search_result root_negamax(
                     num_teams,
                     teams,
                     legals,
+                    rr_values,
                     hashes,
                     teams_p,
                     legals_p,
+                    rr_values_p,
                     hashes_p
                 );
 
@@ -1139,6 +1141,7 @@ struct search_result root_negamax(
                     // update lineups for second pick
                     u64 teams_pp[num_teams_p];
                     u64 legals_pp[num_teams_p];
+                    int rr_values_pp[num_teams_p];
                     u64 hashes_pp[num_teams_p];
                     int num_teams_pp = hero_in_team_update(
                         h2,
@@ -1146,9 +1149,11 @@ struct search_result root_negamax(
                         num_teams_p,
                         teams_p,
                         legals_p,
+                        rr_values_p,
                         hashes_p,
                         teams_pp,
                         legals_pp,
+                        rr_values_pp,
                         hashes_pp
                     );
 
@@ -1165,6 +1170,8 @@ struct search_result root_negamax(
                         teams_pp,
                         e_legals_pp,
                         legals_pp,
+                        e_rr_values,
+                        rr_values_pp,
                         e_hashes,
                         hashes_pp,
                         bans_hash,
@@ -1191,6 +1198,7 @@ struct search_result root_negamax(
                 // update lineups for pick
                 u64 teams_p[num_teams];
                 u64 legals_p[num_teams];
+                int rr_values_p[num_teams];
                 u64 hashes_p[num_teams];
                 int num_teams_p = hero_in_team_update(
                     h,
@@ -1198,9 +1206,11 @@ struct search_result root_negamax(
                     num_teams,
                     teams,
                     legals,
+                    rr_values,
                     hashes,
                     teams_p,
                     legals_p,
+                    rr_values_p,
                     hashes_p
                 );
 
@@ -1227,6 +1237,8 @@ struct search_result root_negamax(
                         teams_p,
                         e_legals_pb,
                         legals_pb,
+                        e_rr_values,
+                        rr_values_p,
                         e_hashes,
                         hashes_p,
                         bans_hash ^ zobrist_keys[BAN_KEYS][h2],
@@ -1264,6 +1276,7 @@ struct search_result root_negamax(
                     // update lineups for pick
                     u64 teams_bp[num_teams];
                     u64 legals_bp[num_teams];
+                    int rr_values_bp[num_teams];
                     u64 hashes_bp[num_teams];
                     int num_teams_bp = hero_in_team_update(
                         h2,
@@ -1271,9 +1284,11 @@ struct search_result root_negamax(
                         num_teams,
                         teams,
                         legals_b,
+                        rr_values,
                         hashes,
                         teams_bp,
                         legals_bp,
+                        rr_values_bp,
                         hashes_bp
                     );
 
@@ -1290,6 +1305,8 @@ struct search_result root_negamax(
                         teams_bp,
                         e_legals_bp,
                         legals_bp,
+                        e_rr_values,
+                        rr_values_bp,
                         e_hashes,
                         hashes_bp,
                         bans_hash_b,
@@ -1340,6 +1357,8 @@ struct search_result root_negamax(
                         teams,
                         e_legals_bb,
                         legals_bb,
+                        e_rr_values,
+                        rr_values,
                         e_hashes,
                         hashes,
                         bans_hash_b ^ zobrist_keys[BAN_KEYS][h2],
@@ -1380,9 +1399,10 @@ struct search_result run_search(
     int* banned
 )
 {
-    // init team A teams, legals and starting hashes for all lineups
+    // init team A teams, legals, rr_values and starting hashes for all lineups
     u64 teams_A[num_teams_A];
     u64 legals_A[num_teams_A];
+    int rr_values_A[num_teams_A];
     u64 hashes_A[num_teams_A];
     for (int i = 0; i < num_teams_A; i++) {
         teams_A[i] = team_bit_repr(team_A_size, start_teams_A[i]);
@@ -1394,12 +1414,14 @@ struct search_result run_search(
             start_teams_B[0],  // any enemy team can be used as all hero variations are removed
             banned
         );
+        rr_values_A[i] = init_rr_value(A, team_A_size, start_teams_A[i]);
         hashes_A[i] = init_hash(A, team_A_size, start_teams_A[i]);
     }
 
-    // init team B teams, legals and starting hashes for all lineups
+    // init team B teams, legals, rr_values and starting hashes for all lineups
     u64 teams_B[num_teams_B];
     u64 legals_B[num_teams_B];
+    int rr_values_B[num_teams_B];
     u64 hashes_B[num_teams_B];
     for (int i = 0; i < num_teams_B; i++) {
         teams_B[i] = team_bit_repr(team_B_size, start_teams_B[i]);
@@ -1411,6 +1433,7 @@ struct search_result run_search(
             start_teams_A[0],
             banned
         );
+        rr_values_B[i] = init_rr_value(B, team_B_size, start_teams_B[i]);
         hashes_B[i] = init_hash(B, team_B_size, start_teams_B[i]);
     }
 
@@ -1429,6 +1452,8 @@ struct search_result run_search(
             teams_B,
             legals_A,
             legals_B,
+            rr_values_A,
+            rr_values_B,
             hashes_A,
             hashes_B,
             bans_hash,
@@ -1442,6 +1467,8 @@ struct search_result run_search(
             teams_A,
             legals_B,
             legals_A,
+            rr_values_B,
+            rr_values_A,
             hashes_B,
             hashes_A,
             bans_hash,
@@ -1512,6 +1539,28 @@ u64 init_hash(int team_or_ban, int hero_nums_size, int hero_nums[])
     }
 
     return hash;
+}
+
+
+//
+// Initialise the running role reward value (in terms of team
+// A's perspective) for the given team.
+//
+int init_rr_value(int team, int hero_nums_size, int hero_nums[])
+{
+    int value = 0;
+
+    if (team == A) {
+        for (int i = 0; i < hero_nums_size; i++) {
+            value += role_rs[hero_nums[i]].A_value;
+        }
+    } else {
+        for (int i = 0; i < hero_nums_size; i++) {
+            value -= role_rs[hero_nums[i]].B_value;
+        }
+    }
+
+    return value;
 }
 
 
