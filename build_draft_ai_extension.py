@@ -1,5 +1,10 @@
 """ Compile draft_ai C code into callable library from python. """
 
+import platform
+import glob
+import os
+import shutil
+
 from cffi import FFI
 
 ffibuilder = FFI()
@@ -69,13 +74,21 @@ ffibuilder.cdef(
 ffibuilder.set_source(
     '_draft_ai',
     """
-    #include "omnidraft/draft_ai.h"
+    #include "ai/draft_ai.h"
     """,
-    sources=['omnidraft/draft_ai.c'],
+    sources=['ai/draft_ai.c'],
     extra_compile_args=['-fopenmp'],
     extra_link_args=['-fopenmp'],
 )
 
+def move_lib():
+    """Place binary output into ai folder in app."""
+    system = platform.system()
+    lib_file = glob.glob('*.so' if system != 'Windows' else '*.dll')[0]
+    dst_file = os.path.join('src', 'main', 'python', 'ai', lib_file)
+    shutil.move(lib_file, dst_file)
+
 
 if __name__ == "__main__":
     ffibuilder.compile(verbose=True)
+    move_lib()
