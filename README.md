@@ -24,7 +24,7 @@ Thus, to create a system that can out-draft opponents at the highest level of co
 
 ### Transforming drafts into a zero-sum game
 
-Turning the draft phase from a game with no formal winner into a zero-sum game requires a method that can evaluate every pair of resulting hero compositions. Additionally, the evaluation should not be general: it should depend on who will be using the drafted compositions. This can be achieved with a reward system that is briefly described below. Moreover, I propose that this simple system is able to explicitly and adequately capture any and all knowledge one would use when carrying out a draft.
+Turning the draft phase from a game with no formal winner into a zero-sum game requires a method that can evaluate every pair of resulting hero compositions. Additionally, the evaluation should _not_ be general: it should depend on who will be using the drafted compositions. This can be achieved with a reward system that is briefly described below. Moreover, I propose that this simple system is able to explicitly and adequately capture any and all knowledge one would use when carrying out a draft.
 
 A set of rewards consisting of only three types—each based on gaining a certain hero or combination of heroes—are created beforehand to reflect a player's thoughts about the intended game. Each reward contains two values representing how desirable the reward is for each team. At the end of a draft each side is granted their respective value associated with any reward whose requirements they meet. The difference in each sides total values provides the single numbered evaluation of the draft. The three rewards are:
 
@@ -42,7 +42,7 @@ With the reward system in place the draft (now formulated as a two player zero-s
 
 ###### Speed
 
-For an example of omnidraft's speed: a draft situation that took a general minimax algorithm written in python 25 minutes to solve, took this engine only 0.12 seconds (that is, 0.008% of the time). The omnidraft engine is able to reach speeds greater than 222 million nodes per second using only 12 threads on my 2019 MacBook Pro. For comparison, during game 1 of the 2020/21 Top Chess Engine Championship (TCEC) finals the winning chess engine Stockfish reached a maximum of 147 million nodes per second on specialised hardware with 172 threads. 
+For an example of omnidraft's speed: a draft situation that took a general minimax algorithm written in python 25 minutes to solve, took this engine only 0.12 seconds (that is, 0.008% of the time). The omnidraft engine is able to reach speeds greater than 222 million nodes per second using only 12 threads on my 2019 MacBook Pro. For comparison, during [game 1 of the 2020/21 Top Chess Engine Championship](https://tcec-chess.com/#div=sf&game=1&season=20) (TCEC) finals the winning chess engine Stockfish reached a maximum of 147 million nodes per second on specialised hardware with 172 threads. 
 
 ###### Main features
 
@@ -56,7 +56,7 @@ The main factor contributing to the engine's speed (feature 1) required reframin
 
 [^2]: Specifically, the case arises when _all_ of the following are true: i) the opponents can respond to a suboptimal action with a hero who can play more than one role, ii) your response to that hero in each role individually results in a value greater than would be gained with the true worst-case optimal action and iii) realising each of those values involves different response actions (which is implied by ii) if the initial action is suboptimal). Therefore, no matter what response is taken to the opponent's response to your initial action, the opponent can then switch their hero's role to gain more value—which, if ii) is true, will leave you with a value less than the worst-case scenario value of an alternate initial action.
 
-Another limitation is that the engine can only support up to 64 role rewards because that this is the number of bits in a unit of data used by most processors. Anymore and the engine would lose its ability to update the game state, determine legal actions and evaluate terminal nodes with only a few hardware operations—as mentioned above. (It's possible that this could be increased to 128—by storing certain information across two words and performing an additional operation when required—without a significant loss in speed, but I never tested it.)
+Another limitation is that the engine can only support up to 64 role rewards because that is the number of bits in a unit of data used by most processors. Anymore and the engine would lose its ability to update the game state, determine legal actions and evaluate terminal nodes with only a few hardware operations—as mentioned above. (It's possible that this could be increased to 128—by storing certain information across two words and performing an additional operation when required—without a significant loss in speed, but I never tested it.)
 
 ### App
 
